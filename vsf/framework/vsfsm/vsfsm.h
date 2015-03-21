@@ -181,21 +181,21 @@ struct vsfsm_sync_t
 vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sem, uint32_t cur_value,
 				uint32_t max_value, vsfsm_evt_t evt);
 vsf_err_t vsfsm_sync_cancel(struct vsfsm_t *sm, struct vsfsm_sync_t *sync);
-vsf_err_t vsfsm_sync_increase(struct vsfsm_t *sm, struct vsfsm_sync_t *sync);
-vsf_err_t vsfsm_sync_decrease(struct vsfsm_t *sm, struct vsfsm_sync_t *sync);
+vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync);
+vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
 
 // SEMAPHORE
 #define vsfsm_sem_t					vsfsm_sync_t
 #define vsfsm_sem_init(sem, cnt, evt)\
 									vsfsm_sync_init((sem), (cnt), 0xFFFFFFFF, (evt))
-#define vsfsm_sem_post(sm, sem)		vsfsm_sync_increase((sm), (sem))
-#define vsfsm_sem_pend(sm, sem)		vsfsm_sync_decrease((sm), (sem))
+#define vsfsm_sem_post(sem)			vsfsm_sync_increase((sem))
+#define vsfsm_sem_pend(sem, sm)		vsfsm_sync_decrease((sem), (sm))
 
 // CRITICAL
 #define vsfsm_crit_t				vsfsm_sync_t
 #define vsfsm_crit_init(crit, evt)	vsfsm_sync_init((crit), 1, 1, (evt))
-#define vsfsm_crit_enter(sm, crit)	vsfsm_sync_decrease((sm), (crit))
-#define vsfsm_crit_leave(sm, crit)	vsfsm_sync_increase((sm), (crit))
+#define vsfsm_crit_enter(crit, sm)	vsfsm_sync_decrease((crit), (sm))
+#define vsfsm_crit_leave(crit)		vsfsm_sync_increase((crit))
 
 #endif	// VSFSM_CFG_SYNC_EN
 

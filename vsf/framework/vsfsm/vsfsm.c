@@ -403,7 +403,7 @@ vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sync, uint32_t cur_value,
 	return VSFERR_NONE;
 }
 
-static void vsfsm_sync_append_sm(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
+static void vsfsm_sync_append_sm(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	struct vsfsm_t *sm_pending;
 	
@@ -447,7 +447,7 @@ vsf_err_t vsfsm_sync_cancel(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfsm_sync_increase(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
+vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 {
 	if (sync->sm_pending)
 	{
@@ -469,14 +469,14 @@ vsf_err_t vsfsm_sync_increase(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfsm_sync_decrease(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
+vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	if (sync->cur_value > 0)
 	{
 		sync->cur_value--;
 		return VSFERR_NONE;
 	}
-	vsfsm_sync_append_sm(sm, sync);
+	vsfsm_sync_append_sm(sync, sm);
 	return VSFERR_NOT_READY;
 }
 #endif	// VSFSM_CFG_SYNC_EN

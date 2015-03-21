@@ -94,7 +94,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	
 	vsfsm_pt_begin(pt);
 	// get lock here
-	if (vsfsm_crit_enter(pt->sm, &shell->output_crit))
+	if (vsfsm_crit_enter(&shell->output_crit, pt->sm))
 	{
 		vsfsm_pt_wfe(pt, VSFSHELL_EVT_OUTPUT_CRIT_AVAIL);
 	}
@@ -185,7 +185,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		}
 	}
 	shell->output_sm = NULL;
-	vsfsm_crit_leave(pt->sm, &shell->output_crit);
+	vsfsm_crit_leave(&shell->output_crit);
 	vsfsm_pt_end(pt);
 	
 	return VSFERR_NONE;
