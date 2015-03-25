@@ -400,6 +400,7 @@ vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sync, uint32_t cur_value,
 	sync->cur_value = cur_value;
 	sync->max_value = max_value;
 	sync->sm_pending = NULL;
+	sync->evt = evt;
 	return VSFERR_NONE;
 }
 
