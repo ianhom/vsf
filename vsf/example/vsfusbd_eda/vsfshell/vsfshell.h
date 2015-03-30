@@ -54,6 +54,7 @@ struct vsfshell_t
 	struct vsfsm_pt_t output_pt;
 	struct vsfsm_crit_t output_crit;
 	bool output_interrupted;
+	bool prompted;
 	char ch;
 };
 

@@ -116,6 +116,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		buffer.buffer = (uint8_t *)VSFSHELL_PROMPT;
 		buffer.size = strlen(VSFSHELL_PROMPT);
 		stream_tx(shell->stream_tx, &buffer);
+		shell->prompted = true;
 		
 		shell->tbuffer.buffer.buffer[shell->tbuffer.position] = '\0';
 		shell->printf_pos = (char *)shell->tbuffer.buffer.buffer;
@@ -142,6 +143,8 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 	
 	va_start(ap, format);
+	printf_size = sizeof(shell->printf_buff);
+	printf_buff = shell->printf_buff;
 	if (pt->sm != shell->input_sm)
 	{
 		// if current pt is not frontend, then add a new line
@@ -152,14 +155,14 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			// 		input will be recovered later
 			shell->output_interrupted = true;
 		}
-		strcpy(shell->printf_buff, VSFSHELL_LINEEND);
-		printf_size = sizeof(shell->printf_buff) - strlen(VSFSHELL_LINEEND);
-		printf_buff = shell->printf_buff + strlen(VSFSHELL_LINEEND);
-	}
-	else
-	{
-		printf_size = sizeof(shell->printf_buff);
-		printf_buff = shell->printf_buff;
+		if (shell->prompted)
+		{
+			// add a new line if prompt is outputed
+			strcpy(shell->printf_buff, VSFSHELL_LINEEND);
+			printf_size -= strlen(VSFSHELL_LINEEND);
+			printf_buff += strlen(VSFSHELL_LINEEND);
+			shell->prompted = false;
+		}
 	}
 	str_len = vsnprintf(printf_buff, printf_size, format, ap);
 	va_end(ap);
@@ -362,6 +365,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfshell_printf(output_pt,
 					"vsfshell 0.1 beta by SimonQian" VSFSHELL_LINEEND);
 	vsfshell_printf(output_pt, VSFSHELL_PROMPT);
+	shell->prompted = true;
 	while (1)
 	{
 		vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMRX_ONIN);
@@ -416,6 +420,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				{
 					vsfshell_printf(output_pt, VSFSHELL_PROMPT);
 				}
+				shell->prompted = true;
 				break;
 			}
 			else
@@ -436,6 +441,7 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
+		shell->prompted = false;
 		shell->output_interrupted = false;
 		shell->tbuffer.buffer.buffer = (uint8_t *)shell->cmd_buff;
 		shell->tbuffer.buffer.size = sizeof(shell->cmd_buff);
@@ -489,12 +495,7 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 		break;
 	case VSFSHELL_EVT_STREAMTX_ONOUT:
-		if (shell->input_sm == &shell->sm)
-		{
-			// pass to shell->input_sm
-			shell->input_pt.thread(&shell->input_pt, evt);
-		}
-		else if (shell->output_sm != NULL)
+		if (shell->output_sm != NULL)
 		{
 			vsfsm_post_evt(shell->output_sm, evt);
 		}
