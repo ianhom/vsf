@@ -424,7 +424,7 @@ static void vsfsm_sync_append_sm(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 	}
 }
 
-vsf_err_t vsfsm_sync_cancel(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
+vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	struct vsfsm_t *sm_pending;
 	
@@ -432,7 +432,7 @@ vsf_err_t vsfsm_sync_cancel(struct vsfsm_t *sm, struct vsfsm_sync_t *sync)
 	{
 		sync->sm_pending = sm->pending_next;
 	}
-	else
+	else if (sync->sm_pending != NULL)
 	{
 		sm_pending = sync->sm_pending;
 		while (sm_pending->pending_next != NULL)

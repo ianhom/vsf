@@ -178,9 +178,9 @@ struct vsfsm_sync_t
 	uint32_t max_value;
 	struct vsfsm_t *sm_pending;
 };
-vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sem, uint32_t cur_value,
+vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sync, uint32_t cur_value,
 				uint32_t max_value, vsfsm_evt_t evt);
-vsf_err_t vsfsm_sync_cancel(struct vsfsm_t *sm, struct vsfsm_sync_t *sync);
+vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
 vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync);
 vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
 
