@@ -450,14 +450,17 @@ vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 
 vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 {
+	struct vsfsm_t *sm;
+	
 	if (sync->sm_pending)
 	{
-		if (vsfsm_post_evt(sync->sm_pending, sync->evt))
+		sm = sync->sm_pending;
+		sync->sm_pending = sync->sm_pending->pending_next;
+		if (vsfsm_post_evt(sm, sync->evt))
 		{
 			// should increase the evtq buffer size
 			return VSFERR_BUG;
 		}
-		sync->sm_pending = sync->sm_pending->pending_next;
 	}
 	else if (sync->cur_value < sync->max_value)
 	{
