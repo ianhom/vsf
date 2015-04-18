@@ -23,7 +23,7 @@ int sllist_is_in(struct sllist *head, struct sllist *node)
 {
 	while (head != (struct sllist *)0)
 	{
-		if (head->next == node)
+		if (head == node)
 		{
 			return 1;
 		}
@@ -41,7 +41,7 @@ int sllist_remove(struct sllist **head, struct sllist *node)
 	
 	if (*head == node)
 	{
-		head = &node->next;
+		*head = node->next;
 		return 0;
 	}
 	while (*head != (struct sllist *)0)

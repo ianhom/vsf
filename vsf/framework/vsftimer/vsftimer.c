@@ -90,6 +90,7 @@ vsf_err_t vsftimer_init(void)
 
 vsf_err_t vsftimer_register(struct vsftimer_timer_t *timer)
 {
+	sllist_init_node(timer->list);
 	timer->start_tickcnt = core_interfaces.tickclk.get_count();
 	if (NULL == vsftimer.timerlist)
 	{
