@@ -1025,6 +1025,7 @@ static void vsfip_tcp_socket_tick(struct vsfip_socket_t *socket)
 			case VSFIP_TCPSTAT_SYN_GET:
 			case VSFIP_TCPSTAT_LASTACK:
 				pcb->state = VSFIP_TCPSTAT_CLOSED;
+			default:
 				vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
 				break;
 			}
