@@ -176,7 +176,9 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 		if ((head->hwlen == netif->macaddr.size) &&
 			(head->protolen == netif->ipaddr.size) &&
 			(buf->buf.size == (sizeof(struct vsfip_arphead_t) +
-								2 * (head->hwlen + head->protolen))))
+								2 * (head->hwlen + head->protolen))) &&
+			!memcmp(bufptr + 2 * head->hwlen + head->protolen,
+					netif->ipaddr.addr.s_addr_buf, head->protolen))
 		{
 			struct vsfip_macaddr_t macaddr;
 			struct vsfip_ipaddr_t ipaddr;
@@ -199,12 +201,8 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 			
 			// send ARP reply
 			vsfip_netif_ip_output_do(buf, VSFIP_NETIF_PROTO_ARP, &macaddr);
+			return;
 		}
-		else
-		{
-			vsfip_buffer_release(buf);
-		}
-		return;
 		break;
 	case ARP_REPLY:
 		// for ARP reply, cache and send UPDATE event to netif->arpc.sm_pending
