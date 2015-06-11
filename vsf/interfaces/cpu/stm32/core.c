@@ -241,61 +241,25 @@ uint32_t stm32_uid_get(uint8_t *buffer, uint32_t size)
 	return size;
 }
 
+// tickclk
 #define CM3_SYSTICK_ENABLE				(1 << 0)
+#define CM3_SYSTICK_INT					(1 << 1)
 #define CM3_SYSTICK_CLKSOURCE			(1 << 2)
 #define CM3_SYSTICK_COUNTFLAG			(1 << 16)
-
-vsf_err_t stm32_delay_init(void)
-{
-	SysTick->CTRL = CM3_SYSTICK_CLKSOURCE;
-	SysTick->VAL = 0;
-	return VSFERR_NONE;
-}
-
-static vsf_err_t stm32_delay_delayus_do(uint32_t tick)
-{
-	uint32_t dly_tmp;
-	
-	stm32_delay_init();
-	while (tick)
-	{
-		dly_tmp = (tick > ((1 << 24) - 1)) ? ((1 << 24) - 1) : tick;
-		SysTick->LOAD = dly_tmp;
-		SysTick->CTRL |= CM3_SYSTICK_ENABLE;
-		while (!(SysTick->CTRL & CM3_SYSTICK_COUNTFLAG));
-		stm32_delay_init();
-		tick -= dly_tmp;
-	}
-	return VSFERR_NONE;
-}
-
-vsf_err_t stm32_delay_delayus(uint16_t us)
-{
-	stm32_delay_delayus_do(us * (stm32_info.sys_freq_hz / (1000 * 1000)));
-	return VSFERR_NONE;
-}
-
-vsf_err_t stm32_delay_delayms(uint16_t ms)
-{
-	stm32_delay_delayus_do(ms * (stm32_info.sys_freq_hz / 1000));
-	return VSFERR_NONE;
-}
-
-// tickclk
-#define TICKCLK_TIM							TIM5
 
 static void (*stm32_tickclk_callback)(void *param) = NULL;
 static void *stm32_tickclk_param = NULL;
 static uint32_t stm32_tickcnt = 0;
 vsf_err_t stm32_tickclk_start(void)
 {
-	TICKCLK_TIM->CR1 |= TIM_CR1_CEN;
+	SysTick->VAL = 0;
+	SysTick->CTRL |= CM3_SYSTICK_ENABLE;
 	return VSFERR_NONE;
 }
 
 vsf_err_t stm32_tickclk_stop(void)
 {
-	TICKCLK_TIM->CR1 &= ~TIM_CR1_CEN;
+	SysTick->CTRL &= ~CM3_SYSTICK_ENABLE;
 	return VSFERR_NONE;
 }
 
@@ -315,47 +279,36 @@ uint32_t stm32_tickclk_get_count(void)
 	return count1;
 }
 
-ROOTFUNC void TIM5_IRQHandler(void)
+ROOTFUNC void SysTick_Handler(void)
 {
 	stm32_tickcnt++;
 	if (stm32_tickclk_callback != NULL)
 	{
 		stm32_tickclk_callback(stm32_tickclk_param);
 	}
-	TICKCLK_TIM->SR = ~TIM_SR_UIF;
 }
 
 vsf_err_t stm32_tickclk_set_callback(void (*callback)(void*), void *param)
 {
-	TICKCLK_TIM->DIER &= ~TIM_DIER_UIE;
+	uint32_t tmp = SysTick->CTRL;
+	
+	SysTick->CTRL &= ~CM3_SYSTICK_INT;
 	stm32_tickclk_callback = callback;
 	stm32_tickclk_param = param;
-	TICKCLK_TIM->DIER |= TIM_DIER_UIE;
+	SysTick->CTRL = tmp;
 	return VSFERR_NONE;
 }
 
 vsf_err_t stm32_tickclk_init(void)
 {
 	stm32_tickcnt = 0;
-	RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;
-	RCC->APB1RSTR |= RCC_APB1RSTR_TIM5RST;
-	RCC->APB1RSTR &= ~RCC_APB1RSTR_TIM5RST;
-	
-	// TIM5 generate 1ms event
-	TICKCLK_TIM->CR1 &= 0x03FF;
-	TICKCLK_TIM->ARR = stm32_info.apb1_freq_hz / 2 / 1000;
-	TICKCLK_TIM->PSC = 1;
-	TICKCLK_TIM->RCR = 0;
-	TICKCLK_TIM->EGR |= TIM_EGR_UG;
-	TICKCLK_TIM->DIER |= TIM_DIER_UIE;
-	NVIC->IP[TIM5_IRQn] = 0xFF;
-	NVIC->ISER[TIM5_IRQn >> 0x05] = 1UL << (TIM5_IRQn & 0x1F);
-	
+	SysTick->LOAD = stm32_info.sys_freq_hz / 1000;
+	SysTick->CTRL = CM3_SYSTICK_INT | CM3_SYSTICK_CLKSOURCE;
+	NVIC_SetPriority(SysTick_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
 	return VSFERR_NONE;
 }
 
 vsf_err_t stm32_tickclk_fini(void)
 {
-	RCC->APB1ENR &= ~RCC_APB1ENR_TIM5EN;
-	return VSFERR_NONE;
+	return stm32_tickclk_stop();
 }

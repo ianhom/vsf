@@ -299,12 +299,6 @@ const struct interfaces_info_t core_interfaces =
 		CORE_TICKCLK_GET_COUNT(__TARGET_CHIP__),
 		CORE_TICKCLK_SET_CALLBACK(__TARGET_CHIP__),
 	}
-	,{
-		// delay
-		CORE_DELAY_INIT(__TARGET_CHIP__),
-		CORE_DELAY_DELAYMS(__TARGET_CHIP__),
-		CORE_DELAY_DELAYUS(__TARGET_CHIP__)
-	}
 	,peripheral_commit
 };
 

@@ -52,7 +52,7 @@ vsf_err_t stm32_gpio_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_gpio_config_pin(uint8_t index, uint8_t pin_idx, uint8_t mode)
+vsf_err_t stm32_gpio_config_pin(uint8_t index, uint8_t pin_idx, uint32_t mode)
 {
 	GPIO_TypeDef *gpio;
 	uint32_t tmpreg = mode & 0x0F;

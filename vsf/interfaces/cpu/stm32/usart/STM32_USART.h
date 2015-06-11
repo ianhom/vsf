@@ -20,10 +20,8 @@
 vsf_err_t stm32_usart_init(uint8_t index);
 vsf_err_t stm32_usart_fini(uint8_t index);
 vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate, 
-								uint8_t datalength, uint8_t mode);
+								uint8_t datalength, uint32_t mode);
 vsf_err_t stm32_usart_config_callback(uint8_t index, uint32_t int_priority,
 				void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 vsf_err_t stm32_usart_tx(uint8_t index, uint16_t data);
-vsf_err_t stm32_usart_tx_isready(uint8_t index);
 uint16_t stm32_usart_rx(uint8_t index);
-vsf_err_t stm32_usart_rx_isready(uint8_t index);

@@ -59,8 +59,9 @@
 
 #define stm32_EINT_ONFALL			0x01
 #define stm32_EINT_ONRISE			0x02
-#define stm32_EINT_INT				0x04
-#define stm32_EINT_EVT				0x08
+#define stm32_EINT_ONLEVEL			0x80
+#define stm32_EINT_ONLOW			(stm32_EINT_ONLEVEL | 0x00)
+#define stm32_EINT_ONHIGH			(stm32_EINT_ONLEVEL | 0x10)
 
 #define stm32_SDIO_RESP_NONE		0x00
 #define stm32_SDIO_RESP_SHORT		0x40

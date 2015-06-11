@@ -572,7 +572,7 @@ vsf_err_t stm32_usart_fini(uint8_t index)
 }
 
 vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate, 
-	uint8_t datalength, uint8_t mode)
+	uint8_t datalength, uint32_t mode)
 {
 	USART_TypeDef *usart;
 	uint8_t usart_idx = index & 0x0F;
@@ -793,23 +793,6 @@ vsf_err_t stm32_usart_tx(uint8_t index, uint16_t data)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_usart_tx_isready(uint8_t index)
-{
-	USART_TypeDef *usart;
-	uint8_t usart_idx = index & 0x0F;
-	
-#if __VSF_DEBUG__
-	if (usart_idx >= USART_NUM)
-	{
-		return VSFERR_NOT_SUPPORT;
-	}
-#endif
-	usart = (USART_TypeDef *)stm32_usarts[usart_idx];
-	
-	return ((usart->SR & STM32_USART_SR_TC) != 0) ?
-				VSFERR_NONE : VSFERR_NOT_READY;
-}
-
 uint16_t stm32_usart_rx(uint8_t index)
 {
 	USART_TypeDef *usart;
@@ -824,23 +807,6 @@ uint16_t stm32_usart_rx(uint8_t index)
 	usart = (USART_TypeDef *)stm32_usarts[usart_idx];
 	
 	return usart->DR;
-}
-
-vsf_err_t stm32_usart_rx_isready(uint8_t index)
-{
-	USART_TypeDef *usart;
-	uint8_t usart_idx = index & 0x0F;
-	
-#if __VSF_DEBUG__
-	if (usart_idx >= USART_NUM)
-	{
-		return VSFERR_NOT_SUPPORT;
-	}
-#endif
-	usart = (USART_TypeDef *)stm32_usarts[usart_idx];
-	
-	return ((usart->SR & STM32_USART_SR_RXNE) != 0) ?
-				VSFERR_NONE : VSFERR_NOT_READY;
 }
 
 #if USART0_INT_EN && (USART00_ENABLE || USART10_ENABLE)

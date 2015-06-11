@@ -175,11 +175,6 @@ vsf_err_t CORE_CLKO_DISABLE(__TARGET_CHIP__)(uint8_t index);
 
 #if IFS_USART_EN
 
-#define CORE_USART_MODE0(m)			__CONNECT(m, _USART_MODE0)
-#define CORE_USART_MODE1(m)			__CONNECT(m, _USART_MODE1)
-#define CORE_USART_MODE2(m)			__CONNECT(m, _USART_MODE2)
-#define CORE_USART_MODE3(m)			__CONNECT(m, _USART_MODE3)
-#define CORE_USART_CLKEN(m)			__CONNECT(m, _USART_CLKEN)
 #define CORE_USART_STOPBITS_0P5(m)	__CONNECT(m, _USART_STOPBITS_0P5)
 #define CORE_USART_STOPBITS_1(m)	__CONNECT(m, _USART_STOPBITS_1)
 #define CORE_USART_STOPBITS_1P5(m)	__CONNECT(m, _USART_STOPBITS_1P5)
@@ -187,11 +182,6 @@ vsf_err_t CORE_CLKO_DISABLE(__TARGET_CHIP__)(uint8_t index);
 #define CORE_USART_PARITY_NONE(m)	__CONNECT(m, _USART_PARITY_NONE)
 #define CORE_USART_PARITY_ODD(m)	__CONNECT(m, _USART_PARITY_ODD)
 #define CORE_USART_PARITY_EVEN(m)	__CONNECT(m, _USART_PARITY_EVEN)
-#define USART_MODE0					CORE_USART_MODE0(__TARGET_CHIP__)
-#define USART_MODE1					CORE_USART_MODE1(__TARGET_CHIP__)
-#define USART_MODE2					CORE_USART_MODE2(__TARGET_CHIP__)
-#define USART_MODE3					CORE_USART_MODE3(__TARGET_CHIP__)
-#define USART_CLKEN					CORE_USART_CLKEN(__TARGET_CHIP__)
 #define USART_STOPBITS_1			CORE_USART_STOPBITS_1(__TARGET_CHIP__)
 #define USART_STOPBITS_1P5			CORE_USART_STOPBITS_1P5(__TARGET_CHIP__)
 #define USART_STOPBITS_2			CORE_USART_STOPBITS_2(__TARGET_CHIP__)
@@ -203,20 +193,11 @@ struct interface_usart_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t baudrate, uint8_t datalength, 
-						uint8_t mode);
+						uint32_t mode);
 	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority,
 			void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 	vsf_err_t (*tx)(uint8_t index, uint16_t data);
-	vsf_err_t (*tx_isready)(uint8_t index);
 	uint16_t (*rx)(uint8_t index);
-	vsf_err_t (*rx_isready)(uint8_t index);
-	
-//	vsf_err_t (*dma_tx_start)(uint8_t index, void *data, uint32_t len);
-//	vsf_err_t (*dma_tx_isready)(uint8_t index);
-//	vsf_err_t (*dma_tx_end)(uint8_t index);
-//	vsf_err_t (*dma_rx_start)(uint8_t index, void *data, uint32_t len);
-//	vsf_err_t (*dma_rx_isready)(uint8_t index);
-//	vsf_err_t (*dma_rx_end)(uint8_t index);
 };
 
 #define CORE_USART_INIT(m)				__CONNECT(m, _usart_init)
@@ -224,21 +205,17 @@ struct interface_usart_t
 #define CORE_USART_CONFIG(m)			__CONNECT(m, _usart_config)
 #define CORE_USART_CONFIG_CALLBACK(m)	__CONNECT(m, _usart_config_callback)
 #define CORE_USART_RX(m)				__CONNECT(m, _usart_rx)
-#define CORE_USART_RX_ISREADY(m)		__CONNECT(m, _usart_rx_isready)
 #define CORE_USART_TX(m)				__CONNECT(m, _usart_tx)
-#define CORE_USART_TX_ISREADY(m)		__CONNECT(m, _usart_tx_isready)
 
 vsf_err_t CORE_USART_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t baudrate, 
-	uint8_t datalength, uint8_t mode);
+	uint8_t datalength, uint32_t mode);
 vsf_err_t CORE_USART_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index,
 	uint32_t int_priority, void *p, void (*ontx)(void *),
 	void (*onrx)(void *, uint16_t));
 vsf_err_t CORE_USART_TX(__TARGET_CHIP__)(uint8_t index, uint16_t data);
-vsf_err_t CORE_USART_TX_ISREADY(__TARGET_CHIP__)(uint8_t index);
 uint16_t CORE_USART_RX(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_USART_RX_ISREADY(__TARGET_CHIP__)(uint8_t index);
 
 #endif
 
@@ -389,7 +366,7 @@ struct interface_gpio_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config_pin)(uint8_t index, uint8_t pin_idx, uint8_t mode);
+	vsf_err_t (*config_pin)(uint8_t index, uint8_t pin_idx, uint32_t mode);
 	vsf_err_t (*config)(uint8_t index, uint32_t pin_mask, uint32_t io, 
 						uint32_t pull_en_mask, uint32_t input_pull_mask);
 	vsf_err_t (*set)(uint8_t index, uint32_t pin_mask);
@@ -418,7 +395,7 @@ struct interface_gpio_pin_t
 vsf_err_t CORE_GPIO_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_GPIO_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_GPIO_CONFIG_PIN(__TARGET_CHIP__)(uint8_t index, uint8_t pin_idx, 
-												uint8_t mode);
+												uint32_t mode);
 vsf_err_t CORE_GPIO_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask, 
 		uint32_t io, uint32_t pull_en_mask, uint32_t input_pull_mask);
 vsf_err_t CORE_GPIO_IN(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask, 
@@ -430,21 +407,6 @@ vsf_err_t CORE_GPIO_CLEAR(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask);
 uint32_t CORE_GPIO_GET(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask);
 
 #endif
-
-struct interface_delay_t
-{
-	vsf_err_t (*init)(void);
-	vsf_err_t (*delayms)(uint16_t ms);
-	vsf_err_t (*delayus)(uint16_t us);
-};
-
-#define CORE_DELAY_INIT(m)				__CONNECT(m, _delay_init)
-#define CORE_DELAY_DELAYMS(m)			__CONNECT(m, _delay_delayms)
-#define CORE_DELAY_DELAYUS(m)			__CONNECT(m, _delay_delayus)
-
-vsf_err_t CORE_DELAY_INIT(__TARGET_CHIP__)(void);
-vsf_err_t CORE_DELAY_DELAYMS(__TARGET_CHIP__)(uint16_t ms);
-vsf_err_t CORE_DELAY_DELAYUS(__TARGET_CHIP__)(uint16_t us);
 
 struct interface_tickclk_t
 {
@@ -572,17 +534,18 @@ vsf_err_t CORE_TIMER_SET_CHANNEL(__TARGET_CHIP__)(uint8_t index,
 
 #define CORE_EINT_ONFALL(m)			__CONNECT(m, _EINT_ONFALL)
 #define CORE_EINT_ONRISE(m)			__CONNECT(m, _EINT_ONRISE)
-#define CORE_EINT_INT(m)			__CONNECT(m, _EINT_INT)
-#define CORE_EINT_EVT(m)			__CONNECT(m, _EINT_EVT)
+#define CORE_EINT_ONLOW(m)			__CONNECT(m, _EINT_ONLOW)
+#define CORE_EINT_ONHIGH(m)			__CONNECT(m, _EINT_ONHIGH)
 #define EINT_ONFALL					CORE_EINT_ONFALL(__TARGET_CHIP__)
 #define EINT_ONRISE					CORE_EINT_ONRISE(__TARGET_CHIP__)
-#define EINT_INT					CORE_EINT_INT(__TARGET_CHIP__)
-#define EINT_EVT					CORE_EINT_EVT(__TARGET_CHIP__)
+#define EINT_ONLOW					CORE_EINT_ONLOW(__TARGET_CHIP__)
+#define EINT_ONHIGH					CORE_EINT_ONHIGH(__TARGET_CHIP__)
 struct interface_eint_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint8_t type, void (*callback)(void));
+	vsf_err_t (*config)(uint8_t index, uint8_t type, uint32_t int_priority,
+						void (*callback)(void *param), void *param);
 	vsf_err_t (*enable)(uint8_t index);
 	vsf_err_t (*disable)(uint8_t index);
 	vsf_err_t (*trigger)(uint8_t index);
@@ -598,7 +561,7 @@ struct interface_eint_t
 vsf_err_t CORE_EINT_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_EINT_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_EINT_CONFIG(__TARGET_CHIP__)(uint8_t index, uint8_t type, 
-											void (*callback)(void));
+			uint32_t int_priority, void (*callback)(void *param), void *param);
 vsf_err_t CORE_EINT_ENABLE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_EINT_DISABLE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_EINT_TRIGGER(__TARGET_CHIP__)(uint8_t index);
@@ -1182,7 +1145,6 @@ struct interfaces_info_t
 	struct interface_sdio_t sdio;
 #endif
 	struct interface_tickclk_t tickclk;
-	struct interface_delay_t delay;
 	vsf_err_t (*peripheral_commit)(void);
 };
 

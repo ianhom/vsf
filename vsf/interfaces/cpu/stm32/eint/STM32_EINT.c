@@ -23,11 +23,13 @@
 #include "STM32_EINT.h"
 
 #define STM32_EINT_NUM					16
-static void (*stm32_enit_callback[STM32_EINT_NUM])(void);
+static void (*stm32_eint_callback[STM32_EINT_NUM])(void *param);
+static void *stm32_eint_param[STM32_EINT_NUM];
 
 vsf_err_t stm32_eint_init(uint8_t index)
 {
 	uint32_t eint_idx = (index & 0x0F) >> 0;
+	uint32_t mask = 1 << eint_idx;
 	uint32_t port_idx = (index & 0xF0) >> 4;
 	
 #if __VSF_DEBUG__
@@ -36,6 +38,10 @@ vsf_err_t stm32_eint_init(uint8_t index)
 		return VSFERR_NOT_SUPPORT;
 	}
 #endif
+	
+	EXTI->RTSR &= ~mask;
+	EXTI->FTSR &= ~mask;
+	EXTI->IMR &= ~mask;
 	
 	AFIO->EXTICR[eint_idx >> 2] &= 0x0F << ((eint_idx & 0x03) << 2);
 	AFIO->EXTICR[eint_idx >> 2] |= port_idx << ((eint_idx & 0x03) << 2);
@@ -55,19 +61,17 @@ vsf_err_t stm32_eint_fini(uint8_t index)
 #endif
 	
 	EXTI->IMR &= ~mask;
-	EXTI->EMR &= ~mask;
-	EXTI->PR |= ~mask;
+	EXTI->PR |= mask;
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_config(uint8_t index, uint8_t type, void (*callback)(void))
+vsf_err_t stm32_eint_config(uint8_t index, uint8_t type, uint32_t int_priority,
+							void (*callback)(void *param), void *param)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
-	uint8_t on_fall = type & EINT_ONFALL, 
-			on_rise = type & EINT_ONRISE, 
-			interrupt = type & EINT_INT, 
-			event = type & EINT_EVT;
+	uint8_t on_fall = type & EINT_ONFALL, on_rise = type & EINT_ONRISE;
+	uint8_t irqn;
 	
 #if __VSF_DEBUG__
 	if (eint_idx >= STM32_EINT_NUM)
@@ -94,21 +98,29 @@ vsf_err_t stm32_eint_config(uint8_t index, uint8_t type, void (*callback)(void))
 		{
 			EXTI->RTSR &= ~mask;
 		}
-		stm32_enit_callback[eint_idx] = callback;
-		if (interrupt)
+		stm32_eint_callback[eint_idx] = callback;
+		stm32_eint_param[eint_idx] = param;
+		
+		if (eint_idx < 5)
 		{
-			EXTI->EMR |= mask;
+			irqn = EXTI0_IRQn + eint_idx;
 		}
-		if (event)
+		else if (eint_idx < 10)
 		{
-			EXTI->IMR |= mask;
+			irqn = EXTI9_5_IRQn;
 		}
+		else
+		{
+			irqn = EXTI15_10_IRQn;
+		}
+		
+		NVIC->IP[irqn] = int_priority;
+		NVIC->ISER[irqn >> 0x05] = 1UL << (irqn & 0x1F);
 	}
 	else
 	{
 		EXTI->IMR &= ~mask;
-		EXTI->EMR &= ~mask;
-		stm32_enit_callback[eint_idx] = NULL;
+		stm32_eint_callback[eint_idx] = NULL;
 	}
 	
 	return VSFERR_NONE;
@@ -164,9 +176,9 @@ vsf_err_t stm32_eint_trigger(uint8_t index)
 
 static void stm32_eint_call(uint8_t index)
 {
-	if (stm32_enit_callback[index] != NULL)
+	if (stm32_eint_callback[index] != NULL)
 	{
-		stm32_enit_callback[index]();
+		stm32_eint_callback[index](stm32_eint_param[index]);
 	}
 	EXTI->PR = 1 << index;
 }
