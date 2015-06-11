@@ -20,6 +20,7 @@ struct vsfip_dhcp_t
 	struct vsfip_ipaddr_t ipaddr;
 	struct vsfip_ipaddr_t gw;
 	struct vsfip_ipaddr_t netmask;
+	struct vsfip_ipaddr_t dns[2];
 	struct vsfip_buffer_t fakebuffer;
 	struct vsfsm_pt_t caller_pt;
 	struct vsfsm_sem_t update_sem;

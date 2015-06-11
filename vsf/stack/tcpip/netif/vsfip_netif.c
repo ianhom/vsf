@@ -87,18 +87,17 @@ static vsf_err_t vsfip_netif_ip_output_do(struct vsfip_buffer_t *buf,
 					enum vsfip_netif_proto_t proto, struct vsfip_macaddr_t *mac)
 {
 	struct vsfip_netif_t *netif = buf->netif;
-	vsf_err_t err = netif->drv->op->header(buf, proto, mac);
-	if (err) goto cleanup;
 	
-	buf->next = NULL;
+	if (netif->drv->op->header(buf, proto, mac))
+	{
+		vsfip_buffer_release(buf);
+		return VSFERR_FAIL;
+	}
+	
+	// TODO: there will be problem when vsfsm_sem_post fails,
+	// 			but it SHOULD not fail except BUG in system
 	vsfip_bufferlist_queue(&netif->output_queue, buf);
-	err = vsfsm_sem_post(&netif->output_sem);
-	if (err) goto cleanup; else goto end;
-	
-cleanup:
-	vsfip_buffer_release(buf);
-end:
-	return err;
+	return vsfsm_sem_post(&netif->output_sem);
 }
 
 static void vsfip_netif_get_ipaddr(struct vsfip_buffer_t *buf,
@@ -118,30 +117,50 @@ static void vsfip_netif_get_ipaddr(struct vsfip_buffer_t *buf,
 	}
 }
 
+static bool vsfip_netif_islocal(struct vsfip_netif_t *netif,
+								struct vsfip_ipaddr_t *ipaddr)
+{
+	int i;
+	uint8_t addr_mask;
+	
+	if (0xFFFFFFFF == ipaddr->addr.s_addr)
+	{
+		return true;
+	}
+	for (i = 0; i < netif->netmask.size; i++)
+	{
+		addr_mask = netif->netmask.addr.s_addr_buf[i];
+		if ((ipaddr->addr.s_addr_buf[i] & addr_mask) !=
+			(netif->gateway.addr.s_addr_buf[i] & addr_mask))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 vsf_err_t vsfip_netif_ip_output(struct vsfip_buffer_t *buf)
 {
 	struct vsfip_netif_t *netif = buf->netif;
 	struct vsfip_macaddr_t *mac;
-	struct vsfip_ipaddr_t dest;
-	vsf_err_t err = VSFERR_NONE;
+	struct vsfip_ipaddr_t dest, *ip_for_mac;
 	
 	vsfip_netif_get_ipaddr(buf, &dest);
-	mac = vsfip_netif_get_mac(netif, &dest);
+	ip_for_mac = vsfip_netif_islocal(netif, &dest) || !netif->gateway.size ?
+					&dest : &netif->gateway;
+	mac = vsfip_netif_get_mac(netif, ip_for_mac);
 	if (NULL == mac)
 	{
+		// TODO: there will be problem when vsfsm_sem_post fails,
+		// 			but it SHOULD not fail except BUG in system
 		vsfip_bufferlist_queue(&netif->arpc.requestlist, buf);
-		err = vsfsm_sem_post(&netif->arpc.sem);
-		if (err) goto cleanup; else goto end;
+		return vsfsm_sem_post(&netif->arpc.sem);
 	}
 	else if (buf->buf.size)
 	{
 		return vsfip_netif_ip_output_do(buf, VSFIP_NETIF_PROTO_IP, mac);
 	}
-	
-cleanup:
-	vsfip_buffer_release(buf);
-end:
-	return err;
+	return VSFERR_NONE;
 }
 
 void vsfip_netif_ip4_input(struct vsfip_buffer_t *buf)
@@ -175,7 +194,7 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 	
 		if ((head->hwlen == netif->macaddr.size) &&
 			(head->protolen == netif->ipaddr.size) &&
-			(buf->buf.size == (sizeof(struct vsfip_arphead_t) +
+			(buf->buf.size >= (sizeof(struct vsfip_arphead_t) +
 								2 * (head->hwlen + head->protolen))) &&
 			!memcmp(bufptr + 2 * head->hwlen + head->protolen,
 					netif->ipaddr.addr.s_addr_buf, head->protolen))
@@ -208,7 +227,8 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 		// for ARP reply, cache and send UPDATE event to netif->arpc.sm_pending
 		if ((head->hwlen != netif->macaddr.size) ||
 			(head->protolen != netif->ipaddr.size) ||
-			((sizeof(struct vsfip_arphead_t) + 2 * (head->hwlen + head->protolen)) != buf->buf.size))
+			(buf->buf.size < (sizeof(struct vsfip_arphead_t) +
+								2 * (head->hwlen + head->protolen))))
 		{
 			break;
 		}
@@ -243,16 +263,47 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 	vsfip_buffer_release(buf);
 }
 
+static struct vsfip_buffer_t *vsfip_netif_prepare_arp_request(
+					struct vsfip_netif_t *netif, struct vsfip_ipaddr_t *ipaddr)
+{
+	struct vsfip_buffer_t *buf = vsfip_buffer_get(128);
+	
+	if (buf != NULL)
+	{
+		uint32_t headsize = netif->drv->netif_header_size +
+							netif->drv->drv_header_size;
+		struct vsfip_arphead_t *head;
+		uint8_t *ptr;
+		
+		buf->netif = netif;
+		
+		buf->buf.buffer += headsize;
+		head = (struct vsfip_arphead_t *)buf->buf.buffer;
+		head->hwtype = SYS_TO_BE_U16(netif->drv->hwtype);
+		head->prototype = SYS_TO_BE_U16(VSFIP_NETIF_PROTO_IP);
+		head->hwlen = (uint8_t)netif->macaddr.size;
+		head->protolen = (uint8_t)netif->ipaddr.size;
+		head->op = SYS_TO_BE_U16(ARP_REQUEST);
+		ptr = (uint8_t *)head + sizeof(struct vsfip_arphead_t);
+		memcpy(ptr, netif->macaddr.addr.s_addr_buf, netif->macaddr.size);
+		ptr += netif->macaddr.size;
+		memcpy(ptr, netif->ipaddr.addr.s_addr_buf, netif->ipaddr.size);
+		ptr += netif->ipaddr.size;
+		memset(ptr, 0, netif->macaddr.size);
+		ptr += netif->macaddr.size;
+		memcpy(ptr, ipaddr->addr.s_addr_buf, ipaddr->size);
+		ptr += ipaddr->size;
+		buf->buf.size = ptr - (uint8_t *)head;
+	}
+	return buf;
+}
+
 static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 												vsfsm_evt_t evt)
 {
 	struct vsfip_netif_t *netif = (struct vsfip_netif_t *)pt->user_data;
 	struct vsfip_macaddr_t *mac;
 	struct vsfip_ipaddr_t dest;
-	struct vsfip_arphead_t *head;
-	uint8_t *ptr;
-	uint32_t headsize = netif->drv->netif_header_size +
-						netif->drv->drv_header_size;
 	
 	vsfsm_pt_begin(pt);
 	
@@ -268,38 +319,24 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 		if (netif->arpc.cur_request != NULL)
 		{
 			vsfip_netif_get_ipaddr(netif->arpc.cur_request, &dest);
-			mac = vsfip_netif_get_mac(netif, &dest);
+			// for local ip, send ARP for dest ip
+			// for non-local ip, if gateway is valid, send to gateway
+			// for non-local ip, if gateway is not valid, send ARP for dest ip
+			// 		and if proxy ARP is enabled on router, router will reply
+			netif->arpc.ip_for_mac =
+				vsfip_netif_islocal(netif, &dest) || !netif->gateway.size ?
+					dest : netif->gateway;
+			mac = vsfip_netif_get_mac(netif, &netif->arpc.ip_for_mac);
 			if (NULL == mac)
 			{
-				// generate ARP request body
-				netif->arpc.buf = vsfip_buffer_get(128);
+				netif->arpc.retry = 3;
+			retry:
+				netif->arpc.buf = vsfip_netif_prepare_arp_request(
+												netif, &netif->arpc.ip_for_mac);
 				if (netif->arpc.buf != NULL)
 				{
-					netif->arpc.buf->netif = netif;
-					
-					netif->arpc.buf->buf.buffer += headsize;
-					head =
-						(struct vsfip_arphead_t *)netif->arpc.buf->buf.buffer;
-					head->hwtype = SYS_TO_BE_U16(netif->drv->hwtype);
-					head->prototype = SYS_TO_BE_U16(VSFIP_NETIF_PROTO_IP);
-					head->hwlen = (uint8_t)netif->macaddr.size;
-					head->protolen = (uint8_t)netif->ipaddr.size;
-					head->op = SYS_TO_BE_U16(ARP_REQUEST);
-					ptr = (uint8_t *)head + sizeof(struct vsfip_arphead_t);
-					memcpy(ptr, netif->macaddr.addr.s_addr_buf,
-								netif->macaddr.size);
-					ptr += netif->macaddr.size;
-					memcpy(ptr, netif->ipaddr.addr.s_addr_buf,
-								netif->ipaddr.size);
-					ptr += netif->ipaddr.size;
-					memset(ptr, 0, netif->macaddr.size);
-					ptr += netif->macaddr.size;
-					memcpy(ptr, dest.addr.s_addr_buf, dest.size);
-					ptr += dest.size;
-					netif->arpc.buf->buf.size = ptr - (uint8_t *)head;
-					
 					if (!vsfip_netif_ip_output_do(netif->arpc.buf,
-								VSFIP_NETIF_PROTO_ARP, &netif->mac_broadcast))
+							VSFIP_NETIF_PROTO_ARP, &netif->mac_broadcast))
 					{
 						netif->arpc.sm_pending = pt->sm;
 						// wait for reply with timeout
@@ -318,8 +355,12 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 						netif->arpc.sm_pending = NULL;
 					}
 					
-					vsfip_netif_get_ipaddr(netif->arpc.cur_request, &dest);
-					mac = vsfip_netif_get_mac(netif, &dest);
+					mac = vsfip_netif_get_mac(netif, &netif->arpc.ip_for_mac);
+					if ((NULL == mac) && (netif->arpc.retry > 0))
+					{
+						netif->arpc.retry--;
+						goto retry;
+					}
 				}
 			}
 			

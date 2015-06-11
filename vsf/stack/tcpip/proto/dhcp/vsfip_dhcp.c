@@ -147,7 +147,7 @@ static vsf_err_t vsfip_dhcp_init_msg(struct vsfip_dhcp_t *dhcp, uint8_t op)
 	}
 	{
 		uint8_t requestlist[] = {VSFIP_DHCPOPT_SUBNET_MASK,
-			VSFIP_DHCPOPT_ROUTER, VSFIP_DHCPOPT_BROADCAST};
+			VSFIP_DHCPOPT_ROUTER, VSFIP_DHCPOPT_DNS, VSFIP_DHCPOPT_BROADCAST};
 		vsfip_dhcp_append_opt(dhcp, VSFIP_DHCPOPT_PARAMLIST,
 								sizeof(requestlist), requestlist);
 	}
@@ -336,6 +336,20 @@ dhcp_request:
 		dhcp->gw.size = optlen;
 		dhcp->gw.addr.s_addr = (4 == optlen) ? *(uint32_t *)optptr : 0;
 		
+		optlen = vsfip_dhcp_get_opt(dhcp->inbuffer, VSFIP_DHCPOPT_DNS,
+									&optptr);
+		dhcp->dns[0].size = dhcp->dns[1].size = 0;
+		if (optlen >= 4)
+		{
+			dhcp->dns[0].size = 4;
+			dhcp->dns[0].addr.s_addr = *(uint32_t *)optptr;
+			if (optlen >= 8)
+			{
+				dhcp->dns[1].size = 4;
+				dhcp->dns[1].addr.s_addr = *(uint32_t *)(optptr + 4);
+			}
+		}
+		
 		vsfip_buffer_release(dhcp->inbuffer);
 	}
 	
@@ -343,6 +357,8 @@ dhcp_request:
 	netif->ipaddr = dhcp->ipaddr;
 	netif->gateway = dhcp->gw;
 	netif->netmask = dhcp->netmask;
+	netif->dns[0] = dhcp->dns[0];
+	netif->dns[1] = dhcp->dns[1];
 	if (dhcp->update_sem.evt != VSFSM_EVT_NONE)
 	{
 		vsfsm_sem_post(&dhcp->update_sem);

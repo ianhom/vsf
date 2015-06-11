@@ -46,6 +46,9 @@ struct vsfip_netif_t
 	struct vsfip_ipaddr_t ipaddr;
 	struct vsfip_ipaddr_t netmask;
 	struct vsfip_ipaddr_t gateway;
+	struct vsfip_ipaddr_t dns[2];
+	
+	struct vsfip_macaddr_t mac_broadcast;
 	
 	uint16_t mtu;
 	
@@ -65,10 +68,11 @@ struct vsfip_netif_t
 		struct vsfip_buffer_t *buf;
 		struct vsfip_bufferlist_t requestlist;
 		struct vsfip_buffer_t *cur_request;
+		struct vsfip_ipaddr_t ip_for_mac;
+		uint32_t retry;
 	} arpc;
 	
 	uint32_t arp_time;
-	struct vsfip_macaddr_t mac_broadcast;
 	struct vsfip_arp_entry_t arp_cache[VSFIP_CFG_ARPCACHE_SIZE];
 	
 	struct vsfsm_pt_t init_pt;
