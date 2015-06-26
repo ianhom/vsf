@@ -46,6 +46,7 @@
 #define STM32_USART_CR1_UE				((uint32_t)1 << 13)
 #define STM32_USART_CR1_M				((uint32_t)1 << 12)
 #define STM32_USART_CR1_TXEIE			((uint32_t)1 << 7)
+#define STM32_USART_CR1_TCIE			((uint32_t)1 << 6)
 #define STM32_USART_CR1_RXNEIE			((uint32_t)1 << 5)
 #define STM32_USART_CR1_TE				((uint32_t)1 << 3)
 #define STM32_USART_CR1_RE				((uint32_t)1 << 2)
@@ -594,7 +595,7 @@ vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate,
 		return VSFERR_FAIL;
 	}
 	
-	cr1 = usart->CR1 & (STM32_USART_CR1_TXEIE | STM32_USART_CR1_RXNEIE);
+	cr1 = usart->CR1 & (STM32_USART_CR1_TCIE | STM32_USART_CR1_RXNEIE);
 	switch (usart_idx)
 	{
 	#if USART00_ENABLE || USART10_ENABLE
@@ -755,13 +756,13 @@ vsf_err_t stm32_usart_config_callback(uint8_t index, uint32_t int_priority,
 	stm32_usart_callback_param[usart_idx] = p;
 	if (ontx != NULL)
 	{
-		cr1 |= STM32_USART_CR1_TXEIE;
+		cr1 |= STM32_USART_CR1_TCIE;
 	}
 	if (onrx != NULL)
 	{
 		cr1 |= STM32_USART_CR1_RXNEIE;
 	}
-	usart->CR1 &= ~(STM32_USART_CR1_TXEIE | STM32_USART_CR1_RXNEIE);
+	usart->CR1 &= ~(STM32_USART_CR1_TCIE | STM32_USART_CR1_RXNEIE);
 	usart->CR1 |= cr1;
 	
 	if ((ontx != NULL) || (onrx != NULL))
@@ -816,9 +817,10 @@ ROOTFUNC void USART1_IRQHandler(void)
 	{
 		stm32_usart_onrx[0](stm32_usart_callback_param[0], USART1->DR);
 	}
-	if ((stm32_usart_ontx[0] != NULL) && (USART1->SR & STM32_USART_SR_TXE))
+	if ((stm32_usart_ontx[0] != NULL) && (USART1->SR & STM32_USART_SR_TC))
 	{
 		stm32_usart_ontx[0](stm32_usart_callback_param[0]);
+		USART1->SR &= ~STM32_USART_SR_TC;
 	}
 }
 #endif
@@ -830,9 +832,10 @@ ROOTFUNC void USART2_IRQHandler(void)
 	{
 		stm32_usart_onrx[1](stm32_usart_callback_param[1], USART2->DR);
 	}
-	if ((stm32_usart_ontx[1] != NULL) && (USART2->SR & STM32_USART_SR_TXE))
+	if ((stm32_usart_ontx[1] != NULL) && (USART2->SR & STM32_USART_SR_TC))
 	{
 		stm32_usart_ontx[1](stm32_usart_callback_param[1]);
+		USART2->SR &= ~STM32_USART_SR_TC;
 	}
 }
 #endif
@@ -844,9 +847,10 @@ ROOTFUNC void USART3_IRQHandler(void)
 	{
 		stm32_usart_onrx[2](stm32_usart_callback_param[2], USART3->DR);
 	}
-	if ((stm32_usart_ontx[2] != NULL) && (USART3->SR & STM32_USART_SR_TXE))
+	if ((stm32_usart_ontx[2] != NULL) && (USART3->SR & STM32_USART_SR_TC))
 	{
 		stm32_usart_ontx[2](stm32_usart_callback_param[2]);
+		USART3->SR &= ~STM32_USART_SR_TC;
 	}
 }
 #endif
