@@ -26,7 +26,7 @@
 static void (*stm32_eint_callback[STM32_EINT_NUM])(void *param);
 static void *stm32_eint_param[STM32_EINT_NUM];
 
-vsf_err_t stm32_eint_init(uint8_t index)
+vsf_err_t stm32_eint_init(uint32_t index)
 {
 	uint32_t eint_idx = (index & 0x0F) >> 0;
 	uint32_t mask = 1 << eint_idx;
@@ -48,7 +48,7 @@ vsf_err_t stm32_eint_init(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_fini(uint8_t index)
+vsf_err_t stm32_eint_fini(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
@@ -65,8 +65,8 @@ vsf_err_t stm32_eint_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_config(uint8_t index, uint8_t type, uint32_t int_priority,
-							void (*callback)(void *param), void *param)
+vsf_err_t stm32_eint_config(uint32_t index, uint32_t type,
+			uint32_t int_priority, void (*callback)(void *param), void *param)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
@@ -126,7 +126,7 @@ vsf_err_t stm32_eint_config(uint8_t index, uint8_t type, uint32_t int_priority,
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_enable(uint8_t index)
+vsf_err_t stm32_eint_enable(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
@@ -142,7 +142,7 @@ vsf_err_t stm32_eint_enable(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_disable(uint8_t index)
+vsf_err_t stm32_eint_disable(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
@@ -158,7 +158,7 @@ vsf_err_t stm32_eint_disable(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_eint_trigger(uint8_t index)
+vsf_err_t stm32_eint_trigger(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
@@ -174,7 +174,7 @@ vsf_err_t stm32_eint_trigger(uint8_t index)
 	return VSFERR_NONE;
 }
 
-static void stm32_eint_call(uint8_t index)
+static void stm32_eint_call(uint32_t index)
 {
 	if (stm32_eint_callback[index] != NULL)
 	{
