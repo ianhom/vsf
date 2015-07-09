@@ -844,7 +844,7 @@ vsf_err_t stm32_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_spi_stop(uint8_t index)
+uint32_t stm32_spi_stop(uint8_t index)
 {
 	uint8_t spi_idx = index & 0x0F;
 	SPI_TypeDef *spi;
@@ -853,7 +853,7 @@ vsf_err_t stm32_spi_stop(uint8_t index)
 #if __VSF_DEBUG__
 	if ((spi_idx >= SPI_NUM) || (len > 0xFFFF))
 	{
-		return VSFERR_NOT_SUPPORT;
+		return 0;
 	}
 #endif
 	spi = stm32_spi[spi_idx].spi;
@@ -863,23 +863,6 @@ vsf_err_t stm32_spi_stop(uint8_t index)
 	spi->CR2 &= ~3;
 	dmatx->CCR &= ~1;
 	dmarx->CCR &= ~1;
-	
-	return VSFERR_NONE;
-}
-
-uint32_t stm32_spi_getlen(uint8_t index)
-{
-	uint8_t spi_idx = index & 0x0F;
-	DMA_Channel_TypeDef *dmatx, *dmarx;
-	
-#if __VSF_DEBUG__
-	if ((spi_idx >= SPI_NUM) || (len > 0xFFFF))
-	{
-		return VSFERR_NOT_SUPPORT;
-	}
-#endif
-	dmatx = stm32_spi[spi_idx].dmatx;
-	dmarx = stm32_spi[spi_idx].dmarx;
 	
 	return stm32_spi_param[spi_idx].len -
 		(stm32_spi_param[spi_idx].out ? dmatx->CNDTR : dmarx->CNDTR);

@@ -135,11 +135,11 @@ bool CORE_FLASH_ISPROTECTED(__TARGET_CHIP__)(uint8_t index);
 
 struct interface_clko_t
 {
-	vsf_err_t (*init)(uint8_t index);
-	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint32_t kHz);
-	vsf_err_t (*enable)(uint8_t index);
-	vsf_err_t (*disable)(uint8_t index);
+	vsf_err_t (*init)(uint32_t index);
+	vsf_err_t (*fini)(uint32_t index);
+	vsf_err_t (*config)(uint32_t index, uint32_t kHz);
+	vsf_err_t (*enable)(uint32_t index);
+	vsf_err_t (*disable)(uint32_t index);
 };
 
 #define CORE_CLKO_INIT(m)				__CONNECT(m, _clko_init)
@@ -148,11 +148,11 @@ struct interface_clko_t
 #define CORE_CLKO_ENABLE(m)				__CONNECT(m, _clko_enable)
 #define CORE_CLKO_DISABLE(m)			__CONNECT(m, _clko_disable)
 
-vsf_err_t CORE_CLKO_INIT(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_CLKO_FINI(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_CLKO_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz);
-vsf_err_t CORE_CLKO_ENABLE(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_CLKO_DISABLE(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_CLKO_INIT(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_CLKO_FINI(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_CLKO_CONFIG(__TARGET_CHIP__)(uint32_t index, uint32_t kHz);
+vsf_err_t CORE_CLKO_ENABLE(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_CLKO_DISABLE(__TARGET_CHIP__)(uint32_t index);
 
 #endif
 
@@ -234,8 +234,7 @@ struct interface_spi_t
 	vsf_err_t (*deselect)(uint8_t index, uint8_t cs);
 	
 	vsf_err_t (*start)(uint8_t index, uint8_t *out, uint8_t *in, uint32_t len);
-	vsf_err_t (*stop)(uint8_t index);
-	uint32_t (*getlen)(uint8_t index);
+	uint32_t (*stop)(uint8_t index);
 };
 
 #define CORE_SPI_INIT(m)				__CONNECT(m, _spi_init)
@@ -249,7 +248,6 @@ struct interface_spi_t
 #define CORE_SPI_DESELECT(m)			__CONNECT(m, _spi_deselect)
 #define CORE_SPI_START(m)				__CONNECT(m, _spi_start)
 #define CORE_SPI_STOP(m)				__CONNECT(m, _spi_stop)
-#define CORE_SPI_GETLEN(m)				__CONNECT(m, _spi_getlen)
 
 vsf_err_t CORE_SPI_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SPI_FINI(__TARGET_CHIP__)(uint8_t index);
@@ -261,8 +259,7 @@ vsf_err_t CORE_SPI_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, uint32_t int_
 vsf_err_t CORE_SPI_SELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
 vsf_err_t CORE_SPI_DESELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
 vsf_err_t CORE_SPI_START(__TARGET_CHIP__)(uint8_t index, uint8_t *out, uint8_t *in, uint32_t len);
-vsf_err_t CORE_SPI_STOP(__TARGET_CHIP__)(uint8_t index);
-uint32_t CORE_SPI_GETLEN(__TARGET_CHIP__)(uint8_t index);
+uint32_t CORE_SPI_STOP(__TARGET_CHIP__)(uint8_t index);
 
 #endif
 
@@ -484,12 +481,11 @@ vsf_err_t CORE_TIMER_SET_CHANNEL(__TARGET_CHIP__)(uint8_t index, uint8_t channel
 #define EINT_ONHIGH					CORE_EINT_ONHIGH(__TARGET_CHIP__)
 struct interface_eint_t
 {
-	vsf_err_t (*init)(uint8_t index);
-	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint8_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
-	vsf_err_t (*enable)(uint8_t index);
-	vsf_err_t (*disable)(uint8_t index);
-	vsf_err_t (*trigger)(uint8_t index);
+	vsf_err_t (*init)(uint32_t index);
+	vsf_err_t (*fini)(uint32_t index);
+	vsf_err_t (*config)(uint32_t index, uint32_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
+	vsf_err_t (*enable)(uint32_t index);
+	vsf_err_t (*disable)(uint32_t index);
 };
 
 #define CORE_EINT_INIT(m)				__CONNECT(m, _eint_init)
@@ -497,14 +493,12 @@ struct interface_eint_t
 #define CORE_EINT_CONFIG(m)				__CONNECT(m, _eint_config)
 #define CORE_EINT_ENABLE(m)				__CONNECT(m, _eint_enable)
 #define CORE_EINT_DISABLE(m)			__CONNECT(m, _eint_disable)
-#define CORE_EINT_TRIGGER(m)			__CONNECT(m, _eint_trigger)
 
-vsf_err_t CORE_EINT_INIT(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_EINT_FINI(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_EINT_CONFIG(__TARGET_CHIP__)(uint8_t index, uint8_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
-vsf_err_t CORE_EINT_ENABLE(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_EINT_DISABLE(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_EINT_TRIGGER(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_EINT_INIT(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_EINT_FINI(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_EINT_CONFIG(__TARGET_CHIP__)(uint32_t index, uint32_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
+vsf_err_t CORE_EINT_ENABLE(__TARGET_CHIP__)(uint32_t index);
+vsf_err_t CORE_EINT_DISABLE(__TARGET_CHIP__)(uint32_t index);
 
 #endif
 

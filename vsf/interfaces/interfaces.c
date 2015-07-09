@@ -110,7 +110,6 @@ const struct interfaces_info_t core_interfaces =
 		CORE_EINT_CONFIG(__TARGET_CHIP__),
 		CORE_EINT_ENABLE(__TARGET_CHIP__),
 		CORE_EINT_DISABLE(__TARGET_CHIP__),
-		CORE_EINT_TRIGGER(__TARGET_CHIP__),
 	}
 #endif
 #if IFS_USART_EN
@@ -138,7 +137,6 @@ const struct interfaces_info_t core_interfaces =
 		CORE_SPI_DESELECT(__TARGET_CHIP__),
 		CORE_SPI_START(__TARGET_CHIP__),
 		CORE_SPI_STOP(__TARGET_CHIP__),
-		CORE_SPI_GETLEN(__TARGET_CHIP__),
 	}
 #endif
 #if IFS_ADC_EN
