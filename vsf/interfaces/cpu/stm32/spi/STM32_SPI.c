@@ -57,13 +57,12 @@ struct
 {
 	void (*onready)(void *);
 	void *param;
-	bool out;
 	uint32_t len;
 } static stm32_spi_param[SPI_NUM];
 struct
 {
 	SPI_TypeDef *spi;
-	uint8_t irqn;
+	uint8_t irqntx;
 	DMA_Channel_TypeDef *dmatx;
 	DMA_Channel_TypeDef *dmarx;
 } static const stm32_spi[SPI_NUM] =
@@ -71,7 +70,7 @@ struct
 #if SPI_NUM >= 1
 	{
 		SPI1,
-		SPI1_IRQn,
+		DMA1_Channel3_IRQn,
 		DMA1_Channel3,
 		DMA1_Channel2,
 	},
@@ -79,7 +78,7 @@ struct
 #if SPI_NUM >= 2
 	{
 		SPI2,
-		SPI2_IRQn,
+		DMA1_Channel5_IRQn,
 		DMA1_Channel5,
 		DMA1_Channel4,
 	},
@@ -87,7 +86,7 @@ struct
 #if SPI_NUM >= 3
 	{
 		SPI3,
-		SPI3_IRQn,
+		DMA2_Channel2_IRQn,
 		DMA2_Channel2,
 		DMA2_Channel1,
 	},
@@ -620,14 +619,13 @@ vsf_err_t stm32_spi_config(uint8_t index, uint32_t kHz, uint8_t mode)
 	}
 	spi->I2SCFGR &= ~STM32_SPI_I2SCFGR;
 	spi->CR1 |= STM32_SPI_CR1_SPE;
+	spi->CR2 |= 3ul;
 	return VSFERR_NONE;
 }
 
-// TODO: enable/disable interrupt for DMA
 vsf_err_t stm32_spi_config_callback(uint8_t index, uint32_t int_priority,
 									void *p, void (*onready)(void *))
 {
-	SPI_TypeDef *spi;
 	uint8_t spi_idx = index & 0x0F;
 	uint8_t irqn;
 	
@@ -638,19 +636,18 @@ vsf_err_t stm32_spi_config_callback(uint8_t index, uint32_t int_priority,
 	}
 #endif
 	
-	spi = stm32_spi[spi_idx].spi;
-	irqn = stm32_spi[spi_idx].irqn;
-	
 	stm32_spi_param[spi_idx].onready = onready;
 	stm32_spi_param[spi_idx].param = p;
 	
 	if (onready != NULL)
 	{
+		irqn = stm32_spi[spi_idx].irqntx;
 		NVIC->IP[irqn] = int_priority;
 		NVIC->ISER[irqn >> 0x05] = 1UL << (irqn & 0x1F);
 	}
 	else
 	{
+		irqn = stm32_spi[spi_idx].irqntx;
 		NVIC->ICER[irqn >> 0x05] = 1UL << (irqn & 0x1F);
 	}
 	return VSFERR_NONE;
@@ -782,6 +779,7 @@ vsf_err_t stm32_spi_deselect(uint8_t index, uint8_t cs)
 	return VSFERR_NONE;
 }
 
+extern uint32_t stm32_dma_dummy;
 vsf_err_t stm32_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 							uint32_t len)
 {
@@ -822,23 +820,28 @@ vsf_err_t stm32_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 	stm32_spi_param[spi_idx].len = len;
 	if (in != NULL)
 	{
-		dmarx->CCR = 0x00000082;
+		dmarx->CCR = 0x00000080;
 		dmarx->CNDTR = len;
 		dmarx->CPAR = (uint32_t)&spi->DR;
 		dmarx->CMAR = (uint32_t)in;
+		stm32_dma_dummy = spi->DR;
 		dmarx->CCR |= STM32_DMA_CCR_EN;
-		spi->CR2 |= 1UL << 0;
-		stm32_spi_param[spi_idx].out = false;
 	}
-	else if (out != NULL)
+	if (out != NULL)
 	{
 		dmatx->CCR = 0x00000092;
 		dmatx->CNDTR = len;
 		dmatx->CPAR = (uint32_t)&spi->DR;
 		dmatx->CMAR = (uint32_t)out;
 		dmatx->CCR |= STM32_DMA_CCR_EN;
-		spi->CR2 |= 1UL << 1;
-		stm32_spi_param[spi_idx].out = true;
+	}
+	else if (len > 0)
+	{
+		dmatx->CCR = 0x00000012;
+		dmatx->CNDTR = len;
+		dmatx->CPAR = (uint32_t)&spi->DR;
+		dmatx->CMAR = (uint32_t)&stm32_dma_dummy;
+		dmatx->CCR |= STM32_DMA_CCR_EN;
 	}
 	
 	return VSFERR_NONE;
@@ -847,7 +850,6 @@ vsf_err_t stm32_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 uint32_t stm32_spi_stop(uint8_t index)
 {
 	uint8_t spi_idx = index & 0x0F;
-	SPI_TypeDef *spi;
 	DMA_Channel_TypeDef *dmatx, *dmarx;
 	
 #if __VSF_DEBUG__
@@ -856,16 +858,56 @@ uint32_t stm32_spi_stop(uint8_t index)
 		return 0;
 	}
 #endif
-	spi = stm32_spi[spi_idx].spi;
+	
 	dmatx = stm32_spi[spi_idx].dmatx;
 	dmarx = stm32_spi[spi_idx].dmarx;
 	
-	spi->CR2 &= ~3;
 	dmatx->CCR &= ~1;
 	dmarx->CCR &= ~1;
 	
-	return stm32_spi_param[spi_idx].len -
-		(stm32_spi_param[spi_idx].out ? dmatx->CNDTR : dmarx->CNDTR);
+	return stm32_spi_param[spi_idx].len - dmatx->CNDTR;
 }
+
+#if SPI_NUM >= 1
+void DMA1_Channel3_IRQHandler(void)
+{
+	if (DMA1->ISR & (1 << (1 + (4 * (3 - 1)))))
+	{
+		if (stm32_spi_param[0].onready != NULL)
+		{
+			stm32_spi_param[0].onready(stm32_spi_param[0].param);
+		}
+	}
+	DMA1->IFCR = 0x0000000F << (4 * (3 - 1));
+}
+#endif
+
+#if SPI_NUM >= 2
+void DMA1_Channel5_IRQHandler(void)
+{
+	if (DMA1->ISR & (1 << (1 + (4 * (5 - 1)))))
+	{
+		if (stm32_spi_param[1].onready != NULL)
+		{
+			stm32_spi_param[1].onready(stm32_spi_param[1].param);
+		}
+	}
+	DMA1->IFCR = 0x00000001 << (4 * (5 - 1));
+}
+#endif
+
+#if SPI_NUM >= 3
+void DMA2_Channel2_IRQHandler(void)
+{
+	if (DMA2->ISR & (1 << (1 + (4 * (2 - 1)))))
+	{
+		if (stm32_spi_param[2].onready != NULL)
+		{
+			stm32_spi_param[2].onready(stm32_spi_param[0].param);
+		}
+	}
+	DMA2->IFCR = 0x00000001 << (4 * (2 - 1));
+}
+#endif
 
 #endif

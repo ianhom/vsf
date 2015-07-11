@@ -43,6 +43,7 @@ static struct stm32_info_t stm32_info =
 	OSC0_FREQ_HZ, CORE_PLL_FREQ_HZ, CORE_AHB_FREQ_HZ, CORE_APB1_FREQ_HZ,
 	CORE_APB2_FREQ_HZ, CORE_FLASH_LATENCY, CORE_DEBUG
 };
+uint32_t stm32_dma_dummy;
 
 vsf_err_t stm32_interface_get_info(struct stm32_info_t **info)
 {
