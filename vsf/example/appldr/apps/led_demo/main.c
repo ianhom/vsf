@@ -107,7 +107,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-vsf_err_t app_main(struct vsf_t const *vsf, struct app_hwcfg_t const *hwcfg)
+vsf_err_t __iar_program_start(struct vsf_t const *vsf, struct app_hwcfg_t const *hwcfg)
 {
 	int i;
 	struct vsfapp_t *app = vsf->buffer.bufmgr.malloc(sizeof(struct vsfapp_t));
