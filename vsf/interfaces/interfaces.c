@@ -76,6 +76,15 @@ const struct interfaces_info_t core_interfaces =
 #if IFS_GPIO_EN
 	,{
 		// gpio
+#if IFS_CONST_EN
+		{
+			GPIO_INFLOAT,
+			GPIO_INPU,
+			GPIO_INPD,
+			GPIO_OUTPP,
+			GPIO_OUTOD,
+		},
+#endif
 		CORE_GPIO_INIT(__TARGET_CHIP__),
 		CORE_GPIO_FINI(__TARGET_CHIP__),
 		CORE_GPIO_CONFIG_PIN(__TARGET_CHIP__),
@@ -105,6 +114,14 @@ const struct interfaces_info_t core_interfaces =
 #if IFS_EINT_EN
 	,{
 		// eint
+#if IFS_CONST_EN
+		{
+			EINT_ONFALL,
+			EINT_ONRISE,
+			EINT_ONLOW,
+			EINT_ONHIGH,
+		},
+#endif
 		CORE_EINT_INIT(__TARGET_CHIP__),
 		CORE_EINT_FINI(__TARGET_CHIP__),
 		CORE_EINT_CONFIG(__TARGET_CHIP__),
@@ -115,6 +132,16 @@ const struct interfaces_info_t core_interfaces =
 #if IFS_USART_EN
 	,{
 		// usart
+#if IFS_CONST_EN
+		{
+			USART_STOPBITS_1,
+			USART_STOPBITS_1P5,
+			USART_STOPBITS_2,
+			USART_PARITY_NONE,
+			USART_PARITY_ODD,
+			USART_PARITY_EVEN,
+		},
+#endif
 		CORE_USART_INIT(__TARGET_CHIP__),
 		CORE_USART_FINI(__TARGET_CHIP__),
 		CORE_USART_CONFIG(__TARGET_CHIP__),
@@ -126,6 +153,18 @@ const struct interfaces_info_t core_interfaces =
 #if IFS_SPI_EN
 	,{
 		// spi
+#if IFS_CONST_EN
+		{
+			SPI_MASTER,
+			SPI_SLAVE,
+			SPI_MODE0,
+			SPI_MODE1,
+			SPI_MODE2,
+			SPI_MODE3,
+			SPI_MSB_FIRST,
+			SPI_LSB_FIRST,
+		},
+#endif
 		CORE_SPI_INIT(__TARGET_CHIP__),
 		CORE_SPI_FINI(__TARGET_CHIP__),
 		CORE_SPI_GET_ABILITY(__TARGET_CHIP__),

@@ -309,6 +309,7 @@ vsf_err_t vsf_multibuf_pop(struct vsf_multibuf_t *mbuffer)
 }
 
 // bufmgr
+static struct vsf_bufmgr_t *vsf_bufmgr = NULL;
 struct vsf_bufmgr_record_t
 {
 	uint32_t size;
@@ -317,42 +318,20 @@ struct vsf_bufmgr_record_t
 
 void vsf_bufmgr_init(struct vsf_bufmgr_t *bufmgr)
 {
-#if __VSF_DEBUG__
-	if (NULL == bufmgr)
-	{
-		return;
-	}
-#endif
-	
-	bufmgr->num_of_buffer = 0;
+	vsf_bufmgr = bufmgr;
+	vsf_bufmgr->num_of_buffer = 0;
 }
 
-void* vsf_bufmgr_malloc(struct vsf_bufmgr_t *bufmgr, uint32_t size)
+void* vsf_bufmgr_malloc(uint32_t size)
 {
-	REFERENCE_PARAMETER(bufmgr);
 	REFERENCE_PARAMETER(size);
-	
-#if __VSF_DEBUG__
-	if (NULL == bufmgr)
-	{
-		return NULL;
-	}
-#endif
 	
 	return NULL;
 }
 
-void vsf_bufmgr_free(struct vsf_bufmgr_t *bufmgr, void *ptr)
+void vsf_bufmgr_free(void *ptr)
 {
-	REFERENCE_PARAMETER(bufmgr);
 	REFERENCE_PARAMETER(ptr);
-	
-#if __VSF_DEBUG__
-	if (NULL == bufmgr)
-	{
-		return;
-	}
-#endif
 	
 	
 }

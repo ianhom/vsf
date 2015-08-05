@@ -75,8 +75,8 @@ struct vsf_bufmgr_t
 	uint16_t num_of_buffer;
 };
 void vsf_bufmgr_init(struct vsf_bufmgr_t *bufmgr);
-void* vsf_bufmgr_malloc(struct vsf_bufmgr_t *bufmgr, uint32_t size);
-void vsf_bufmgr_free(struct vsf_bufmgr_t *bufmgr, void *ptr);
+void* vsf_bufmgr_malloc(uint32_t size);
+void vsf_bufmgr_free(void *ptr);
 
 #endif	// __BUFFER_H_INCLUDED__
 

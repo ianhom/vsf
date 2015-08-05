@@ -173,6 +173,17 @@ vsf_err_t CORE_CLKO_DISABLE(__TARGET_CHIP__)(uint32_t index);
 #define USART_PARITY_EVEN			CORE_USART_PARITY_EVEN(__TARGET_CHIP__)
 struct interface_usart_t
 {
+#if IFS_CONST_EN
+	struct
+	{
+		uint32_t STOPBITS_1;
+		uint32_t STOPBITS_1P5;
+		uint32_t STOPBITS_2;
+		uint32_t PARITY_NONE;
+		uint32_t PARITY_ODD;
+		uint32_t PARITY_EVEN;
+	} constants;
+#endif
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t baudrate, uint8_t datalength, uint32_t mode);
@@ -222,6 +233,19 @@ struct spi_ability_t
 };
 struct interface_spi_t
 {
+#if IFS_CONST_EN
+	struct
+	{
+		uint32_t MASTER;
+		uint32_t SLAVE;
+		uint32_t MODE0;
+		uint32_t MODE1;
+		uint32_t MODE2;
+		uint32_t MODE3;
+		uint32_t MSB_FIRST;
+		uint32_t LSB_FIRST;
+	} constants;
+#endif
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*get_ability)(uint8_t index, struct spi_ability_t *ability);
@@ -318,6 +342,16 @@ uint32_t CORE_ADC_GET(__TARGET_CHIP__)(uint8_t index, uint8_t channel);
 #define GPIO_OUTOD					CORE_GPIO_OUTOD(__TARGET_CHIP__)
 struct interface_gpio_t
 {
+#if IFS_CONST_EN
+	struct
+	{
+		uint32_t INFLOAT;
+		uint32_t INPU;
+		uint32_t INPD;
+		uint32_t OUTPP;
+		uint32_t OUTOD;
+	} constants;
+#endif
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config_pin)(uint8_t index, uint8_t pin_idx, uint32_t mode);
@@ -481,6 +515,15 @@ vsf_err_t CORE_TIMER_SET_CHANNEL(__TARGET_CHIP__)(uint8_t index, uint8_t channel
 #define EINT_ONHIGH					CORE_EINT_ONHIGH(__TARGET_CHIP__)
 struct interface_eint_t
 {
+#if IFS_CONST_EN
+	struct
+	{
+		uint32_t ONFALL;
+		uint32_t ONRISE;
+		uint32_t ONLOW;
+		uint32_t ONHIGH;
+	} constants;
+#endif
 	vsf_err_t (*init)(uint32_t index);
 	vsf_err_t (*fini)(uint32_t index);
 	vsf_err_t (*config)(uint32_t index, uint32_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
