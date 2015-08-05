@@ -89,6 +89,7 @@ const struct vsf_t vsf =
 		},					// struct fifo
 		{
 			vsf_bufmgr_malloc,
+			vsf_bufmgr_malloc_aligned,
 			vsf_bufmgr_free,
 		},					// struct bufmgr;
 	},						// struct buffer;

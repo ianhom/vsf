@@ -5,7 +5,6 @@ struct vsfapp_t
 {
 	struct app_hwcfg_t hwcfg;
 	
-	struct vsf_bufmgr_t bufmgr;
 	uint8_t bufmgr_buffer[64 * 1024];
 } static app =
 {
@@ -43,12 +42,6 @@ struct vsfapp_t
 			{5, 0, 5, 1},
 		},							// struct led_t led[24];
 	},								// struct app_hwcfg_t hwcfg;
-	{
-		{
-			app.bufmgr_buffer,
-			sizeof(app.bufmgr_buffer),
-		},							// struct vsf_buffer_t buffer;
-	},								// struct vsf_bufmgr_t bufmgr;
 };
 
 // tickclk interrupt, simply call vsftimer_callback_int
@@ -64,7 +57,7 @@ int main(void)
 	vsf_leave_critical();
 	
 	// system initialize
-	vsf_bufmgr_init(&app.bufmgr);
+	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 	core_interfaces.core.init(NULL);
 	core_interfaces.tickclk.init();
 	core_interfaces.tickclk.start();

@@ -20,6 +20,8 @@
 #ifndef __BUFFER_H_INCLUDED__
 #define __BUFFER_H_INCLUDED__
 
+#include "tool/list/list.h"
+
 struct vsf_buffer_t
 {
 	uint8_t *buffer;
@@ -45,7 +47,7 @@ uint8_t vsf_fifo_pop8(struct vsf_fifo_t *fifo);
 uint32_t vsf_fifo_push(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
 uint32_t vsf_fifo_pop(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
 uint32_t vsf_fifo_peek(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
-uint32_t vsf_fifo_peek_consequent(struct vsf_fifo_t *fifo, uint32_t size, 
+uint32_t vsf_fifo_peek_consequent(struct vsf_fifo_t *fifo, uint32_t size,
 								uint8_t *data);
 uint32_t vsf_fifo_get_data_length(struct vsf_fifo_t *fifo);
 uint32_t vsf_fifo_get_avail_length(struct vsf_fifo_t *fifo);
@@ -56,7 +58,7 @@ struct vsf_multibuf_t
 	uint16_t count;
 	uint32_t size;
 	uint8_t **buffer_list;
-	
+
 	uint16_t head;
 	uint16_t tail;
 	uint16_t length;
@@ -69,13 +71,9 @@ uint8_t* vsf_multibuf_get_payload(struct vsf_multibuf_t *mbuffer);
 vsf_err_t vsf_multibuf_pop(struct vsf_multibuf_t *mbuffer);
 
 // buffer_manager
-struct vsf_bufmgr_t
-{
-	struct vsf_buffer_t buffer;
-	uint16_t num_of_buffer;
-};
-void vsf_bufmgr_init(struct vsf_bufmgr_t *bufmgr);
+void vsf_bufmgr_init(uint8_t *buf, uint32_t size);
 void* vsf_bufmgr_malloc(uint32_t size);
+void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align);
 void vsf_bufmgr_free(void *ptr);
 
 #endif	// __BUFFER_H_INCLUDED__
