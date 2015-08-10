@@ -19,7 +19,7 @@ vsf_err_t stm32_spi_fini(uint8_t index);
 vsf_err_t stm32_spi_get_ability(uint8_t index, struct spi_ability_t *ability);
 vsf_err_t stm32_spi_enable(uint8_t index);
 vsf_err_t stm32_spi_disable(uint8_t index);
-vsf_err_t stm32_spi_config(uint8_t index, uint32_t kHz, uint8_t mode);
+vsf_err_t stm32_spi_config(uint8_t index, uint32_t kHz, uint32_t mode);
 vsf_err_t stm32_spi_config_callback(uint8_t index, uint32_t int_priority,
 									void *p, void (*onready)(void *));
 vsf_err_t stm32_spi_select(uint8_t index, uint8_t cs);

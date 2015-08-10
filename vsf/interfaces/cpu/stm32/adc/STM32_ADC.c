@@ -98,7 +98,7 @@ vsf_err_t stm32_adc_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_adc_config(uint8_t index, uint32_t clock_hz, uint8_t mode)
+vsf_err_t stm32_adc_config(uint8_t index, uint32_t clock_hz, uint32_t mode)
 {
 	ADC_TypeDef *adc;
 	struct stm32_info_t *info;

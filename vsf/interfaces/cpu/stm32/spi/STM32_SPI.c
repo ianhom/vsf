@@ -396,7 +396,7 @@ vsf_err_t stm32_spi_get_ability(uint8_t index, struct spi_ability_t *ability)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_spi_config(uint8_t index, uint32_t kHz, uint8_t mode)
+vsf_err_t stm32_spi_config(uint8_t index, uint32_t kHz, uint32_t mode)
 {
 	uint8_t spi_idx = index & 0x0F;
 	uint8_t remap_idx = (index >> 4) & 0x0F;

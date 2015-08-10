@@ -251,7 +251,7 @@ struct interface_spi_t
 	vsf_err_t (*get_ability)(uint8_t index, struct spi_ability_t *ability);
 	vsf_err_t (*enable)(uint8_t index);
 	vsf_err_t (*disable)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint8_t mode);
+	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint32_t mode);
 	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
 	
 	vsf_err_t (*select)(uint8_t index, uint8_t cs);
@@ -278,7 +278,7 @@ vsf_err_t CORE_SPI_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SPI_GET_ABILITY(__TARGET_CHIP__)(uint8_t index, struct spi_ability_t *ability);
 vsf_err_t CORE_SPI_ENABLE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SPI_DISABLE(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_SPI_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz, uint8_t mode);
+vsf_err_t CORE_SPI_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz, uint32_t mode);
 vsf_err_t CORE_SPI_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
 vsf_err_t CORE_SPI_SELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
 vsf_err_t CORE_SPI_DESELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
@@ -297,7 +297,7 @@ struct interface_adc_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint32_t clock_hz, uint8_t mode);
+	vsf_err_t (*config)(uint8_t index, uint32_t clock_hz, uint32_t mode);
 	vsf_err_t (*config_channel)(uint8_t index, uint8_t channel, uint8_t cycles);
 	uint32_t (*get_max_value)(uint8_t index);
 	vsf_err_t (*calibrate)(uint8_t index, uint8_t channel);
@@ -318,7 +318,7 @@ struct interface_adc_t
 
 vsf_err_t CORE_ADC_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_ADC_FINI(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_ADC_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t clock_hz, uint8_t mode);
+vsf_err_t CORE_ADC_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t clock_hz, uint32_t mode);
 vsf_err_t CORE_ADC_CONFIG_CHANNEL(__TARGET_CHIP__)(uint8_t index,  uint8_t channel, uint8_t cycles);
 vsf_err_t CORE_ADC_CALIBRATE(__TARGET_CHIP__)(uint8_t index, uint8_t channel);
 uint32_t CORE_ADC_GET_MAX_VALUE(__TARGET_CHIP__)(uint8_t index);
