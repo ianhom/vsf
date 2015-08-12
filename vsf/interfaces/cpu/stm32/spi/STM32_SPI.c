@@ -15,6 +15,7 @@
  **************************************************************************/
 
 #include "app_type.h"
+#include "compiler.h"
 #include "interfaces.h"
 
 // TODO: remove MACROs below to stm32_reg.h
@@ -869,7 +870,7 @@ uint32_t stm32_spi_stop(uint8_t index)
 }
 
 #if SPI_NUM >= 1
-void DMA1_Channel3_IRQHandler(void)
+ROOTFUNC void DMA1_Channel3_IRQHandler(void)
 {
 	if (DMA1->ISR & (1 << (1 + (4 * (3 - 1)))))
 	{
@@ -883,7 +884,7 @@ void DMA1_Channel3_IRQHandler(void)
 #endif
 
 #if SPI_NUM >= 2
-void DMA1_Channel5_IRQHandler(void)
+ROOTFUNC void DMA1_Channel5_IRQHandler(void)
 {
 	if (DMA1->ISR & (1 << (1 + (4 * (5 - 1)))))
 	{
@@ -897,7 +898,7 @@ void DMA1_Channel5_IRQHandler(void)
 #endif
 
 #if SPI_NUM >= 3
-void DMA2_Channel2_IRQHandler(void)
+ROOTFUNC void DMA2_Channel2_IRQHandler(void)
 {
 	if (DMA2->ISR & (1 << (1 + (4 * (2 - 1)))))
 	{
