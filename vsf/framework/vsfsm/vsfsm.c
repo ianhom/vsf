@@ -290,13 +290,13 @@ vsf_err_t vsfsm_poll(void)
 	while (vsfsm_evt_count)
 	{
 		sm = vsfsm_evtq_head->sm;
-		vsfsm_dispatch_evt(sm, vsfsm_evtq_head->evt);
 		(vsfsm_evtq_head == &vsfsm_evtq[VSFSM_CFG_EVTQ_SIZE - 1]) ?
 			vsfsm_evtq_head = &vsfsm_evtq[0] : vsfsm_evtq_head++;
 		vsf_enter_critical();
 		sm->evt_count--;
 		vsfsm_evt_count--;
 		vsf_leave_critical();
+		vsfsm_dispatch_evt(sm, vsfsm_evtq_head->evt);
 	}
 	return VSFERR_NONE;
 }

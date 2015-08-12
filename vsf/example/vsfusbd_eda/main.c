@@ -352,7 +352,7 @@ struct vsfapp_t
 				1, 1,
 				(struct vsfusbd_desc_filter_t *)HID_Report_Descriptors,
 				dimof(app.usbd.hid.reports),
-				(struct vsfusbd_HID_report_t *)&app.usbd.hid.reports,
+				app.usbd.hid.reports,
 			},					// struct vsfusbd_HID_param_t param;
 			{
 				{USB_HID_REPORT_INPUT, 1, NULL,
