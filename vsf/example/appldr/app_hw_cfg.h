@@ -1,5 +1,8 @@
+#define APP_BOARD_NAME				"led_demo"
+
 struct app_hwcfg_t
 {
+	char *board;
 	struct
 	{
 		struct

@@ -131,6 +131,7 @@ struct vsf_module_t* vsf_module_get(char *name)
 
 ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 {
+	VSF_API_VERSION,		// api_ver
 	&core_interfaces,
 	
 	{

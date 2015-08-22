@@ -19,6 +19,8 @@
 #include "stm32f4xx.h"
 #include "core.h"
 
+#define VSF_BASE_ADDR				0x00000200
+
 #define stm32f4_SLEEP_WFI			0
 #define stm32f4_SLEEP_PWRDOWN		1
 

@@ -32,6 +32,8 @@
 
 #include "tool/buffer/buffer.h"
 
+#define VSF_API_VERSION						0x00000001
+
 struct vsf_module_t
 {
 	char *name;
@@ -46,6 +48,7 @@ struct vsf_module_t
 
 struct vsf_t
 {
+	uint32_t api_ver;
 	const struct interfaces_info_t *ifs;
 	
 	struct vsf_framework_t
@@ -105,7 +108,8 @@ struct vsf_t
 
 #ifndef VSF_SYS
 
-#define VSF_BASE						((struct vsf_t *)0x08000200)
+#define VSF_BASE						((struct vsf_t *)VSF_BASE_ADDR)
+#define vsf_api_ver						(VSF_BASE->api_ver)
 #define core_interfaces					(*(VSF_BASE->ifs))
 
 #define vsfsm_init						VSF_BASE->framework.sm_init

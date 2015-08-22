@@ -9,6 +9,7 @@ struct vsfapp_t
 } static app =
 {
 	{
+		APP_BOARD_NAME,				// char *board;
 		{
 			{
 				2,					// uint8_t port;

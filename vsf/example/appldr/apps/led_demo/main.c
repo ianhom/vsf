@@ -108,9 +108,17 @@ void app_on_load(struct vsf_module_t *me, struct vsf_module_t *new)
 vsf_err_t __iar_program_start(struct app_hwcfg_t const *hwcfg)
 {
 	int i;
-	struct vsfapp_t *app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
+	struct vsfapp_t *app;
 	struct vsf_module_t *led_mod;
 	
+	// check board and api version
+	if (strcmp(hwcfg->board, APP_BOARD_NAME) ||
+		(vsf_api_ver != VSF_API_VERSION))
+	{
+		return VSFERR_NOT_SUPPORT;
+	}
+	
+	app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
 	if (NULL == app)
 	{
 		return VSFERR_NOT_ENOUGH_RESOURCES;
