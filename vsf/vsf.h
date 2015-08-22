@@ -32,6 +32,18 @@
 
 #include "tool/buffer/buffer.h"
 
+struct vsf_module_t
+{
+	char *name;
+	void *ifs;
+	struct
+	{
+		void (*on_load)(struct vsf_module_t *me, struct vsf_module_t *new);
+		void (*on_unload)(struct vsf_module_t *me, struct vsf_module_t *old);
+	} callback;
+	struct vsf_module_t *next;
+};
+
 struct vsf_t
 {
 	const struct interfaces_info_t *ifs;
@@ -57,6 +69,13 @@ struct vsf_t
 		
 		vsf_err_t (*timer_register)(struct vsftimer_timer_t *timer);
 		vsf_err_t (*timer_unregister)(struct vsftimer_timer_t *timer);
+		
+		struct
+		{
+			vsf_err_t (*module_register)(struct vsf_module_t *module);
+			vsf_err_t (*module_unregister)(struct vsf_module_t *module);
+			struct vsf_module_t* (*module_get)(char *name);
+		} module;
 	} framework;
 	
 	struct
@@ -79,20 +98,6 @@ struct vsf_t
 			void (*free)(void *ptr);
 		} bufmgr;
 	} buffer;
-	
-/*	struct vsf_stacks_t
-	{
-		struct
-		{
-			
-		} usbd;
-		struct
-		{
-			
-		} tcpip;
-	} stacks;
-*/
-	
 };
 
 extern const struct vsf_t vsf;

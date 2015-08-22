@@ -56,6 +56,79 @@ static void vsfsm_leave_critical_internal(void)
 	vsf_leave_critical();
 }
 
+static struct vsf_module_t *modulelist = NULL;
+static void vsf_module_callback(bool load, struct vsf_module_t *module)
+{
+	struct vsf_module_t *moduletmp = modulelist;
+	void (*callback)(struct vsf_module_t *, struct vsf_module_t *);
+	
+	while (moduletmp != NULL)
+	{
+		if (moduletmp != module)
+		{
+			callback = load ? moduletmp->callback.on_load :
+								moduletmp->callback.on_unload;
+			if (callback != NULL)
+			{
+				callback(moduletmp, module);
+			}
+		}
+		moduletmp = moduletmp->next;
+	}
+}
+
+static vsf_err_t vsf_module_register(struct vsf_module_t *module)
+{
+	if ((NULL == module) || (NULL == module->name))
+	{
+		return VSFERR_NONE;
+	}
+	
+	module->next = modulelist;
+	modulelist = module;
+	vsf_module_callback(true, module);
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsf_module_unregister(struct vsf_module_t *module)
+{
+	if (module == modulelist)
+	{
+		vsf_module_callback(false, module);
+		modulelist = modulelist->next;
+	}
+	else
+	{
+		struct vsf_module_t *moduletmp = modulelist;
+		
+		while (moduletmp->next != NULL)
+		{
+			if (moduletmp->next == module)
+			{
+				vsf_module_callback(false, module);
+				moduletmp->next = module->next;
+			}
+			moduletmp = moduletmp->next;
+		}
+	}
+	return VSFERR_NONE;
+}
+
+struct vsf_module_t* vsf_module_get(char *name)
+{
+	struct vsf_module_t *moduletmp = modulelist;
+	
+	while (moduletmp != NULL)
+	{
+		if (!strcmp(moduletmp->name, name))
+		{
+			return moduletmp;
+		}
+		moduletmp = moduletmp->next;
+	}
+	return NULL;
+}
+
 const struct vsf_t vsf =
 {
 	&core_interfaces,
@@ -75,6 +148,12 @@ const struct vsf_t vsf =
 		vsfsm_crit_leave_internal,
 		vsftimer_register,
 		vsftimer_unregister,
+		
+		{
+			vsf_module_register,
+			vsf_module_unregister,
+			vsf_module_get,
+		},
 	},						// struct vsf_framework_t framework;
 	
 	{
