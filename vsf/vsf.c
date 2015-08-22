@@ -129,7 +129,7 @@ struct vsf_module_t* vsf_module_get(char *name)
 	return NULL;
 }
 
-const struct vsf_t vsf =
+ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 {
 	&core_interfaces,
 	
