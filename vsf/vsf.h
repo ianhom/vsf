@@ -67,14 +67,17 @@ struct vsf_t
 		vsf_err_t (*crit_enter)(struct vsfsm_crit_t *crit, struct vsfsm_t *sm);
 		vsf_err_t (*crit_leave)(struct vsfsm_crit_t *crit);
 		
-		vsf_err_t (*timer_register)(struct vsftimer_timer_t *timer);
-		vsf_err_t (*timer_unregister)(struct vsftimer_timer_t *timer);
+		struct
+		{
+			vsf_err_t (*add)(struct vsftimer_timer_t *timer);
+			vsf_err_t (*remove)(struct vsftimer_timer_t *timer);
+		} timer;
 		
 		struct
 		{
-			vsf_err_t (*module_register)(struct vsf_module_t *module);
-			vsf_err_t (*module_unregister)(struct vsf_module_t *module);
-			struct vsf_module_t* (*module_get)(char *name);
+			vsf_err_t (*load)(struct vsf_module_t *module);
+			vsf_err_t (*unload)(struct vsf_module_t *module);
+			struct vsf_module_t* (*get)(char *name);
 		} module;
 	} framework;
 	

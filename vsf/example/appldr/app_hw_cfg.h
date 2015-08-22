@@ -8,7 +8,7 @@ struct app_hwcfg_t
 			uint8_t pin;
 		} usb_pullup;
 	} usbd;
-	struct led_t
+	struct led_hw_t
 	{
 		uint8_t hport;
 		uint8_t hpin;
