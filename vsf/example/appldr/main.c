@@ -52,7 +52,7 @@ static void app_tickclk_callback_int(void *param)
 
 int main(void)
 {
-	int (*app_main)(const struct vsf_t *vsf, struct app_hwcfg_t *hwcfg) = NULL;
+	int (*app_main)(struct app_hwcfg_t *hwcfg) = NULL;
 	
 	vsf_leave_critical();
 	
@@ -68,7 +68,7 @@ int main(void)
 	// TODO: try to load app_main address
 	if (app_main != NULL)
 	{
-		app_main(&vsf, &app.hwcfg);
+		app_main(&app.hwcfg);
 	}
 	
 	while (1)

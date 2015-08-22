@@ -103,6 +103,25 @@ struct vsf_t
 	} buffer;
 };
 
-extern const struct vsf_t vsf;
+#ifndef VSF_SYS
+
+#define VSF_BASE						((struct vsf_t *)0x08000200)
+#define core_interfaces					(*(VSF_BASE->ifs))
+
+#define vsfsm_init						VSF_BASE->framework.sm_init
+#define vsfsm_pt_init					VSF_BASE->framework.pt_init
+#define vsfsm_post_evt					VSF_BASE->framework.post_evt
+#define vsfsm_post_evt_pending			VSF_BASE->framework.post_evt_pending
+
+#define vsftimer_register				VSF_BASE->framework.timer.add
+#define vsftimer_unregister				VSF_BASE->framework.timer.remove
+
+#define vsf_module_load					VSF_BASE->framework.module.load
+#define vsf_module_unload				VSF_BASE->framework.module.unload
+#define vsf_module_get					VSF_BASE->framework.module.get
+
+#define vsf_bufmgr_malloc				VSF_BASE->buffer.bufmgr.malloc
+
+#endif		// VSF_SYS
 
 #endif		// __VSF_H_INCLUDED__

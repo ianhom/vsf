@@ -9,11 +9,6 @@ struct vsfapp_t
 {
 	struct vsf_module_t app_mod;
 	
-	struct
-	{
-		struct vsf_t const *vsf;
-	} sys;
-	
 	struct vsfsm_t sm;
 	struct vsftimer_timer_t timer;
 	
@@ -36,7 +31,6 @@ static vsf_err_t app_led_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct app_led_t *led = (struct app_led_t *)pt->user_data;
 	struct vsfapp_t *app = led->app;
-	struct vsf_framework_t const *framework = &app->sys.vsf->framework;
 	
 	vsfsm_pt_begin(pt);
 	
@@ -49,7 +43,7 @@ static vsf_err_t app_led_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			app->led_ifs->off(&led->led_mod);
 			if (led->sm_carry != NULL)
 			{
-				framework->post_evt(led->sm_carry, LED_EVT_CARRY);
+				vsfsm_post_evt(led->sm_carry, LED_EVT_CARRY);
 			}
 		}
 		else
@@ -66,7 +60,6 @@ static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	struct vsfapp_t *app = (struct vsfapp_t *)sm->user_data;
-	struct vsf_framework_t const *framework = &app->sys.vsf->framework;
 	struct app_led_t *led;
 	uint8_t i;
 	
@@ -84,16 +77,16 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			led->sm_carry = (i < (app->led_num - 1)) ?
 								&app->led[i + 1].sm : NULL;
 			led->app = app;
-			framework->pt_init(&led->sm, &led->pt);
+			vsfsm_pt_init(&led->sm, &led->pt);
 		}
 		
 		app->timer.interval = 1;
 		app->timer.evt = LED_EVT_CARRY;
 		app->timer.sm = sm;
-		framework->timer.add(&app->timer);
+		vsftimer_register(&app->timer);
 		break;
 	case LED_EVT_CARRY:
-		framework->post_evt(&app->led[0].sm, LED_EVT_CARRY);
+		vsfsm_post_evt(&app->led[0].sm, LED_EVT_CARRY);
 		break;
 	}
 	return NULL;
@@ -108,15 +101,14 @@ void app_on_load(struct vsf_module_t *me, struct vsf_module_t *new)
 		app->led_ifs = new->ifs;
 		app->sm.init_state.evt_handler = app_evt_handler;
 		app->sm.user_data = app;
-		app->sys.vsf->framework.sm_init(&app->sm);
+		vsfsm_init(&app->sm);
 	}
 }
 
-vsf_err_t __iar_program_start(struct vsf_t const *vsf,
-								struct app_hwcfg_t const *hwcfg)
+vsf_err_t __iar_program_start(struct app_hwcfg_t const *hwcfg)
 {
 	int i;
-	struct vsfapp_t *app = vsf->buffer.bufmgr.malloc(sizeof(struct vsfapp_t));
+	struct vsfapp_t *app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
 	struct vsf_module_t *led_mod;
 	
 	if (NULL == app)
@@ -125,7 +117,6 @@ vsf_err_t __iar_program_start(struct vsf_t const *vsf,
 	}
 	
 	memset(app, 0, sizeof(*app));
-	app->sys.vsf = vsf;
 	app->led_num = dimof(hwcfg->led);
 	for (i = 0; i < app->led_num; i++)
 	{
@@ -133,7 +124,7 @@ vsf_err_t __iar_program_start(struct vsf_t const *vsf,
 	}
 	
 	// get led_module
-	led_mod = vsf->framework.module.get("led");
+	led_mod = vsf_module_get("led");
 	if (NULL == led_mod)
 	{
 		app->app_mod.name = "app";
