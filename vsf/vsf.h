@@ -116,6 +116,16 @@ struct vsf_t
 #define vsfsm_pt_init					VSF_BASE->framework.pt_init
 #define vsfsm_post_evt					VSF_BASE->framework.post_evt
 #define vsfsm_post_evt_pending			VSF_BASE->framework.post_evt_pending
+#define vsf_enter_critical				VSF_BASE->framework.enter_critical
+#define vsf_leave_critical				VSF_BASE->framework.leave_critical
+
+#define vsfsm_sem_init					VSF_BASE->framework.sem_init
+#define vsfsm_sem_post					VSF_BASE->framework.sem_post
+#define vsfsm_sem_pend					VSF_BASE->framework.sem_pend
+
+#define vsfsm_crit_init					VSF_BASE->framework.crit_init
+#define vsfsm_crit_enter				VSF_BASE->framework.crit_enter
+#define vsfsm_crit_leave				VSF_BASE->framework.crit_leave
 
 #define vsftimer_register				VSF_BASE->framework.timer.add
 #define vsftimer_unregister				VSF_BASE->framework.timer.remove
@@ -124,7 +134,17 @@ struct vsf_t
 #define vsf_module_unload				VSF_BASE->framework.module.unload
 #define vsf_module_get					VSF_BASE->framework.module.get
 
+#define vsf_fifo_init					VSF_BASE->buffer.fifo.init
+#define vsf_fifo_push8					VSF_BASE->buffer.fifo.push8
+#define vsf_fifo_pop8					VSF_BASE->buffer.fifo.pop8
+#define vsf_fifo_push					VSF_BASE->buffer.fifo.push
+#define vsf_fifo_pop					VSF_BASE->buffer.fifo.pop
+#define vsf_fifo_get_data_length		VSF_BASE->buffer.fifo.get_data_length
+#define vsf_fifo_get_avail_length		VSF_BASE->buffer.fifo.get_avail_length
+
 #define vsf_bufmgr_malloc				VSF_BASE->buffer.bufmgr.malloc
+#define vsf_bufmgr_malloc_aligned		VSF_BASE->buffer.bufmgr.malloc_aligned
+#define vsf_bufmgr_free					VSF_BASE->buffer.bufmgr.free
 
 #endif		// VSF_SYS
 
