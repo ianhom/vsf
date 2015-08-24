@@ -1,3 +1,21 @@
+/***************************************************************************
+ *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 #include "app_type.h"
 #include "compiler.h"
 
@@ -219,6 +237,9 @@ struct vsfsm_state_t * vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfip->tick_timer.interval = 1;
 		vsftimer_register(&vsfip->tick_timer);
 		break;
+	case VSFSM_EVT_FINI:
+		vsftimer_unregister(&vsfip->tick_timer);
+		break;
 	case VSFIP_EVT_TICK:
 	{
 		struct vsfip_socket_t *socket;
@@ -310,7 +331,7 @@ uint16_t vsfip_get_port(enum vsfip_sockproto_t proto)
 
 vsf_err_t vsfip_fini(void)
 {
-	return VSFERR_NONE;
+	return vsfsm_post_evt(&vsfip.tick_sm, VSFSM_EVT_FINI);
 }
 
 static uint16_t vsfip_checksum(uint8_t *data, uint16_t len)
