@@ -345,9 +345,7 @@ void vsfshell_free_handler_thread(struct vsfshell_t *shell, struct vsfsm_t *sm)
 			{
 				FREE(pt->user_data);
 			}
-			FREE(pt);
 		}
-		FREE(sm);
 	}
 }
 
