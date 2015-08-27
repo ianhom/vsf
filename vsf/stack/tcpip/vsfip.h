@@ -1,3 +1,4 @@
+
 /***************************************************************************
  *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
  *                                                                         *
@@ -181,8 +182,6 @@ struct vsfip_tcppcb_t
 	struct vsfsm_t *rx_sm;
 	uint32_t rx_timeout_ms;
 	
-	struct vsfip_socket_t *new_socket;
-	
 	uint32_t ack_tick;
 	bool rclose;
 	bool lclose;
@@ -215,6 +214,15 @@ struct vsfip_socket_t
 	struct vsfip_bufferlist_t input_bufferlist;
 	
 	bool can_rx;
+	struct
+	{
+		struct vsfip_socket_t *child;
+		uint8_t backlog;
+		uint8_t accepted_num;
+		bool closing;
+	} listener;
+	bool accepted;
+	struct vsfip_socket_t *father;
 	
 	uint32_t timeout_ms;
 	struct vsftimer_timer_t tx_timer;
@@ -242,6 +250,7 @@ struct vsfip_buffer_t *
 vsfip_bufferlist_dequeue(struct vsfip_bufferlist_t *list);
 void vsfip_bufferlist_remove(struct vsfip_bufferlist_t *list,
 								struct vsfip_buffer_t *buf);
+void vsfip_bufferlist_free(struct vsfip_bufferlist_t *list);
 
 vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif);
@@ -256,30 +265,30 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 vsf_err_t vsfip_close(struct vsfip_socket_t *socket);
 
 // for UPD and TCP
-vsf_err_t vsfip_listen(struct vsfip_socket_t *socket);
+vsf_err_t vsfip_listen(struct vsfip_socket_t *socket, uint8_t backlog);
 vsf_err_t vsfip_bind(struct vsfip_socket_t *socket, uint16_t port);
 
 // for TCP
 vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
+		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_socket_t **remote);
+		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf);
+		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+		struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t **buf);
+		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+		struct vsfip_buffer_t **buf);
 vsf_err_t vsfip_tcp_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_socket_t *socket);
 
 // for UDP
 vsf_err_t vsfip_udp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf);
+		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+		struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t **buf);
+		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+		struct vsfip_buffer_t **buf);
 
 // for sniffer
 extern void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf);

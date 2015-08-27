@@ -225,7 +225,7 @@ retry:
 		err = VSFERR_FAIL;
 		goto cleanup;
 	}
-	vsfip_listen(dhcp->so);
+	vsfip_listen(dhcp->so, 0);
 	
 	// if allocated, just request again
 	if (dhcp->ipaddr.size != 0)

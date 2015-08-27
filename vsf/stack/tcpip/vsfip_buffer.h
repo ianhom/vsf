@@ -16,8 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef __VSFIP_BUFFER_INCLUDED__
-#define __VSFIP_BUFFER_INCLUDED__
+#ifndef __VSFIP_BUFFER_H_INCLUDED__
+#define __VSFIP_BUFFER_H_INCLUDED__
 
 #include "vsfip_cfg.h"
 
@@ -51,4 +51,4 @@ struct vsfip_buffer_t * vsfip_buffer_get(uint32_t size);
 void vsfip_buffer_reference(struct vsfip_buffer_t *buf);
 void vsfip_buffer_release(struct vsfip_buffer_t *buf);
 
-#endif		// __VSFIP_BUFFER_INCLUDED__
+#endif		// __VSFIP_BUFFER_H_INCLUDED__

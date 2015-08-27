@@ -23,7 +23,7 @@
 
 #include "vsfip.h"
 #include "vsfip_buffer.h"
-	
+
 static uint8_t vsfip_buffer_mem[VSFIP_BUFFER_NUM][VSFIP_BUFFER_SIZE];
 static struct vsfip_buffer_t vsfip_buffer[VSFIP_BUFFER_NUM];
 
