@@ -79,12 +79,12 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// HID Descriptor
 	0x09,
-	USB_HIDDESC_TYPE_HID,	// 0x21 == HID Discriptor
+	USB_HID_DT_HID,
 	0x00,
 	0x01,	// HID BCD ID
 	0x00,	// Country Code
 	0x01,	// Number of Descriptors
-	USB_HIDDESC_TYPE_REPORT,	// Descriptor Type
+	USB_HID_DT_REPORT,
 	63,
 	0x00,	// Descriptor Length
 	
@@ -290,7 +290,8 @@ static const struct vsfusbd_desc_filter_t HID_Report_Descriptors[] =
 	VSFUSBD_DESC_NULL
 };
 
-static vsf_err_t HID_on_set_get_report(struct vsfusbd_HID_report_t *report)
+static vsf_err_t HID_on_set_get_report(struct vsfusbd_HID_param_t *param,
+										struct vsfusbd_HID_report_t *report)
 {
 	return VSFERR_NONE;
 }

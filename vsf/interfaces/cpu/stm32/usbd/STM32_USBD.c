@@ -93,7 +93,7 @@
 #define SetEPCountRxReg(reg, count)	\
 		do {\
 			register uint16_t block;\
-			if((count) > 62) {\
+			if((count) <= 62) {\
 				block = (((count) >> 1) + ((count) & 1 ? 1 : 0)) << 10;\
 			} else {\
 				block = ((((count) >> 5) - ((count) & 0x1F ? 0 : 1)) << 10) | 0x8000;\

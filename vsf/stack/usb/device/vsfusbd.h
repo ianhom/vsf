@@ -85,20 +85,9 @@ struct vsfusbd_transact_t
 {
 	struct vsf_transaction_buffer_t tbuffer;
 	struct vsfusbd_transact_callback_t callback;
+	bool zlp;
 	
 	// private
-	union
-	{
-		struct
-		{
-			uint16_t num;	// used for IN, indicating the number of package
-			bool zlp;
-		} in;
-		struct
-		{
-			bool isshort;	// used for OUT, indicating the short package
-		} out;
-	} pkt;
 	bool need_poll;
 };
 

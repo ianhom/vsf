@@ -117,7 +117,6 @@ vsf_err_t vsfusbd_ep_receive_nb(struct vsfusbd_device_t *device, uint8_t ep)
 	struct vsf_transaction_buffer_t *tbuffer = &transact->tbuffer;
 	uint16_t size;
 	
-	transact->pkt.out.isshort = false;
 	tbuffer->position = 0;
 	size = tbuffer->buffer.size;
 	
@@ -152,11 +151,6 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 	
 	remain_size = tbuffer->buffer.size;
 	ep_size = device->drv->ep.get_IN_epsize(ep);
-	transact->pkt.in.num = (remain_size + ep_size - 1) / ep_size;
-	if (transact->pkt.in.zlp && !(tbuffer->buffer.size % ep_size))
-	{
-		transact->pkt.in.num++;
-	}
 	pkg_size = min(remain_size, ep_size);
 	
 	if (pkg_size > 0)
@@ -895,57 +889,48 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = &device->IN_transact[ep];
 	struct vsf_transaction_buffer_t *tbuffer = &transact->tbuffer;
-	uint32_t remain_size;
+	uint32_t remain_size = tbuffer->buffer.size - tbuffer->position;
 	uint16_t pkg_size, ep_size;
 	
-	if (--device->IN_transact[ep].pkt.in.num > 0)
+	if (remain_size)
+	{
+		uint8_t *buffer_ptr = vsfusbd_data_io(transact);
+		
+		transact->need_poll = (NULL == buffer_ptr);
+		if (transact->need_poll)
+		{
+			return VSFERR_NONE;
+		}
+		
+#if VSFUSBD_CFG_DBUFFER_EN
+		device->drv->ep.switch_IN_buffer(ep);
+#endif
+		ep_size = device->drv->ep.get_IN_epsize(ep);
+		pkg_size = min(remain_size, ep_size);
+		device->drv->ep.write_IN_buffer(ep, buffer_ptr, pkg_size);
+		device->drv->ep.set_IN_count(ep, pkg_size);
+		tbuffer->position += pkg_size;
+		
+		remain_size = tbuffer->buffer.size - tbuffer->position;
+		if (!remain_size)
+		{
+			if (pkg_size < ep_size)
+			{
+				transact->zlp = false;
+			}
+		}
+	}
+	else if (transact->zlp)
 	{
 #if VSFUSBD_CFG_DBUFFER_EN
-		uint32_t pkg_thres;
-		
-		if (device->drv->ep.is_IN_dbuffer(ep))
-		{
-			device->drv->ep.switch_IN_buffer(ep);
-			pkg_thres = 1;
-		}
-		else
-		{
-			pkg_thres = 0;
-		}
-		
-		if (device->IN_transact[ep].pkt.in.num > pkg_thres)
-#else
-		if (device->IN_transact[ep].pkt.in.num > 0)
+		device->drv->ep.switch_IN_buffer(ep);
 #endif
-		{
-			remain_size = tbuffer->buffer.size - tbuffer->position;
-			
-			if (remain_size)
-			{
-				uint8_t *buffer_ptr = vsfusbd_data_io(transact);
-				
-				transact->need_poll = (NULL == buffer_ptr);
-				if (transact->need_poll)
-				{
-					return VSFERR_NONE;
-				}
-				
-				ep_size = device->drv->ep.get_IN_epsize(ep);
-				pkg_size = min(remain_size, ep_size);
-				device->drv->ep.write_IN_buffer(ep, buffer_ptr, pkg_size);
-				device->drv->ep.set_IN_count(ep, pkg_size);
-				tbuffer->position += pkg_size;
-			}
-			else
-			{
-				device->drv->ep.set_IN_count(ep, 0);
-			}
-		}
+		device->drv->ep.set_IN_count(ep, 0);
+		transact->zlp = false;
 	}
 	else
 	{
 		struct vsfusbd_transact_callback_t *callback = &transact->callback;
-		
 		if (callback->callback != NULL)
 		{
 			callback->callback(callback->param);
@@ -959,7 +944,6 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = &device->OUT_transact[ep];
 	struct vsf_transaction_buffer_t *tbuffer = &transact->tbuffer;
-	struct vsfusbd_transact_callback_t *callback = &transact->callback;
 	uint16_t pkg_size;
 	
 #if VSFUSBD_CFG_DBUFFER_EN
@@ -992,15 +976,7 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 		
 		if (pkg_size < device->drv->ep.get_OUT_epsize(ep))
 		{
-			transact->pkt.out.isshort = true;
-		}
-		if (transact->pkt.out.isshort)
-		{
-			if (callback->callback != NULL)
-			{
-				callback->callback(callback->param);
-			}
-			return VSFERR_NONE;
+			goto pkg_received;
 		}
 		
 		if (tbuffer->position < tbuffer->buffer.size)
@@ -1014,17 +990,19 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 		}
 		else
 		{
-			// zlp
-			device->drv->ep.enable_OUT(ep);
+			goto pkg_received;
 		}
 		return VSFERR_NONE;
 	}
 	else if (!pkg_size && !tbuffer->buffer.size)
 	{
-		// zlp get
-		if (callback->callback != NULL)
+	pkg_received:
 		{
-			callback->callback(callback->param);
+			struct vsfusbd_transact_callback_t *callback = &transact->callback;
+			if (callback->callback != NULL)
+			{
+				callback->callback(callback->param);
+			}
 		}
 		return VSFERR_NONE;
 	}
@@ -1058,7 +1036,7 @@ static void vsfusbd_setup_status_callback(void *param)
 	{
 		device->IN_transact[0].tbuffer.buffer.buffer = NULL;
 		device->IN_transact[0].tbuffer.buffer.size = 0;
-		device->IN_transact[0].pkt.in.zlp = true;
+		device->IN_transact[0].zlp = false;
 		device->IN_transact[0].callback.param = device;
 		device->IN_transact[0].callback.callback =
 											vsfusbd_setup_end_callback;
@@ -1390,8 +1368,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			else
 			{
 				device->IN_transact[0].tbuffer.buffer = buffer;
-				device->IN_transact[0].pkt.in.zlp =
-											buffer.size < request->length;
+				device->IN_transact[0].zlp = buffer.size < request->length;
 				device->IN_transact[0].callback.param = device;
 				device->IN_transact[0].callback.callback = NULL;
 				device->IN_transact[0].callback.data_io = data_io;

@@ -227,6 +227,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 							(report->idle_cnt >= report->idle))))
 				{
 					report->idle_cnt = 0;
++					transact->zlp = false;
 					transact->tbuffer.buffer = report->buffer;
 					transact->callback.callback = vsfusbd_HID_INREPORT_callback;
 					transact->callback.param = param;
