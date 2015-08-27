@@ -5,9 +5,9 @@
 
 enum usb_HID_description_type_t
 {
-	USB_HIDDESC_TYPE_HID					= 0x21,
-	USB_HIDDESC_TYPE_REPORT					= 0x22,
-	USB_HIDDESC_TYPE_PHYSICAL				= 0x23,
+	USB_HID_DT_HID							= 0x21,
+	USB_HID_DT_REPORT						= 0x22,
+	USB_HID_DT_PHYSICAL						= 0x23,
 };
 
 enum usb_HID_req_t
@@ -31,18 +31,20 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_HID_class;
 
 enum usb_HID_report_type_t
 {
-	USB_HID_REPORT_OUTPUT,
-	USB_HID_REPORT_INPUT,
-	USB_HID_REPORT_FEATURE,
+	USB_HID_REPORT_OUTPUT = 1,
+	USB_HID_REPORT_INPUT = 2,
+	USB_HID_REPORT_FEATURE = 3,
 };
 
+struct vsfusbd_HID_param_t;
 struct vsfusbd_HID_report_t
 {
 	enum usb_HID_report_type_t type;
 	uint8_t id;
 	uint8_t idle;
 	struct vsf_buffer_t buffer;
-	vsf_err_t (*on_set_report)(struct vsfusbd_HID_report_t *report);
+	vsf_err_t (*on_set_report)(struct vsfusbd_HID_param_t *param,
+								struct vsfusbd_HID_report_t *report);
 	bool changed;
 	
 	// private
@@ -51,7 +53,7 @@ struct vsfusbd_HID_report_t
 };
 
 #define VSFUSBD_DESC_HID_REPORT(ptr, size, func)			\
-	{USB_HIDDESC_TYPE_REPORT, 0, 0, {(uint8_t*)(ptr), (size)}, (func)}
+	{USB_HID_DT_REPORT, 0, 0, {(uint8_t*)(ptr), (size)}, (func)}
 
 enum vsfusbd_HID_output_state_t
 {
