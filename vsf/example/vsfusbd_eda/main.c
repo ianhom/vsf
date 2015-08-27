@@ -335,7 +335,6 @@ struct vsfapp_t
 	struct
 	{
 		struct vsfshell_t shell;
-		vsfsm_evt_t evt_buff[8];
 	} shell;
 	
 	struct vsfsm_t sm;
@@ -343,8 +342,8 @@ struct vsfapp_t
 } static app =
 {
 	{
-		2,						// uint8_t port;
-		13,						// uint8_t pin;
+		USB_PULLUP_PORT,		// uint8_t port;
+		USB_PULLUP_PIN,			// uint8_t pin;
 	},							// struct usb_pullup_port_t usb_pullup;
 	{
 		{

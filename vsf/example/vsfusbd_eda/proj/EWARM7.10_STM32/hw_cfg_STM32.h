@@ -20,3 +20,6 @@
 #endif
 
 #define OSC_HZ							HSE_VALUE
+
+#define USB_PULLUP_PORT					2
+#define USB_PULLUP_PIN					13
