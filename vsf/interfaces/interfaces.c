@@ -188,7 +188,6 @@ const struct interfaces_info_t core_interfaces =
 		CORE_ADC_GET_MAX_VALUE(__TARGET_CHIP__),
 		CORE_ADC_CALIBRATE(__TARGET_CHIP__),
 		CORE_ADC_START(__TARGET_CHIP__),
-		CORE_ADC_ISREADY(__TARGET_CHIP__),
 		CORE_ADC_GET(__TARGET_CHIP__)
 	}
 #endif

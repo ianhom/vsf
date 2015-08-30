@@ -1,5 +1,6 @@
 
 #include "app_type.h"
+#include "compiler.h"
 #include "interfaces.h"
 
 // TODO: remove MACROs below to stm32_reg.h
@@ -23,6 +24,7 @@
 #define STM32_ADC_SR_STRT				((uint32_t)1 << 4)
 #define STM32_ADC_SR_EOC				((uint32_t)1 << 1)
 
+#define STM32_ADC_CR1_EOCIE				((uint32_t)1 << 5)
 #define STM32_ADC_CR1_DISCEN			((uint32_t)1 << 11)
 
 #define STM32_ADC_CR2_ADON				((uint32_t)1 << 0)
@@ -41,10 +43,13 @@
 #define STM32_ADC_NUM					3
 
 static const ADC_TypeDef *stm32_adcs[STM32_ADC_NUM] = {ADC1, ADC2, ADC3};
+static void (*stm32_adc_callback[STM32_ADC_NUM])(void *param, uint16_t value);
+static void *stm32_adc_param[STM32_ADC_NUM];
 
 vsf_err_t stm32_adc_init(uint8_t index)
 {
 	ADC_TypeDef *adc;
+	uint8_t irqn;
 	
 #if __VSF_DEBUG__
 	if (index >= STM32_ADC_NUM)
@@ -78,6 +83,18 @@ vsf_err_t stm32_adc_init(uint8_t index)
 	adc->CR1 = STM32_ADC_CR1_DISCEN;
 	adc->CR2 = 0;
 	adc->SQR1 = 0;
+	
+	stm32_adc_callback[index] = NULL;
+	if (index < 2)
+	{
+		irqn = ADC1_2_IRQn;
+	}
+	else
+	{
+		irqn = ADC3_IRQn;
+	}
+	NVIC->IP[irqn] = 0xFF;
+	NVIC->ISER[irqn >> 0x05] = 1UL << (irqn & 0x1F);
 	
 	return VSFERR_NONE;
 }
@@ -199,6 +216,10 @@ vsf_err_t stm32_adc_config_channel(uint8_t index, uint8_t channel,
 					((cycles >> 5) << (3 * channel));
 		adc->SMPR2 = tmpreg;
 	}
+	if (!(adc->CR2 & STM32_ADC_CR2_ADON))
+	{
+		adc->CR2 |= STM32_ADC_CR2_ADON;
+	}
 	
 	return VSFERR_NONE;
 }
@@ -232,7 +253,8 @@ uint32_t stm32_adc_get_max_value(uint8_t index)
 	return (1 << 12);
 }
 
-vsf_err_t stm32_adc_start(uint8_t index, uint8_t channel)
+vsf_err_t stm32_adc_start(uint8_t index, uint8_t channel,
+							void (callback)(void *, uint16_t), void *param)
 {
 	ADC_TypeDef *adc;
 	
@@ -244,8 +266,12 @@ vsf_err_t stm32_adc_start(uint8_t index, uint8_t channel)
 #endif
 	adc = (ADC_TypeDef *)stm32_adcs[index];
 	
+	stm32_adc_callback[index] = callback;
+	stm32_adc_param[index] = param;
+	
 	adc->SQR3 = channel;
 	adc->SR &= ~STM32_ADC_SR_EOC;
+	adc->CR1 |= STM32_ADC_CR1_EOCIE;
 	adc->CR2 |= STM32_ADC_CR2_ADON;
 	return VSFERR_NONE;
 }
@@ -280,6 +306,35 @@ uint32_t stm32_adc_get(uint8_t index, uint8_t channel)
 	adc = (ADC_TypeDef *)stm32_adcs[index];
 	
 	return adc->DR;
+}
+
+ROOTFUNC void ADC1_2_IRQHandler(void)
+{
+	if (ADC1->SR & STM32_ADC_SR_EOC)
+	{
+		if (stm32_adc_callback[0] != NULL)
+		{
+			stm32_adc_callback[0](stm32_adc_param[0], ADC1->DR);
+		}
+	}
+	if (ADC2->SR & STM32_ADC_SR_EOC)
+	{
+		if (stm32_adc_callback[1] != NULL)
+		{
+			stm32_adc_callback[1](stm32_adc_param[1], ADC2->DR);
+		}
+	}
+}
+
+ROOTFUNC void ADC3_IRQHandler(void)
+{
+	if (ADC3->SR & STM32_ADC_SR_EOC)
+	{
+		if (stm32_adc_callback[2] != NULL)
+		{
+			stm32_adc_callback[2](stm32_adc_param[2], ADC3->DR);
+		}
+	}
 }
 
 #endif
