@@ -32,23 +32,8 @@
 
 struct vsfusbd_device_t;
 
-enum vsfusbd_ctrl_state_t
-{
-	USB_CTRL_STAT_WAIT_SETUP,
-	USB_CTRL_STAT_SETTING_UP,
-	USB_CTRL_STAT_IN_DATA,
-	USB_CTRL_STAT_OUT_DATA,
-	USB_CTRL_STAT_LAST_IN_DATA,
-	USB_CTRL_STAT_LAST_OUT_DATA,
-	USB_CTRL_STAT_WAIT_STATUS_IN,
-	USB_CTRL_STAT_WAIT_STATUS_OUT,
-	USB_CTRL_STAT_STALLED,
-	USB_CTRL_STAT_PAUSE,
-};
-
 struct vsfusbd_ctrl_handler_t
 {
-	enum vsfusbd_ctrl_state_t state;
 	uint16_t ep_size;
 	struct usb_ctrl_request_t request;
 	struct vsfusbd_setup_filter_t *filter;
@@ -156,29 +141,30 @@ struct vsfusbd_device_t
 	struct interface_usbd_t *drv;
 	uint32_t int_priority;
 	
-	const struct vsfusbd_user_callback_t
+	struct vsfusbd_user_callback_t
 	{
-		vsf_err_t (*init)(void);
-		vsf_err_t (*fini)(void);
-		vsf_err_t (*on_set_interface)(uint8_t iface,
-										uint8_t alternate_setting);
+		vsf_err_t (*init)(struct vsfusbd_device_t *device);
+		vsf_err_t (*fini)(struct vsfusbd_device_t *device);
+		vsf_err_t (*on_set_interface)(struct vsfusbd_device_t *device,
+							uint8_t iface, uint8_t alternate_setting);
 		
-		void (*on_ATTACH)(void);
-		void (*on_DETACH)(void);
-		void (*on_RESET)(void);
-		void (*on_SOF)(void);
-		void (*on_ERROR)(enum interface_usbd_error_t type);
+		void (*on_ATTACH)(struct vsfusbd_device_t *device);
+		void (*on_DETACH)(struct vsfusbd_device_t *device);
+		void (*on_RESET)(struct vsfusbd_device_t *device);
+		void (*on_SOF)(struct vsfusbd_device_t *device);
+		void (*on_ERROR)(struct vsfusbd_device_t *device,
+							enum interface_usbd_error_t type);
 #if VSFUSBD_CFG_LP_EN
-		void (*on_WAKEUP)(void);
-		void (*on_SUSPEND)(void);
-		void (*on_RESUME)(void);
+		void (*on_WAKEUP)(struct vsfusbd_device_t *device);
+		void (*on_SUSPEND)(struct vsfusbd_device_t *device);
+		void (*on_RESUME)(struct vsfusbd_device_t *device);
 #endif
 		
-		void (*on_IN)(uint8_t ep);
-		void (*on_OUT)(uint8_t ep);
+		void (*on_IN)(struct vsfusbd_device_t *device, uint8_t ep);
+		void (*on_OUT)(struct vsfusbd_device_t *device, uint8_t ep);
 #if VSFUSBD_EP_ISO_EN
-		void (*on_SYNC_UNDERFLOW)(uint8_t ep);
-		void (*on_SYNC_OVERFLOW)(uint8_t ep);
+		void (*on_SYNC_UNDERFLOW)(struct vsfusbd_device_t *device, uint8_t ep);
+		void (*on_SYNC_OVERFLOW)(struct vsfusbd_device_t *device, uint8_t ep);
 #endif
 	} callback;
 	
@@ -211,6 +197,9 @@ vsf_err_t vsfusbd_device_init(struct vsfusbd_device_t *device);
 vsf_err_t vsfusbd_device_fini(struct vsfusbd_device_t *device);
 vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep);
 vsf_err_t vsfusbd_ep_receive_nb(struct vsfusbd_device_t *device, uint8_t ep);
+
+vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep);
+vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep);
 
 vsf_err_t vsfusbd_set_IN_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));

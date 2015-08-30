@@ -187,7 +187,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 		
 		// enable timer
-		param->timer4ms.sm = &param->iface->sm;
+		param->timer4ms.sm = sm;
 		param->timer4ms.evt = VSFUSBD_HID_EVT_TIMER4MS;
 		param->timer4ms.interval = 4;
 		vsftimer_register(&param->timer4ms);
@@ -200,7 +200,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			for (i = 0; i < param->num_of_report; i++)
 			{
 				report = &param->reports[i];
-				if ((report->type == USB_HID_REPORT_TYPE_INPUT) &&
+				if ((report->type == USB_HID_REPORT_INPUT) &&
 					(report->idle != 0))
 				{
 					report->idle_cnt++;
@@ -222,12 +222,12 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			for (i = 0; i < param->num_of_report; i++)
 			{
 				report = &param->reports[i];
-				if ((report->type == USB_HID_REPORT_TYPE_INPUT) &&
+				if ((report->type == USB_HID_REPORT_INPUT) &&
 					(report->changed || ((report->idle != 0) &&
 							(report->idle_cnt >= report->idle))))
 				{
 					report->idle_cnt = 0;
-+					transact->zlp = false;
+					transact->zlp = false;
 					transact->tbuffer.buffer = report->buffer;
 					transact->callback.callback = vsfusbd_HID_INREPORT_callback;
 					transact->callback.param = param;

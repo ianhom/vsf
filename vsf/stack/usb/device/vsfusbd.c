@@ -452,7 +452,6 @@ static vsf_err_t vsfusbd_stdreq_set_configuration_prepare(
 	}
 	
 	device->configured = false;
-	
 	return VSFERR_NONE;
 }
 
@@ -660,7 +659,7 @@ static vsf_err_t vsfusbd_stdreq_set_interface_prepare(
 {
 	struct usb_ctrl_request_t *request = &device->ctrl_handler.request;
 	uint8_t iface_idx = request->index;
-	uint8_t alternate_setting = request->value;
+	uint8_t alt = request->value;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	
 	if (iface_idx >= device->config[device->configuration].num_of_ifaces)
@@ -668,10 +667,10 @@ static vsf_err_t vsfusbd_stdreq_set_interface_prepare(
 		return VSFERR_FAIL;
 	}
 	
-	config->iface[iface_idx].alternate_setting = alternate_setting;
+	config->iface[iface_idx].alternate_setting = alt;
 	if (device->callback.on_set_interface != NULL)
 	{
-		return device->callback.on_set_interface(iface_idx, alternate_setting);
+		return device->callback.on_set_interface(device, iface_idx, alt);
 	}
 	return VSFERR_NONE;
 }
@@ -885,7 +884,7 @@ static struct vsfusbd_setup_filter_t *vsfusbd_get_request_filter(
 }
 
 // on_IN and on_OUT executer
-static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
+vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = &device->IN_transact[ep];
 	struct vsf_transaction_buffer_t *tbuffer = &transact->tbuffer;
@@ -903,7 +902,10 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 		}
 		
 #if VSFUSBD_CFG_DBUFFER_EN
-		device->drv->ep.switch_IN_buffer(ep);
+		if (device->drv->ep.is_IN_dbuffer(ep))
+		{
+			device->drv->ep.switch_IN_buffer(ep);
+		}
 #endif
 		ep_size = device->drv->ep.get_IN_epsize(ep);
 		pkg_size = min(remain_size, ep_size);
@@ -923,7 +925,10 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 	else if (transact->zlp)
 	{
 #if VSFUSBD_CFG_DBUFFER_EN
-		device->drv->ep.switch_IN_buffer(ep);
+		if (device->drv->ep.is_IN_dbuffer(ep))
+		{
+			device->drv->ep.switch_IN_buffer(ep);
+		}
 #endif
 		device->drv->ep.set_IN_count(ep, 0);
 		transact->zlp = false;
@@ -940,7 +945,7 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
+vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = &device->OUT_transact[ep];
 	struct vsf_transaction_buffer_t *tbuffer = &transact->tbuffer;
@@ -1023,7 +1028,6 @@ static void vsfusbd_setup_end_callback(void *param)
 			&device->IN_transact[0].tbuffer;
 		ctrl_handler->filter->process(device, &tbuffer->buffer);
 	}
-	ctrl_handler->state = USB_CTRL_STAT_WAIT_SETUP;
 }
 
 static void vsfusbd_setup_status_callback(void *param)
@@ -1169,7 +1173,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		device->drv->disconnect();
 		if (device->callback.fini != NULL)
 		{
-			device->callback.fini();
+			device->callback.fini(device);
 		}
 		break;
 	case VSFSM_EVT_INIT:
@@ -1228,7 +1232,8 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			}
 			
 			if (device->drv->init(device->int_priority) ||
-				((device->callback.init != NULL) && device->callback.init()))
+				((device->callback.init != NULL) &&
+				 	device->callback.init(device)))
 			{
 				err = VSFERR_FAIL;
 				goto init_exit;
@@ -1252,7 +1257,6 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			device->configured = false;
 			device->configuration = 0;
 			device->feature = 0;
-			device->ctrl_handler.state = USB_CTRL_STAT_WAIT_SETUP;
 			
 			for (i = 0; i < device->num_of_configuration; i++)
 			{
@@ -1301,7 +1305,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			
 			if (device->callback.on_RESET != NULL)
 			{
-				device->callback.on_RESET();
+				device->callback.on_RESET(device);
 			}
 			
 			if (vsfusbd_set_IN_handler(device, 0, vsfusbd_on_IN_do) ||
@@ -1320,20 +1324,18 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 			struct usb_ctrl_request_t *request = &ctrl_handler->request;
 			struct vsf_buffer_t buffer;
-			uint8_t buff[USB_SETUP_PKG_SIZE];
 			uint8_t* (*data_io)(void *param) = NULL;
 			
-			if (device->drv->get_setup(buff))
+			if (device->drv->get_setup((uint8_t *)request))
 			{
 				// fail to get setup request data
 				err = VSFERR_FAIL;
 				goto setup_exit;
 			}
-			memcpy(request, buff, USB_SETUP_PKG_SIZE);
-			ctrl_handler->filter	= vsfusbd_get_request_filter(device,
-														&ctrl_handler->iface);
-			buffer.size				= 0;
-			buffer.buffer			= NULL;
+			ctrl_handler->filter =
+					vsfusbd_get_request_filter(device, &ctrl_handler->iface);
+			buffer.size = 0;
+			buffer.buffer = NULL;
 			
 			if ((NULL == ctrl_handler->filter) ||
 				((ctrl_handler->filter->prepare != NULL) &&
@@ -1342,7 +1344,6 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				err = VSFERR_FAIL;
 				goto setup_exit;
 			}
-			ctrl_handler->state = USB_CTRL_STAT_SETTING_UP;
 			if (buffer.size > request->length)
 			{
 				buffer.size = request->length;
@@ -1392,20 +1393,20 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	case VSFUSBD_INTEVT_WAKEUP:
 		if (device->callback.on_WAKEUP != NULL)
 		{
-			device->callback.on_WAKEUP();
+			device->callback.on_WAKEUP(device);
 		}
 		break;
 	case VSFUSBD_INTEVT_SUSPEND:
 		if (device->callback.on_SUSPEND != NULL)
 		{
-			device->callback.on_SUSPEND();
+			device->callback.on_SUSPEND(device);
 		}
 		device->drv->suspend();
 		break;
 	case VSFUSBD_INTEVT_RESUME:
 		if (device->callback.on_RESUME != NULL)
 		{
-			device->callback.on_RESUME();
+			device->callback.on_RESUME(device);
 		}
 		device->drv->resume();
 		break;
@@ -1413,19 +1414,19 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	case VSFUSBD_INTEVT_SOF:
 		if (device->callback.on_SOF != NULL)
 		{
-			device->callback.on_SOF();
+			device->callback.on_SOF(device);
 		}
 		break;
 	case VSFUSBD_INTEVT_ATTACH:
 		if (device->callback.on_ATTACH != NULL)
 		{
-			device->callback.on_ATTACH();
+			device->callback.on_ATTACH(device);
 		}
 		break;
 	case VSFUSBD_INTEVT_DETACH:
 		if (device->callback.on_DETACH != NULL)
 		{
-			device->callback.on_DETACH();
+			device->callback.on_DETACH(device);
 		}
 		break;
 	default:
@@ -1501,7 +1502,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					enum interface_usbd_error_t type =
 							(enum interface_usbd_error_t)(evt & 0xFF);
-					device->callback.on_ERROR(type);
+					device->callback.on_ERROR(device, type);
 				}
 			}
 			break;

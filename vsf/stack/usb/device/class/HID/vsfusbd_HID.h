@@ -20,10 +20,6 @@ enum usb_HID_req_t
 	USB_HIDREQ_SET_PROTOCOL					= 0x0B,
 };
 
-#define USB_HID_REPORT_TYPE_INPUT			1
-#define USB_HID_REPORT_TYPE_OUTPUT			2
-#define USB_HID_REPORT_TYPE_FEATURE			3
-
 #define USB_HID_PROTOCOL_BOOT				0
 #define USB_HID_PROTOCOL_REPORT				1
 
@@ -31,8 +27,8 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_HID_class;
 
 enum usb_HID_report_type_t
 {
-	USB_HID_REPORT_OUTPUT = 1,
-	USB_HID_REPORT_INPUT = 2,
+	USB_HID_REPORT_INPUT = 1,
+	USB_HID_REPORT_OUTPUT = 2,
 	USB_HID_REPORT_FEATURE = 3,
 };
 
