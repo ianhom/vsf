@@ -110,6 +110,11 @@ vsf_err_t vsftimer_register(struct vsftimer_timer_t *timer)
 
 vsf_err_t vsftimer_unregister(struct vsftimer_timer_t *timer)
 {
+	if (NULL == vsftimer.timerlist)
+	{
+		return VSFERR_NONE;
+	}
+	
 	if (vsftimer.timerlist == timer)
 	{
 		vsftimer.timerlist = sllist_get_container(timer->list.next,
