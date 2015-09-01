@@ -276,38 +276,6 @@ vsf_err_t stm32_adc_start(uint8_t index, uint8_t channel,
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_adc_isready(uint8_t index, uint8_t channel)
-{
-	ADC_TypeDef *adc;
-	
-	REFERENCE_PARAMETER(channel);
-#if __VSF_DEBUG__
-	if (index >= STM32_ADC_NUM)
-	{
-		return VSFERR_NOT_SUPPORT;
-	}
-#endif
-	adc = (ADC_TypeDef *)stm32_adcs[index];
-	
-	return (adc->SR & STM32_ADC_SR_EOC) ? VSFERR_NONE : VSFERR_NOT_READY;
-}
-
-uint32_t stm32_adc_get(uint8_t index, uint8_t channel)
-{
-	ADC_TypeDef *adc;
-	
-	REFERENCE_PARAMETER(channel);
-#if __VSF_DEBUG__
-	if (index >= STM32_ADC_NUM)
-	{
-		return 0;
-	}
-#endif
-	adc = (ADC_TypeDef *)stm32_adcs[index];
-	
-	return adc->DR;
-}
-
 ROOTFUNC void ADC1_2_IRQHandler(void)
 {
 	if (ADC1->SR & STM32_ADC_SR_EOC)
