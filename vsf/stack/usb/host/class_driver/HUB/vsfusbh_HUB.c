@@ -503,9 +503,8 @@ void *vsfusbh_hub_init(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev)
 	hdata->vsfurb.vsfdev = dev;
 	hdata->vsfurb.timeout = 200; 	/* default timeout 200ms */
 	hdata->usbh = usbh;
-	dev->priv = cdata;
-
 	cdata->param = hdata;
+
 	hdata->sm.init_state.evt_handler = vsfusbh_hub_evt_handler_init;
 	hdata->sm.user_data = (void*)hdata;
 	vsfsm_init(&hdata->sm);

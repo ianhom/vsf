@@ -424,32 +424,35 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 			return -1;
 		}
 
-		ifp->ep_desc = vsf_bufmgr_malloc(ifp->bNumEndpoints *
-			sizeof(struct usb_endpoint_descriptor_t));
-		if (!ifp->ep_desc)
+		if (ifp->bNumEndpoints != 0)
 		{
-			return -1;
-		}
-
-		memset(ifp->ep_desc, 0, ifp->bNumEndpoints *
-			sizeof(struct usb_endpoint_descriptor_t));
-
-		for (i = 0; i < ifp->bNumEndpoints; i++)
-		{
-			header = (struct usb_descriptor_header_t *)buffer;
-
-			if (header->bLength > size)
+			ifp->ep_desc = vsf_bufmgr_malloc(ifp->bNumEndpoints *
+				sizeof(struct usb_endpoint_descriptor_t));
+			if (!ifp->ep_desc)
 			{
 				return -1;
 			}
 
-			retval = parse_endpoint(ifp->ep_desc + i, buffer, size);
-			if (retval < 0)
-				return retval;
+			memset(ifp->ep_desc, 0, ifp->bNumEndpoints *
+				sizeof(struct usb_endpoint_descriptor_t));
 
-			buffer += retval;
-			parsed += retval;
-			size -= retval;
+			for (i = 0; i < ifp->bNumEndpoints; i++)
+			{
+				header = (struct usb_descriptor_header_t *)buffer;
+
+				if (header->bLength > size)
+				{
+					return -1;
+				}
+
+				retval = parse_endpoint(ifp->ep_desc + i, buffer, size);
+				if (retval < 0)
+					return retval;
+
+				buffer += retval;
+				parsed += retval;
+				size -= retval;
+			}
 		}
 
 		/* We check to see if it's an alternate to this one */
