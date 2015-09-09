@@ -164,6 +164,10 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 		device->drv->ep.write_IN_buffer(ep, buffer_ptr, pkg_size);
 	}
 	device->drv->ep.set_IN_count(ep, pkg_size);
+	if (pkg_size < ep_size)
+	{
+		transact->zlp = false;
+	}
 	tbuffer->position = pkg_size;
 	remain_size -= pkg_size;
 	
@@ -183,6 +187,10 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 			device->drv->ep.write_IN_buffer(ep, buffer_ptr, pkg_size);
 		}
 		device->drv->ep.set_IN_count(ep, pkg_size);
+		if (pkg_size < ep_size)
+		{
+			transact->zlp = false;
+		}
 		tbuffer->position += pkg_size;
 	}
 #endif
