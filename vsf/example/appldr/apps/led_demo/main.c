@@ -10,7 +10,6 @@ struct vsfapp_t
 	struct vsf_module_t app_mod;
 	
 	struct vsfsm_t sm;
-	struct vsftimer_timer_t timer;
 	
 	// Application
 	uint8_t led_num;
@@ -80,10 +79,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			vsfsm_pt_init(&led->sm, &led->pt);
 		}
 		
-		app->timer.interval = 1;
-		app->timer.evt = LED_EVT_CARRY;
-		app->timer.sm = sm;
-		vsftimer_register(&app->timer);
+		vsftimer_create(sm, 1, -1, LED_EVT_CARRY);
 		break;
 	case LED_EVT_CARRY:
 		vsfsm_post_evt(&app->led[0].sm, LED_EVT_CARRY);

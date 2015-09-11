@@ -19,34 +19,6 @@
 
 #include "vsf.h"
 
-static vsf_err_t vsfsm_sem_init_internal(struct vsfsm_sem_t *sem, uint32_t cnt,
-											vsfsm_evt_t evt)
-{
-	return vsfsm_sync_init(sem, cnt, 0xFFFFFFFF, evt);
-}
-static vsf_err_t vsfsm_sem_post_internal(struct vsfsm_sem_t *sem)
-{
-	return vsfsm_sync_increase(sem);
-}
-static vsf_err_t vsfsm_sem_pend_internal(struct vsfsm_sem_t *sem,
-											struct vsfsm_t *sm)
-{
-	return vsfsm_sync_decrease(sem, sm);
-}
-static vsf_err_t vsfsm_crit_init_internal(struct vsfsm_crit_t *crit,
-											vsfsm_evt_t evt)
-{
-	return vsfsm_sync_init(crit, 1, 1, evt);
-}
-static vsf_err_t vsfsm_crit_enter_internal(struct vsfsm_crit_t *crit,
-											struct vsfsm_t *sm)
-{
-	return vsfsm_sync_decrease(crit, sm);
-}
-static vsf_err_t vsfsm_crit_leave_internal(struct vsfsm_crit_t *crit)
-{
-	return vsfsm_sync_increase(crit);
-}
 static void vsfsm_enter_critical_internal(void)
 {
 	vsf_enter_critical();
@@ -141,20 +113,26 @@ ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 		vsfsm_post_evt_pending,
 		vsfsm_enter_critical_internal,
 		vsfsm_leave_critical_internal,
-		vsfsm_sem_init_internal,
-		vsfsm_sem_post_internal,
-		vsfsm_sem_pend_internal,
-		vsfsm_crit_init_internal,
-		vsfsm_crit_enter_internal,
-		vsfsm_crit_leave_internal,
-		vsftimer_register,
-		vsftimer_unregister,
+		
+		{
+			vsfsm_sync_init,
+			vsfsm_sync_cancel,
+			vsfsm_sync_increase,
+			vsfsm_sync_decrease,
+		},					// struct sync;
+		
+		{
+			vsftimer_create,
+			vsftimer_free,
+			vsftimer_enqueue,
+			vsftimer_dequeue,
+		},					// struct timer;
 		
 		{
 			vsf_module_register,
 			vsf_module_unregister,
 			vsf_module_get,
-		},
+		},					// struct module;
 	},						// struct vsf_framework_t framework;
 	
 	{

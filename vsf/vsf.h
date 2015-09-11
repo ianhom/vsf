@@ -61,19 +61,23 @@ struct vsf_t
 		void (*enter_critical)(void);
 		void (*leave_critical)(void);
 		
-		vsf_err_t (*sem_init)(struct vsfsm_sem_t *sem, uint32_t cnt,
-								vsfsm_evt_t evt);
-		vsf_err_t (*sem_post)(struct vsfsm_sem_t *sem);
-		vsf_err_t (*sem_pend)(struct vsfsm_sem_t *sem, struct vsfsm_t *sm);
-		
-		vsf_err_t (*crit_init)(struct vsfsm_crit_t *crit, vsfsm_evt_t evt);
-		vsf_err_t (*crit_enter)(struct vsfsm_crit_t *crit, struct vsfsm_t *sm);
-		vsf_err_t (*crit_leave)(struct vsfsm_crit_t *crit);
+		struct
+		{
+			vsf_err_t (*init)(struct vsfsm_sync_t *sync, uint32_t cur_value,
+								uint32_t max_value, vsfsm_evt_t evt);
+			vsf_err_t (*cancel)(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
+			vsf_err_t (*increase)(struct vsfsm_sync_t *sync);
+			vsf_err_t (*decrease)(struct vsfsm_sync_t *sync,
+								struct vsfsm_t *sm);
+		} sync;
 		
 		struct
 		{
-			vsf_err_t (*add)(struct vsftimer_timer_t *timer);
-			vsf_err_t (*remove)(struct vsftimer_timer_t *timer);
+			struct vsftimer_t * (*create)(struct vsfsm_t *sm, uint32_t interval,
+										int16_t trigger_cnt, vsfsm_evt_t evt);
+			void (*free)(struct vsftimer_t *timer);
+			void (*enqueue)(struct vsftimer_t *timer);
+			void (*dequeue)(struct vsftimer_t *timer);
 		} timer;
 		
 		struct
@@ -116,19 +120,21 @@ struct vsf_t
 #define vsfsm_pt_init					VSF_BASE->framework.pt_init
 #define vsfsm_post_evt					VSF_BASE->framework.post_evt
 #define vsfsm_post_evt_pending			VSF_BASE->framework.post_evt_pending
+
+#undef vsf_enter_critical
 #define vsf_enter_critical				VSF_BASE->framework.enter_critical
+#undef vsf_leave_critical
 #define vsf_leave_critical				VSF_BASE->framework.leave_critical
 
-#define vsfsm_sem_init					VSF_BASE->framework.sem_init
-#define vsfsm_sem_post					VSF_BASE->framework.sem_post
-#define vsfsm_sem_pend					VSF_BASE->framework.sem_pend
+#define vsfsm_sync_init					VSF_BASE->framework.sync.init
+#define vsfsm_sync_cancel				VSF_BASE->framework.sync.cancel
+#define vsfsm_sync_increase				VSF_BASE->framework.sync.increase
+#define vsfsm_sync_decrease				VSF_BASE->framework.sync.decrease
 
-#define vsfsm_crit_init					VSF_BASE->framework.crit_init
-#define vsfsm_crit_enter				VSF_BASE->framework.crit_enter
-#define vsfsm_crit_leave				VSF_BASE->framework.crit_leave
-
-#define vsftimer_register				VSF_BASE->framework.timer.add
-#define vsftimer_unregister				VSF_BASE->framework.timer.remove
+#define vsftimer_create					VSF_BASE->framework.timer.create
+#define vsftimer_free					VSF_BASE->framework.timer.free
+#define vsftimer_enqueue				VSF_BASE->framework.timer.enqueue
+#define vsftimer_dequeue				VSF_BASE->framework.timer.dequeue
 
 #define vsf_module_load					VSF_BASE->framework.module.load
 #define vsf_module_unload				VSF_BASE->framework.module.unload

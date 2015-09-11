@@ -2109,6 +2109,12 @@
     <group>
       <name>tool</name>
       <group>
+        <name>bittool</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\tool\bittool\bittool.c</name>
+        </file>
+      </group>
+      <group>
         <name>buffer</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\buffer\buffer.c</name>

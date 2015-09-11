@@ -29,7 +29,7 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -60,7 +60,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -87,7 +87,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.10.3.6927</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -137,12 +137,12 @@
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -620,6 +620,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -979,7 +980,7 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -1010,7 +1011,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -1087,12 +1088,12 @@
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -1571,6 +1572,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -2100,6 +2102,12 @@
     </group>
     <group>
       <name>tool</name>
+      <group>
+        <name>bittool</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\tool\bittool\bittool.c</name>
+        </file>
+      </group>
       <group>
         <name>buffer</name>
         <file>

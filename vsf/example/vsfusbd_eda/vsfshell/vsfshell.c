@@ -540,17 +540,13 @@ vsfshell_echo_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 	if (3 == param->argc)
 	{
-		param->priv = MALLOC(sizeof(struct vsftimer_timer_t));
+		param->priv = vsftimer_create(pt->sm, strtoul(param->argv[2], NULL, 0),
+										-1, VSFSHELL_EVT_USER);
 		if (NULL == param->priv)
 		{
 			vsfshell_printf(output_pt, "not enough resources." VSFSHELL_LINEEND);
 			goto handler_thread_end;
 		}
-		memset(param->priv, 0, sizeof(struct vsftimer_timer_t));
-		((struct vsftimer_timer_t *)param->priv)->sm = pt->sm;
-		((struct vsftimer_timer_t *)param->priv)->evt = VSFSHELL_EVT_USER;
-		((struct vsftimer_timer_t *)param->priv)->interval = strtoul(param->argv[2], NULL, 0);
-		vsftimer_register((struct vsftimer_timer_t *)param->priv);
 		vsfshell_handler_release_io(pt);
 	}
 	
@@ -562,10 +558,6 @@ vsfshell_echo_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		vsfshell_printf(output_pt, "%s" VSFSHELL_LINEEND, param->argv[1]);
 	} while (3 == param->argc);
-	if (3 == param->argc)
-	{
-		vsftimer_unregister((struct vsftimer_timer_t *)param->priv);
-	}
 handler_thread_end:
 	if (param->priv != NULL)
 	{

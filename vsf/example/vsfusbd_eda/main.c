@@ -339,7 +339,6 @@ struct vsfapp_t
 	} shell;
 	
 	struct vsfsm_t sm;
-	struct vsftimer_timer_t usbpu_timer;
 } static app =
 {
 	{
@@ -426,11 +425,6 @@ struct vsfapp_t
 	{
 		{app_evt_handler},		// struct vsfsm_state_t init_state;
 	},							// struct vsfsm_t sm;
-	{
-		200,					// uint32_t interval;
-		&app.sm,				// struct vsfsm_t *sm;
-		APP_EVT_USBPU_TO,		// vsfsm_evt_t evt;
-	},							// struct vsftimer_timer_t usbpu_timer;
 };
 
 // tickclk interrupt, simply call vsftimer_callback_int
@@ -465,7 +459,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 											app.usb_pullup.pin, GPIO_OUTPP);
 		}
 		app.usbd.device.drv->disconnect();
-		vsftimer_register(&app.usbpu_timer);
+		vsftimer_create(sm, 200, 1, APP_EVT_USBPU_TO);
 		break;
 	case APP_EVT_USBPU_TO:
 		if (app.usb_pullup.port != IFS_DUMMY_PORT)
@@ -474,7 +468,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 										1 << app.usb_pullup.pin);
 		}
 		app.usbd.device.drv->connect();
-		vsftimer_unregister(&app.usbpu_timer);
 		break;
 	}
 	return NULL;
