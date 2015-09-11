@@ -17,42 +17,43 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __VSFTIMER_H_INCLUDED__
-#define __VSFTIMER_H_INCLUDED__
+#ifndef __BITTOOL_H_INCLUDED__
+#define __BITTOOL_H_INCLUDED__
 
-#include "tool/list/list.h"
-#include "framework/vsfsm/vsfsm.h"
+uint8_t BIT_REVERSE_U8(uint8_t);
+uint16_t BIT_REVERSE_U16(uint16_t);
+uint32_t BIT_REVERSE_U32(uint32_t);
+uint64_t BIT_REVERSE_U64(uint64_t);
 
-struct vsftimer_t
-{
-	struct vsfsm_t *sm;
-	vsfsm_evt_t evt;
-	uint32_t interval;
-	int trigger_cnt;
-	
-	// private
-	struct sllist list;
-	uint32_t trigger_tick;
-};
+// GET_UXX_XXXXXXXX and SET_UXX_XXXXXXXX are align independent
+uint16_t GET_U16_MSBFIRST(uint8_t *p);
+uint32_t GET_U24_MSBFIRST(uint8_t *p);
+uint32_t GET_U32_MSBFIRST(uint8_t *p);
+uint64_t GET_U64_MSBFIRST(uint8_t *p);
+uint16_t GET_U16_LSBFIRST(uint8_t *p);
+uint32_t GET_U24_LSBFIRST(uint8_t *p);
+uint32_t GET_U32_LSBFIRST(uint8_t *p);
+uint64_t GET_U64_LSBFIRST(uint8_t *p);
 
-vsf_err_t vsftimer_init(void);
-// call vsftimer_callback_int in hw timer interrupt
-void vsftimer_callback_int(void);
+void SET_U16_MSBFIRST(uint8_t *p, uint16_t v16);
+void SET_U24_MSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U32_MSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U64_MSBFIRST(uint8_t *p, uint64_t v64);
+void SET_U16_LSBFIRST(uint8_t *p, uint16_t v16);
+void SET_U24_LSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U32_LSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U64_LSBFIRST(uint8_t *p, uint64_t v64);
 
-struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
-							int16_t trigger_cnt, vsfsm_evt_t evt);
-void vsftimer_free(struct vsftimer_t *timer);
+uint16_t SWAP_U16(uint16_t);
+uint32_t SWAP_U24(uint32_t);
+uint32_t SWAP_U32(uint32_t);
+uint64_t SWAP_U64(uint64_t);
 
-void vsftimer_enqueue(struct vsftimer_t *timer);
-void vsftimer_dequeue(struct vsftimer_t *timer);
+int ffz(uint32_t);
 
-#define vsfsm_pt_delay(pt, tick)		\
-	do {\
-		if (NULL == vstimer_create((pt)->sm, (tick), 1, VSFSM_EVT_DELAY_DONE))\
-		{\
-			return VSFERR_NOT_ENOUGH_RESOURCES;\
-		}\
-		vsfsm_pt_wfe(pt, VSFSM_EVT_DELAY_DONE);\
-	} while (0)
+// mask array
+void mskarr_set(uint32_t *arr, int bit);
+void mskarr_clr(uint32_t *arr, int bit);
+int mskarr_ffz(uint32_t *arr, int arrlen);
 
-#endif	// #ifndef __VSFTIMER_H_INCLUDED__
+#endif // __BITTOOL_H_INCLUDED__

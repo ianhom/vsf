@@ -67,6 +67,8 @@ struct vsfusbd_HID_param_t
 	uint8_t num_of_report;
 	struct vsfusbd_HID_report_t *reports;
 	
+	vsf_err_t (*on_report_out)(struct vsfusbd_HID_param_t *param);
+	
 	// private
 	uint8_t protocol;
 	
@@ -77,7 +79,7 @@ struct vsfusbd_HID_param_t
 	uint8_t num_of_OUTPUT_report;
 	uint8_t num_of_FEATURE_report;
 	
-	struct vsftimer_timer_t timer4ms;
+	struct vsftimer_t timer4ms;
 	struct vsfusbd_device_t *device;
 	struct vsfusbd_iface_t *iface;
 	bool busy;

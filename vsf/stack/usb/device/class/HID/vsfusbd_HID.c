@@ -66,16 +66,7 @@ static vsf_err_t vsfusbd_HID_OUT_hanlder(struct vsfusbd_device_t *device,
 	switch (param->output_state)
 	{
 	case HID_OUTPUT_STATE_WAIT:
-		if (1 == param->num_of_OUTPUT_report)
-		{
-			report_id = 0;
-		}
-		else
-		{
-			report_id = buffer[0];
-			pbuffer++;
-			pkg_size--;
-		}
+		report_id = buffer[0];
 		report = vsfusbd_HID_find_report(param, USB_HID_REPORT_OUTPUT, 
 											report_id);
 		if ((NULL == report) || (pkg_size > report->buffer.size))
@@ -130,6 +121,10 @@ static void vsfusbd_HID_INREPORT_callback(void *param)
 								(struct vsfusbd_HID_param_t *)param;
 	
 	HID_param->busy = false;
+	if (HID_param->on_report_out != NULL)
+	{
+		HID_param->on_report_out(HID_param);
+	}
 	vsfsm_post_evt(&HID_param->iface->sm, VSFUSBD_HID_EVT_INREPORT);
 }
 
@@ -190,7 +185,8 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		param->timer4ms.sm = sm;
 		param->timer4ms.evt = VSFUSBD_HID_EVT_TIMER4MS;
 		param->timer4ms.interval = 4;
-		vsftimer_register(&param->timer4ms);
+		param->timer4ms.trigger_cnt = -1;
+		vsftimer_enqueue(&param->timer4ms);
 		break;
 	case VSFUSBD_HID_EVT_TIMER4MS:
 		{

@@ -31,6 +31,9 @@ enum
 	VSFSM_EVT_DUMMY = VSFSM_EVT_SYSTEM + 0,
 	VSFSM_EVT_INIT = VSFSM_EVT_SYSTEM + 1,
 	VSFSM_EVT_FINI = VSFSM_EVT_SYSTEM + 2,
+	// event for vsftimer
+	VSFSM_EVT_TIMER = VSFSM_EVT_SYSTEM + 3,
+	VSFSM_EVT_DELAY_DONE = VSFSM_EVT_SYSTEM + 4,
 	VSFSM_EVT_USER = 0x10,
 	// instant message CANNOT be but in the event queue and
 	// can not be sent in interrupt

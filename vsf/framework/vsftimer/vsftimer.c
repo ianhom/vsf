@@ -17,18 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "compiler.h"
+
 #include "vsftimer.h"
 #include "interfaces.h"
 #include "framework/vsfsm/vsfsm.h"
 
-#define VSFSM_EVT_TIMER					8
+#include "tool/bittool/bittool.h"
 
 static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt);
 
-struct vsftimer_t
+struct vsftimer_info_t
 {
-	struct vsftimer_timer_t *timerlist;
+	struct vsftimer_t *timerlist;
 	struct vsfsm_t sm;
 } static vsftimer =
 {
@@ -47,79 +49,153 @@ void vsftimer_callback_int(void)
 	vsfsm_post_evt_pending(&vsftimer.sm, VSFSM_EVT_TIMER);
 }
 
-static struct vsfsm_state_t *
-vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
-{
-	switch (evt)
-	{
-	case VSFSM_EVT_TIMER:
-	{
-		uint32_t cur_tickcnt = core_interfaces.tickclk.get_count();
-		struct vsftimer_timer_t timer, *ptimer = vsftimer.timerlist;
-		
-		while (ptimer != NULL)
-		{
-			// save timer on stack in case event handler of the state machine
-			// unregister and free the timer, beause timer on stack maintain
-			// the list pointing to the next timer
-			timer = *ptimer;
-			if ((cur_tickcnt - timer.start_tickcnt) >= timer.interval)
-			{
-				// triggered
-				ptimer->start_tickcnt = cur_tickcnt;
-				if ((timer.sm != NULL) && (timer.evt != VSFSM_EVT_INVALID))
-				{
-					vsfsm_post_evt(timer.sm, timer.evt);
-				}
-			}
-			ptimer = sllist_get_container(timer.list.next,
-											struct vsftimer_timer_t, list);
-		}
-		return NULL;
-	}
-	default:
-		return NULL;
-	}
-}
-
+static struct vsftimer_t vsftimer_pool[VSFTIMER_CFG_POOL_SIZE];
+static uint32_t vsftimer_poll_mskarr[(VSFTIMER_CFG_POOL_SIZE + 31) / 32];
 vsf_err_t vsftimer_init(void)
 {
+	memset(vsftimer_pool, 0, sizeof(vsftimer_pool));
+	memset(vsftimer_poll_mskarr, 0, sizeof(vsftimer_poll_mskarr));
+	
 	vsftimer.timerlist = NULL;
 	return vsfsm_init(&vsftimer.sm);
 }
 
-vsf_err_t vsftimer_register(struct vsftimer_timer_t *timer)
+static struct vsftimer_t *vsftimer_allocate(void)
 {
-	sllist_init_node(timer->list);
-	timer->start_tickcnt = core_interfaces.tickclk.get_count();
-	if (NULL == vsftimer.timerlist)
+	int index = mskarr_ffz(vsftimer_poll_mskarr, dimof(vsftimer_poll_mskarr));
+	if (index > VSFTIMER_CFG_POOL_SIZE)
 	{
-		vsftimer.timerlist = timer;
-		return VSFERR_NONE;
+		return NULL;
 	}
-	if (!sllist_is_in(&vsftimer.timerlist->list, &timer->list))
-	{
-		if (vsftimer.timerlist != NULL)
-		{
-			sllist_insert(timer->list, vsftimer.timerlist->list);
-		}
-		vsftimer.timerlist = timer;
-	}
-	return VSFERR_NONE;
+	mskarr_set(vsftimer_poll_mskarr, index);
+	return &vsftimer_pool[index];
 }
 
-vsf_err_t vsftimer_unregister(struct vsftimer_timer_t *timer)
+void vsftimer_enqueue(struct vsftimer_t *timer)
 {
+	struct vsftimer_t *ptimer, *ntimer;
+
+	vsftimer_dequeue(timer);
+	sllist_init_node(timer->list);
+
 	if (NULL == vsftimer.timerlist)
 	{
-		return VSFERR_NONE;
+		vsftimer.timerlist = timer;
+		return;
 	}
-	
+
+	if (vsftimer.timerlist->trigger_tick > timer->trigger_tick)
+	{
+		sllist_insert(timer->list, vsftimer.timerlist->list);
+		vsftimer.timerlist = timer;
+		return;
+	}
+
+	ptimer = vsftimer.timerlist;
+	ntimer = sllist_get_container(ptimer->list.next, struct vsftimer_t, list);
+	while (ntimer != NULL)
+	{
+		if (ntimer->trigger_tick > timer->trigger_tick)
+		{
+			break;
+		}
+		ptimer = ntimer;
+		ntimer = sllist_get_container(ptimer->list.next,
+										struct vsftimer_t, list);
+	}
+
+	if (ntimer != NULL)
+	{
+		sllist_insert(timer->list, ntimer->list);
+	}
+	sllist_insert(ptimer->list, timer->list);
+}
+
+void vsftimer_dequeue(struct vsftimer_t *timer)
+{
+	if (vsftimer.timerlist == NULL)
+	{
+		return;
+	}
+
 	if (vsftimer.timerlist == timer)
 	{
 		vsftimer.timerlist = sllist_get_container(timer->list.next,
-								struct vsftimer_timer_t, list);
-		return VSFERR_NONE;
+								struct vsftimer_t, list);
+		return;
 	}
-	return sllist_remove(&vsftimer.timerlist->list.next, &timer->list);
+	sllist_remove(&vsftimer.timerlist->list.next, &timer->list);
+}
+
+static struct vsfsm_state_t *
+vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
+	uint32_t cur_tick = core_interfaces.tickclk.get_count();
+	struct vsftimer_t *timer = vsftimer.timerlist;
+	
+	switch (evt)
+	{
+	case VSFSM_EVT_TIMER:
+		while (timer != NULL)
+		{
+			if (cur_tick >= timer->trigger_tick)
+			{
+				timer->trigger_tick += timer->interval;
+				if (timer->trigger_cnt > 0)
+				{
+					timer->trigger_cnt--;
+				}
+				if (timer->trigger_cnt != 0)
+				{
+					vsftimer_dequeue(timer);
+					vsftimer_enqueue(timer);
+				}
+				else
+				{
+					vsftimer_free(timer);
+				}
+				
+				if ((timer->sm != NULL) && (timer->evt != VSFSM_EVT_INVALID))
+				{
+					vsfsm_post_evt(timer->sm, timer->evt);
+				}
+				timer = vsftimer.timerlist;
+			}
+			else
+			{
+				break;
+			}
+		}
+		break;
+	}
+	return NULL;
+}
+
+struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
+									int16_t trigger_cnt, vsfsm_evt_t evt)
+{
+	struct vsftimer_t *timer = vsftimer_allocate();
+	if (NULL == timer)
+	{
+		return NULL;
+	}
+	
+	timer->sm = sm;
+	timer->evt = evt;
+	timer->interval = interval;
+	timer->trigger_cnt = trigger_cnt;
+	timer->trigger_tick = timer->interval + core_interfaces.tickclk.get_count();
+	vsftimer_enqueue(timer);
+	return timer;
+}
+
+void vsftimer_free(struct vsftimer_t *timer)
+{
+	vsftimer_dequeue(timer);
+	if ((timer >= &vsftimer_pool[0]) &&
+		(timer <= &vsftimer_pool[dimof(vsftimer_pool) - 1]))
+	{
+		// timer in pool
+		mskarr_clr(vsftimer_poll_mskarr, timer - vsftimer_pool);
+	}
 }
