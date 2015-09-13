@@ -12,9 +12,9 @@
 
 #include "dal/stream/stream.h"
 
-#include "stack/usb/device/vsfusbd.h"
-#include "stack/usb/device/class/HID/vsfusbd_HID.h"
-#include "stack/usb/device/class/CDC/vsfusbd_CDCACM.h"
+#include "stack/usb/core/vsfusbd.h"
+#include "stack/usb/class/device/HID/vsfusbd_HID.h"
+#include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
 
 #include "vsfshell/vsfshell.h"
 
@@ -22,7 +22,7 @@
 static const uint8_t USB_DeviceDescriptor[] =
 {
 	0x12,	// bLength = 18
-	USB_DESC_TYPE_DEVICE,	// USB_DESC_TYPE_DEVICE
+	USB_DT_DEVICE,	// USB_DESC_TYPE_DEVICE
 	0x00,
 	0x02,	// bcdUSB
 	0xEF,	// device class: IAD
@@ -45,7 +45,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 {
 	// Configuation Descriptor
 	0x09,	// bLength: Configuation Descriptor size
-	USB_DESC_TYPE_CONFIGURATION,
+	USB_DT_CONFIG,
 			// bDescriptorType: Configuration
 	108,	// wTotalLength:no of returned bytes*
 	0x00,
@@ -57,7 +57,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// IAD
 	0x08,	// bLength: IAD Descriptor size
-	USB_DESC_TYPE_IAD,
+	USB_DT_INTERFACE_ASSOCIATION,
 			// bDescriptorType: IAD
 	0,		// bFirstInterface
 	1,		// bInterfaceCount
@@ -68,7 +68,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 
 	// Interface Descriptor for HID
 	0x09,	// bLength: Interface Descriptor size
-	USB_DESC_TYPE_INTERFACE,	// bDescriptorType:
+	USB_DT_INTERFACE,	// bDescriptorType:
 	0x00,	// bInterfaceNumber: Number of Interface
 	0x00,	// bAlternateSetting: Alternate setting
 	0x01,	// bNumEndpoints
@@ -90,7 +90,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Endpoint 1 Descriptor
 	0x07,	// Endpoint descriptor length = 7
-	USB_DESC_TYPE_ENDPOINT,	// Endpoint descriptor type
+	USB_DT_ENDPOINT,	// Endpoint descriptor type
 	0x81,	// Endpoint address (IN, address 1)
 	0x03,	// interrupt endpoint type
 	0x40,	// Maximum packet size (64 bytes)
@@ -99,7 +99,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// IAD
 	0x08,	// bLength: IAD Descriptor size
-	USB_DESC_TYPE_IAD,
+	USB_DT_INTERFACE_ASSOCIATION,
 			// bDescriptorType: IAD
 	1,		// bFirstInterface
 	2,		// bInterfaceCount
@@ -110,7 +110,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Interface Descriptor for CDC
 	0x09,	// bLength: Interface Descriptor size
-	USB_DESC_TYPE_INTERFACE,
+	USB_DT_INTERFACE,
 			// bDescriptorType: Interface
 	1,		// bInterfaceNumber: Number of Interface
 	0x00,	// bAlternateSetting: Alternate setting
@@ -149,7 +149,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Endpoint 2 Descriptor
 	0x07,	// bLength: Endpoint Descriptor size
-	USB_DESC_TYPE_ENDPOINT,
+	USB_DT_ENDPOINT,
 			// bDescriptorType: Endpoint
 	0x82,	// bEndpointAddress: (IN2)
 	0x03,	// bmAttributes: Interrupt
@@ -159,7 +159,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Data class interface descriptor
 	0x09,	// bLength: Endpoint Descriptor size
-	USB_DESC_TYPE_INTERFACE,
+	USB_DT_INTERFACE,
 			// bDescriptorType: Interface
 	2,		// bInterfaceNumber: Number of Interface
 	0x00,	// bAlternateSetting: Alternate setting
@@ -171,7 +171,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Endpoint 3 Descriptor
 	0x07,	// bLength: Endpoint Descriptor size
-	USB_DESC_TYPE_ENDPOINT,
+	USB_DT_ENDPOINT,
 			// bDescriptorType: Endpoint
 	0x03,	// bEndpointAddress: (OUT3)
 	0x02,	// bmAttributes: Bulk
@@ -181,7 +181,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	
 	// Endpoint 3 Descriptor
 	0x07,	// bLength: Endpoint Descriptor size
-	USB_DESC_TYPE_ENDPOINT,
+	USB_DT_ENDPOINT,
 			// bDescriptorType: Endpoint
 	0x83,	// bEndpointAddress: (IN3)
 	0x02,	// bmAttributes: Bulk
@@ -193,7 +193,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 static const uint8_t USB_StringLangID[] =
 {
 	4,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	0x09,
 	0x04
 };
@@ -201,7 +201,7 @@ static const uint8_t USB_StringLangID[] =
 static const uint8_t USB_StringVendor[] =
 {
 	20,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	'S', 0, 'i', 0, 'm', 0, 'o', 0, 'n', 0, 'Q', 0, 'i', 0, 'a', 0,
 	'n', 0
 };
@@ -209,7 +209,7 @@ static const uint8_t USB_StringVendor[] =
 static const uint8_t USB_StringSerial[50] =
 {
 	50,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	'0', 0, '1', 0, '2', 0, '3', 0, '4', 0, '5', 0, '6', 0, '7', 0, 
 	'8', 0, '9', 0, 'A', 0, 'B', 0, 'C', 0, 'D', 0, 'E', 0, 'F', 0, 
 	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, 
@@ -218,21 +218,21 @@ static const uint8_t USB_StringSerial[50] =
 static const uint8_t USB_StringProduct[] =
 {
 	14,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	'V', 0, 'S', 0, 'F', 0, 'U', 0, 'S', 0, 'B', 0
 };
 
 static const uint8_t HID_StringFunc[] =
 {
 	14,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	'V', 0, 'S', 0, 'F', 0, 'H', 0, 'I', 0, 'D', 0
 };
 
 static const uint8_t CDC_StringFunc[] =
 {
 	14,
-	USB_DESC_TYPE_STRING,
+	USB_DT_STRING,
 	'V', 0, 'S', 0, 'F', 0, 'C', 0, 'D', 0, 'C', 0
 };
 

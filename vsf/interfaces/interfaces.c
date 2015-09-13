@@ -22,10 +22,10 @@ vsf_err_t peripheral_commit(void)
 	return VSFERR_NONE;
 }
 
-const struct interfaces_info_t core_interfaces = 
+const struct interfaces_info_t core_interfaces =
 {
 	NULL,			// struct interfaes_commit_t *comm;
-	
+
 	// core
 	{
 		CORE_INIT(__TARGET_CHIP__),
@@ -218,7 +218,7 @@ const struct interfaces_info_t core_interfaces =
 			&CORE_USBD_EP_NUM(__TARGET_CHIP__),
 			CORE_USBD_EP_RESET(__TARGET_CHIP__),
 			CORE_USBD_EP_SET_TYPE(__TARGET_CHIP__),
-			
+
 			CORE_USBD_EP_SET_IN_DBUFFER(__TARGET_CHIP__),
 			CORE_USBD_EP_IS_IN_DBUFFER(__TARGET_CHIP__),
 			CORE_USBD_EP_SWITCH_IN_BUFFER(__TARGET_CHIP__),
@@ -231,7 +231,7 @@ const struct interfaces_info_t core_interfaces =
 			CORE_USBD_EP_TOGGLE_IN_TOGGLE(__TARGET_CHIP__),
 			CORE_USBD_EP_SET_IN_COUNT(__TARGET_CHIP__),
 			CORE_USBD_EP_WRITE_IN_BUFFER(__TARGET_CHIP__),
-			
+
 			CORE_USBD_EP_SET_OUT_DBUFFER(__TARGET_CHIP__),
 			CORE_USBD_EP_IS_OUT_DBUFFER(__TARGET_CHIP__),
 			CORE_USBD_EP_SWITCH_OUT_BUFFER(__TARGET_CHIP__),
@@ -278,7 +278,7 @@ const struct interfaces_info_t core_interfaces =
 		// ebi
 		CORE_EBI_INIT(__TARGET_CHIP__),
 		CORE_EBI_FINI(__TARGET_CHIP__),
-		
+
 		CORE_EBI_CONFIG(__TARGET_CHIP__),
 		CORE_EBI_CONFIG_SRAM(__TARGET_CHIP__),
 		CORE_EBI_CONFIG_PSRAM(__TARGET_CHIP__),
@@ -287,10 +287,10 @@ const struct interfaces_info_t core_interfaces =
 		CORE_EBI_CONFIG_SDRAM(__TARGET_CHIP__),
 		CORE_EBI_CONFIG_DDRAM(__TARGET_CHIP__),
 		CORE_EBI_CONFIG_PCCARD(__TARGET_CHIP__),
-		
+
 		CORE_EBI_GET_BASE_ADDR(__TARGET_CHIP__),
 		CORE_EBI_ISREADY(__TARGET_CHIP__),
-		
+
 		CORE_EBI_READ(__TARGET_CHIP__),
 		CORE_EBI_WRITE(__TARGET_CHIP__),
 		CORE_EBI_READ8(__TARGET_CHIP__),
@@ -299,7 +299,7 @@ const struct interfaces_info_t core_interfaces =
 		CORE_EBI_WRITE16(__TARGET_CHIP__),
 		CORE_EBI_READ32(__TARGET_CHIP__),
 		CORE_EBI_WRITE32(__TARGET_CHIP__),
-		
+
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 	}
 #endif
@@ -318,6 +318,14 @@ const struct interfaces_info_t core_interfaces =
 		CORE_SDIO_DATA_TX_ISREADY(__TARGET_CHIP__),
 		CORE_SDIO_DATA_RX(__TARGET_CHIP__),
 		CORE_SDIO_DATA_RX_ISREADY(__TARGET_CHIP__),
+	}
+#endif
+#if IFS_HCD_EN
+	,{
+		// usb hcd
+		CORE_HCD_INIT(__TARGET_CHIP__),
+		CORE_HCD_FINI(__TARGET_CHIP__),
+		CORE_HCD_REGBASE(__TARGET_CHIP__),
 	}
 #endif
 	,{	// tickclk

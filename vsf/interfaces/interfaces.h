@@ -71,24 +71,24 @@ struct interface_flash_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	
+
 	vsf_err_t (*lock)(uint8_t index);
 	vsf_err_t (*unlock)(uint8_t index);
-	
+
 	vsf_err_t (*getcapacity)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
-	
+
 	vsf_err_t (*read)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
 	vsf_err_t (*read_isready)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
 	vsf_err_t (*write)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
 	vsf_err_t (*write_isready)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-	
+
 	vsf_err_t (*readpage)(uint8_t index, uint32_t offset, uint8_t *buff);
 	vsf_err_t (*readpage_isready)(uint8_t index, uint32_t offset, uint8_t *buff);
 	vsf_err_t (*erasepage)(uint8_t index, uint32_t offset);
 	vsf_err_t (*erasepage_isready)(uint8_t index, uint32_t offset);
 	vsf_err_t (*writepage)(uint8_t index, uint32_t offset, uint8_t *buff);
 	vsf_err_t (*writepage_isready)(uint8_t index, uint32_t offset, uint8_t *buff);
-	
+
 	bool (*isprotected)(uint8_t index);
 	vsf_err_t (*protect)(uint8_t index);
 };
@@ -253,10 +253,10 @@ struct interface_spi_t
 	vsf_err_t (*disable)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint32_t mode);
 	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
-	
+
 	vsf_err_t (*select)(uint8_t index, uint8_t cs);
 	vsf_err_t (*deselect)(uint8_t index, uint8_t cs);
-	
+
 	vsf_err_t (*start)(uint8_t index, uint8_t *out, uint8_t *in, uint32_t len);
 	uint32_t (*stop)(uint8_t index);
 };
@@ -469,7 +469,7 @@ struct interface_timer_t
 	vsf_err_t (*stop)(uint8_t index);
 	vsf_err_t (*get_count)(uint8_t index, uint32_t *count);
 	vsf_err_t (*set_count)(uint8_t index, uint32_t count);
-	
+
 	vsf_err_t (*config_channel)(uint8_t index, uint8_t channel, uint32_t mode, void (*callback)(void));
 	vsf_err_t (*get_channel)(uint8_t index, uint8_t channel, uint32_t *count);
 	vsf_err_t (*set_channel)(uint8_t index, uint8_t channel, uint32_t count);
@@ -611,7 +611,7 @@ struct ebi_info_t
 		EBI_WAIT_POLLOW_VI = 3,
 		EBI_WAIT_POLLOW_VN = 4
 	} wait_signal;
-	
+
 	// mux_addr_mask is used when a multiplexer(eg. 74LS138) is used.
 	// If no multiplexer is used, set mux_addr_mask to 0.
 	// mux_addr_mask defines the address mask to select current chip.
@@ -621,7 +621,7 @@ struct ebi_sram_psram_nor_param_t
 {
 	// A0-15 == D0-15 with ALE
 	bool addr_multiplex;
-	
+
 	struct ebi_sram_param_nor_timing_t
 	{
 		uint16_t address_setup_cycle_r;
@@ -687,7 +687,7 @@ struct interface_ebi_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	
+
 	vsf_err_t (*config)(uint8_t index, uint8_t target_index, void *param);
 	vsf_err_t (*config_sram)(uint8_t index, struct ebi_sram_psram_nor_info_t *info);
 	vsf_err_t (*config_psram)(uint8_t index, struct ebi_sram_psram_nor_info_t *info);
@@ -696,20 +696,20 @@ struct interface_ebi_t
 	vsf_err_t (*config_sdram)(uint8_t index, struct ebi_sdram_info_t *info);
 	vsf_err_t (*config_ddram)(uint8_t index, struct ebi_ddram_info_t *info);
 	vsf_err_t (*config_pccard)(uint8_t index, struct ebi_pccard_info_t *info);
-	
+
 	void* (*get_base_addr)(uint8_t index, uint8_t target_index);
 	vsf_err_t (*isready)(uint8_t index, uint8_t target_index);
-	
+
 	vsf_err_t (*read)(uint8_t index, uint8_t target_index, uint32_t address, uint8_t data_size, uint8_t *buff, uint32_t count);
 	vsf_err_t (*write)(uint8_t index, uint8_t target_index, uint32_t address, uint8_t data_size, uint8_t *buff, uint32_t count);
-	
+
 	uint8_t (*read8)(uint8_t index, uint32_t address);
 	void (*write8)(uint8_t index, uint32_t address, uint8_t data);
 	uint16_t (*read16)(uint8_t index, uint32_t address);
 	void (*write16)(uint8_t index, uint32_t address, uint16_t data);
 	uint32_t (*read32)(uint8_t index, uint32_t address);
 	void (*write32)(uint8_t index, uint32_t address, uint32_t data);
-	
+
 	vsf_err_t (*readp8)(uint8_t index, uint32_t address, uint32_t count, uint8_t *buff);
 	vsf_err_t (*readp8_isready)(uint8_t index);
 	vsf_err_t (*writep8)(uint8_t index, uint32_t address, uint32_t count, uint8_t *buff);
@@ -861,28 +861,28 @@ struct interface_usbd_t
 	vsf_err_t (*fini)(void);
 	vsf_err_t (*reset)(void);
 	vsf_err_t (*poll)(void);
-	
+
 	vsf_err_t (*connect)(void);
 	vsf_err_t (*disconnect)(void);
-	
+
 	vsf_err_t (*set_address)(uint8_t addr);
 	uint8_t (*get_address)(void);
-	
+
 	vsf_err_t (*suspend)(void);
 	vsf_err_t (*resume)(void);
 	vsf_err_t (*lowpower)(uint8_t level);
-	
+
 	uint32_t (*get_frame_number)(void);
-	
+
 	vsf_err_t (*get_setup)(uint8_t *buffer);
 	vsf_err_t (*prepare_buffer)(void);
 	struct usbd_endpoint_t
 	{
 		const uint8_t *num_of_ep;
-		
+
 		vsf_err_t (*reset)(uint8_t idx);
 		vsf_err_t (*set_type)(uint8_t idx, enum interface_usbd_eptype_t type);
-		
+
 		vsf_err_t (*set_IN_dbuffer)(uint8_t idx);
 		bool (*is_IN_dbuffer)(uint8_t idx);
 		vsf_err_t (*switch_IN_buffer)(uint8_t idx);
@@ -895,7 +895,7 @@ struct interface_usbd_t
 		vsf_err_t (*toggle_IN_toggle)(uint8_t idx);
 		vsf_err_t (*set_IN_count)(uint8_t idx, uint16_t size);
 		vsf_err_t (*write_IN_buffer)(uint8_t idx, uint8_t *buffer, uint16_t size);
-		
+
 		vsf_err_t (*set_OUT_dbuffer)(uint8_t idx);
 		bool (*is_OUT_dbuffer)(uint8_t idx);
 		vsf_err_t (*switch_OUT_buffer)(uint8_t idx);
@@ -1008,6 +1008,33 @@ extern struct interface_usbd_callback_t CORE_USBD_CALLBACK(__TARGET_CHIP__);
 
 #endif
 
+#if IFS_HCD_EN
+#define CORE_HCD_PORT1(m)				__CONNECT(m, _HCD_PORT1)
+#define CORE_HCD_PORT2(m)				__CONNECT(m, _HCD_PORT2)
+#define CORE_HCD_PORT3(m)				__CONNECT(m, _HCD_PORT3)
+#define CORE_HCD_PORT4(m)				__CONNECT(m, _HCD_PORT4)
+#define HCD_PORT1						CORE_HCD_PORT1(__TARGET_CHIP__)
+#define HCD_PORT2						CORE_HCD_PORT2(__TARGET_CHIP__)
+#define HCD_PORT3						CORE_HCD_PORT3(__TARGET_CHIP__)
+#define HCD_PORT4						CORE_HCD_PORT3(__TARGET_CHIP__)
+
+struct interface_hcd_t
+{
+	vsf_err_t (*init)(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *param);
+	vsf_err_t (*fini)(uint8_t index);
+	void* (*regbase)(uint8_t index);
+};
+
+#define CORE_HCD_INIT(m)				__CONNECT(m, _hcd_init)
+#define CORE_HCD_FINI(m)				__CONNECT(m, _hcd_fini)
+#define CORE_HCD_REGBASE(m)				__CONNECT(m, _hcd_regbase)
+
+vsf_err_t CORE_HCD_INIT(__TARGET_CHIP__)(uint8_t index,
+		vsf_err_t (*hcd_irq)(void *), void *param);
+vsf_err_t CORE_HCD_FINI(__TARGET_CHIP__)(uint8_t index);
+void* CORE_HCD_REGBASE(__TARGET_CHIP__)(uint8_t index);
+#endif
+
 struct interfaces_comm_t
 {
 	vsf_err_t (*init)(void);
@@ -1017,7 +1044,7 @@ struct interfaces_comm_t
 struct interfaces_info_t
 {
 	struct interfaces_comm_t *comm;
-	
+
 	struct interface_core_t core;
 #if IFS_UNIQUEID_EN
 	struct interface_uid_t uid;
@@ -1051,6 +1078,9 @@ struct interfaces_info_t
 #endif
 #if IFS_USBD_EN
 	struct interface_usbd_t usbd;
+#endif
+#if IFS_HCD_EN
+	struct interface_hcd_t hcd;
 #endif
 #if IFS_PWM_EN
 	struct interface_pwm_t pwm;

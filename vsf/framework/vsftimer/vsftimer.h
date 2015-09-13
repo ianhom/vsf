@@ -29,7 +29,7 @@ struct vsftimer_t
 	vsfsm_evt_t evt;
 	uint32_t interval;
 	int trigger_cnt;
-	
+
 	// private
 	struct sllist list;
 	uint32_t trigger_tick;
@@ -48,7 +48,7 @@ void vsftimer_dequeue(struct vsftimer_t *timer);
 
 #define vsfsm_pt_delay(pt, tick)		\
 	do {\
-		if (NULL == vstimer_create((pt)->sm, (tick), 1, VSFSM_EVT_DELAY_DONE))\
+		if (NULL == vsfimer_create((pt)->sm, (tick), 1, VSFSM_EVT_DELAY_DONE))\
 		{\
 			return VSFERR_NOT_ENOUGH_RESOURCES;\
 		}\
