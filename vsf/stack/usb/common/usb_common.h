@@ -5,7 +5,6 @@
 #include "usb_type.h"
 
 #include "usb_ch9.h"
-#include "usb_ch11.h"
 
 /*
  * USB Packet IDs (PIDs)
