@@ -40,7 +40,7 @@ vsf_err_t stream_fini(struct vsf_stream_t *stream)
 uint32_t stream_rx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = vsf_fifo_pop(&stream->fifo, buffer->size, buffer->buffer);
-	
+
 	if ((stream->callback_tx.on_out_int != NULL) && (count > 0))
 	{
 		stream->callback_tx.on_out_int(stream->callback_tx.param);
@@ -51,7 +51,7 @@ uint32_t stream_rx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 uint32_t stream_tx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = vsf_fifo_push(&stream->fifo, buffer->size, buffer->buffer);
-	
+
 	if (count < buffer->size)
 	{
 		stream->overflow = true;
@@ -79,7 +79,7 @@ void stream_connect_rx(struct vsf_stream_t *stream)
 	{
 		stream->callback_tx.on_connect_rx(stream->callback_tx.param);
 	}
-	if (stream->tx_ready)
+	if ((stream->tx_ready) && (stream->callback_rx.on_connect_tx != NULL))
 	{
 		stream->callback_rx.on_connect_tx(stream->callback_rx.param);
 	}
@@ -92,7 +92,7 @@ void stream_connect_tx(struct vsf_stream_t *stream)
 	{
 		stream->callback_rx.on_connect_tx(stream->callback_rx.param);
 	}
-	if (stream->rx_ready)
+	if ((stream->rx_ready) && (stream->callback_tx.on_connect_rx != NULL))
 	{
 		stream->callback_tx.on_connect_rx(stream->callback_tx.param);
 	}
