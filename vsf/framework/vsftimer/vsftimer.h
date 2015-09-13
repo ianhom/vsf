@@ -48,7 +48,7 @@ void vsftimer_dequeue(struct vsftimer_t *timer);
 
 #define vsfsm_pt_delay(pt, tick)		\
 	do {\
-		if (NULL == vsfimer_create((pt)->sm, (tick), 1, VSFSM_EVT_DELAY_DONE))\
+		if (NULL == vsftimer_create((pt)->sm, (tick), 1, VSFSM_EVT_DELAY_DONE))\
 		{\
 			return VSFERR_NOT_ENOUGH_RESOURCES;\
 		}\
