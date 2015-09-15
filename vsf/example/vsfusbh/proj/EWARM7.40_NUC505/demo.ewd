@@ -37,7 +37,7 @@
         </option>
         <option>
           <name>MacFile</name>
-          <state>C:\Users\Lion\Desktop\vsf\vsf\example\vsfusbh\proj\EWARM7.40_NUC505\NUC505_SRAM.mac</state>
+          <state>$PROJ_DIR$\NUC505_SRAM.mac</state>
         </option>
         <option>
           <name>MemOverride</name>
