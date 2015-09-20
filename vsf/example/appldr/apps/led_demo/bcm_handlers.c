@@ -16,6 +16,9 @@ struct vsfshell_bcm_wifi_t
 	struct vsfip_netdrv_t netdrv;
 	struct vsfip_dhcp_t dhcp;
 	struct vsfip_netif_t netif;
+
+	uint8_t pwrctrl_port;
+	uint8_t pwrctrl_pin;
 };
 
 struct vsfshell_bcm_init_t
@@ -52,11 +55,15 @@ vsfshell_bcm_init_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	init = (struct vsfshell_bcm_init_t *)param->priv;
 
 	// power cycle
-	core_interfaces.gpio.init(0);
-	core_interfaces.gpio.out(0, 1 << 3, 1 << 3);
-	core_interfaces.gpio.config_pin(0, 3, core_interfaces.gpio.constants.OUTPP);
-	vsfsm_pt_delay(pt, 100);
-	core_interfaces.gpio.out(0, 1 << 3, 0);
+	if (wifi->pwrctrl_port != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.init(wifi->pwrctrl_port);
+		core_interfaces.gpio.set(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
+		core_interfaces.gpio.config_pin(wifi->pwrctrl_port,
+					wifi->pwrctrl_pin, core_interfaces.gpio.constants.OUTPP);
+		vsfsm_pt_delay(pt, 100);
+		core_interfaces.gpio.clear(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
+	}
 
 	vsfip_init();
 
@@ -142,11 +149,15 @@ vsfshell_bcm_fini_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		return VSFERR_NOT_READY;
 	}
-	
+
 	vsfip_fini();
 
-	core_interfaces.gpio.out(0, 1 << 3, 1 << 3);
-	core_interfaces.gpio.config_pin(0, 3, core_interfaces.gpio.constants.INFLOAT);
+	if (wifi->pwrctrl_port != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.set(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
+		core_interfaces.gpio.config_pin(wifi->pwrctrl_port, wifi->pwrctrl_pin,
+						core_interfaces.gpio.constants.INFLOAT);
+	}
 
 handler_thread_end:
 	if (param->priv != NULL)
@@ -429,6 +440,9 @@ vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 	wifi->bcm_wifi.bus.port.eint_pin = hwcfg->bcm_wifi_port.eint_pin;
 	wifi->bcm_wifi.bus.port.eint = hwcfg->bcm_wifi_port.eint;
 	wifi->bcm_wifi.country = "US";
+
+	wifi->pwrctrl_port = hwcfg->bcm_wifi_port.pwrctrl_port;
+	wifi->pwrctrl_pin = hwcfg->bcm_wifi_port.pwrctrl_pin;
 
 	memset(bcm_handlers, 0, size);
 	bcm_handlers[0].name = "bcm.init";

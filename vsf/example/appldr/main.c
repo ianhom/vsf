@@ -58,6 +58,9 @@ struct vsfapp_t
 			BCM_EINT_PORT,
 			BCM_EINT_PIN,
 			BCM_EINT,
+			
+			BCM_PWRCTRL_PORT,
+			BCM_PWRCTRL_PIN,
 		},							// struct bcm_wifi_port;
 	},								// struct app_hwcfg_t hwcfg;
 };

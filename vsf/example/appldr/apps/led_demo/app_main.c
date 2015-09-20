@@ -1,8 +1,6 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
-#include "../led_module/led.h"
-
 #include "bcm_handlers.h"
 
 #define LED_EVT_CARRY					(VSFSM_EVT_USER_LOCAL + 0)
@@ -176,6 +174,11 @@ static const uint8_t CDC_StringFunc[] =
 	'V', 0, 'S', 0, 'F', 0, 'C', 0, 'D', 0, 'C', 0
 };
 
+struct led_t
+{
+	struct led_hw_t const *hw;
+	bool on;
+};
 struct vsfapp_t
 {
 	struct app_hwcfg_t const *hwcfg;

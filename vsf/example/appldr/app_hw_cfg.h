@@ -41,5 +41,8 @@ struct app_hwcfg_t
 		uint8_t eint_port;
 		uint8_t eint_pin;
 		uint8_t eint;
+		
+		uint8_t pwrctrl_port;
+		uint8_t pwrctrl_pin;
 	} bcm_wifi_port;
 };

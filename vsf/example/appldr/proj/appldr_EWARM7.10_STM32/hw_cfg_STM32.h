@@ -41,3 +41,5 @@
 #define BCM_EINT_PORT					0
 #define BCM_EINT_PIN					8
 #define BCM_EINT						0x08
+#define BCM_PWRCTRL_PORT				0
+#define BCM_PWRCTRL_PIN					3
