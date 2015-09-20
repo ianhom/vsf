@@ -469,7 +469,7 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state></state>
+          <state>VSF_APP_BASE=0x08080000</state>
         </option>
         <option>
           <name>AList</name>
