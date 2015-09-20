@@ -327,6 +327,7 @@ struct vsf_t
 
 #define VSF_BASE						((struct vsf_t *)VSF_BASE_ADDR)
 #define vsf								(*VSF_BASE)
+#define api_ver							vsf.api_ver
 #define core_interfaces					(*vsf.ifs)
 
 #define vsfsm_init						vsf.framework.sm_init
@@ -415,7 +416,7 @@ struct vsf_t
 #define vsfusbd_set_OUT_handler			vsf.stack.usb.device.set_OUT_handler
 #define vsfusbd_HID_class				(*vsf.stack.usb.device.classes.hid.protocol)
 #define vsfusbd_CDCACMControl_class		(*vsf.stack.usb.device.classes.cdc.control_protocol)
-#define vsfusbd_CDCACMDATA_class		(*vsf.stack.usb.device.classes.cdc.data_protocol)
+#define vsfusbd_CDCACMData_class		(*vsf.stack.usb.device.classes.cdc.data_protocol)
 
 #define vsfip_init						vsf.stack.tcpip.init
 #define vsfip_fini						vsf.stack.tcpip.fini
@@ -439,6 +440,8 @@ struct vsf_t
 
 #define vsfip_dhcp_start				vsf.stack.tcpip.protocol.dhcp.start
 
+#define bcm_bus_spi_op					(*vsf.stack.tcpip.broadcom_wifi.bus.spi_op)
+#define bcm_wifi_netdrv_op				(*vsf.stack.tcpip.broadcom_wifi.netdrv_op)
 #define bcm_wifi_scan					vsf.stack.tcpip.broadcom_wifi.scan
 #define bcm_wifi_join					vsf.stack.tcpip.broadcom_wifi.join
 #define bcm_wifi_leave					vsf.stack.tcpip.broadcom_wifi.leave

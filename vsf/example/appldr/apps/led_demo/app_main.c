@@ -316,9 +316,11 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		app->usbd.cdc.stream_tx.fifo.buffer.size = sizeof(app->usbd.cdc.txbuff);
 		app->usbd.cdc.stream_rx.fifo.buffer.buffer = app->usbd.cdc.rxbuff;
 		app->usbd.cdc.stream_rx.fifo.buffer.size = sizeof(app->usbd.cdc.rxbuff);
-		app->usbd.ifaces[0].class_protocol = (struct vsfusbd_class_protocol_t *)vsf.stack.usb.device.classes.cdc.control_protocol;
+		app->usbd.ifaces[0].class_protocol =
+				(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class;
 		app->usbd.ifaces[0].protocol_param = (void *)&app->usbd.cdc.param;
-		app->usbd.ifaces[1].class_protocol = (struct vsfusbd_class_protocol_t *)vsf.stack.usb.device.classes.cdc.data_protocol;
+		app->usbd.ifaces[1].class_protocol =
+				(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class;
 		app->usbd.ifaces[1].protocol_param = (void *)&app->usbd.cdc.param;
 		app->usbd.config[0].num_of_ifaces = dimof(app->usbd.ifaces);
 		app->usbd.config[0].iface = (struct vsfusbd_iface_t *)&app->usbd.ifaces;
@@ -415,7 +417,7 @@ ROOTFUNC vsf_err_t app_main(struct app_hwcfg_t const *hwcfg)
 	
 	// check board and api version
 	if (strcmp(hwcfg->board, APP_BOARD_NAME) ||
-		(vsf.api_ver != VSF_API_VERSION))
+		(api_ver != VSF_API_VERSION))
 	{
 		return VSFERR_NOT_SUPPORT;
 	}

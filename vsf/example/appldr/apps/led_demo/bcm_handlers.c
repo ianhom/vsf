@@ -426,10 +426,10 @@ vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 
 	memset(wifi, 0, sizeof(*wifi));
 	wifi->netif.drv = &wifi->netdrv;
-	wifi->netdrv.op = vsf.stack.tcpip.broadcom_wifi.netdrv_op;
+	wifi->netdrv.op = &bcm_wifi_netdrv_op;
 	wifi->netdrv.param = &wifi->bcm_wifi;
 	wifi->bcm_wifi.bus.type = hwcfg->bcm_wifi_port.type;
-	wifi->bcm_wifi.bus.op = vsf.stack.tcpip.broadcom_wifi.bus.spi_op;
+	wifi->bcm_wifi.bus.op = &bcm_bus_spi_op;
 	wifi->bcm_wifi.bus.port.comm.spi.port = hwcfg->bcm_wifi_port.comm.spi.port;
 	wifi->bcm_wifi.bus.port.comm.spi.cs_port = hwcfg->bcm_wifi_port.comm.spi.cs_port;
 	wifi->bcm_wifi.bus.port.comm.spi.cs_pin = hwcfg->bcm_wifi_port.comm.spi.cs_pin;
