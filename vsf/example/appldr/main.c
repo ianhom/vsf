@@ -94,7 +94,7 @@ int main(void)
 		app_main_ptr = *(uint32_t *)APP_MAIN_ADDR;
 		if (app_main_ptr != 0xFFFFFFFF)
 		{
-//			app_main_ptr += APP_MAIN_ADDR;
+			app_main_ptr += APP_MAIN_ADDR;
 			((int (*)(struct app_hwcfg_t *hwcfg))app_main_ptr)(&app.hwcfg);
 		}
 	}

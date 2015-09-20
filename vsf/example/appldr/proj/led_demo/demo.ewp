@@ -30,7 +30,7 @@
         <option>
           <name>Variant</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -138,12 +138,12 @@
         <option>
           <name>GFPUCoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
