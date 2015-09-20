@@ -29,8 +29,8 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
-          <state>34</state>
+          <version>21</version>
+          <state>38</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -60,7 +60,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -70,16 +70,16 @@
         <option>
           <name>GRuntimeLibSelect</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelectSlave</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>RTDescription</name>
-          <state>Use the full configuration of the C/C++ runtime library. Full locale interface, C locale, file descriptor support, multibytes in printf and scanf, and hex floats in strtod.</state>
+          <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
         </option>
         <option>
           <name>OGProductVersion</name>
@@ -87,7 +87,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.10.3.6927</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -133,17 +133,17 @@
         </option>
         <option>
           <name>RTConfigPath2</name>
-          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Full.h</state>
+          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Normal.h</state>
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
-          <state>34</state>
+          <version>21</version>
+          <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
-          <state>34</state>
+          <version>21</version>
+          <state>38</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -233,7 +233,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>11111110</state>
+          <state>00000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -327,7 +327,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -336,7 +336,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>1</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -617,6 +617,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -976,7 +977,7 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
+          <version>21</version>
           <state>34</state>
         </option>
         <option>
@@ -1007,7 +1008,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -1084,12 +1085,12 @@
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>34</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>34</state>
         </option>
         <option>
@@ -1564,6 +1565,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -1931,10 +1933,13 @@
     </file>
   </group>
   <file>
-    <name>$PROJ_DIR$\app_hw_cfg.h</name>
+    <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\..\apps\led_demo\main.c</name>
+    <name>$PROJ_DIR$\..\..\apps\led_demo\app_main.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\apps\led_demo\bcm_handlers.c</name>
   </file>
 </project>
 

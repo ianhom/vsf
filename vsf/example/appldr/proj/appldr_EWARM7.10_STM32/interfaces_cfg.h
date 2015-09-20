@@ -129,7 +129,7 @@
 #define IFS_FLASH_EN						1
 #define IFS_USART_EN						1
 #define IFS_SPI_EN							1
-#define IFS_ADC_EN							0
+#define IFS_ADC_EN							1
 #define IFS_GPIO_EN							1
 #define IFS_IIC_EN							0
 #define IFS_PWM_EN							0
