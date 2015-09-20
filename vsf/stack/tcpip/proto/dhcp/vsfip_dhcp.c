@@ -91,8 +91,6 @@ enum vsfip_dhcp_op_t
 
 enum vsfip_dhcp_EVT_t
 {
-	VSFIP_DHCP_EVT_REENTRY		= VSFSM_EVT_USER_LOCAL + 0,
-	
 	VSFIP_DHCP_EVT_REPLY		= VSFSM_EVT_USER_LOCAL_INSTANT + 0,
 	VSFIP_DHCP_EVT_TIMEROUT		= VSFSM_EVT_USER_LOCAL_INSTANT + 1,
 };
@@ -399,12 +397,7 @@ cleanup:
 	}
 	if ((err < 0) && (++dhcp->retry < VSFIP_DHCP_RETRY_CNT))
 	{
-		dhcp->timer_retry.interval = 2;
-		dhcp->timer_retry.evt = VSFIP_DHCP_EVT_REENTRY;
-		dhcp->timer_retry.sm = pt->sm;
-		vsftimer_register(&dhcp->timer_retry);
-		vsfsm_pt_wfe(pt, VSFIP_DHCP_EVT_REENTRY);
-		vsftimer_unregister(&dhcp->timer_retry);
+		vsfsm_pt_delay(pt, 2);
 		goto retry;
 	}
 	

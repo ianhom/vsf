@@ -82,7 +82,7 @@ struct vsfip_netif_t
 		struct vsfsm_sem_t sem;
 		struct vsfsm_pt_t caller_pt;
 		struct vsfsm_t *sm_pending;
-		struct vsftimer_timer_t to;
+		struct vsftimer_t to;
 		struct vsfip_buffer_t *buf;
 		struct vsfip_bufferlist_t requestlist;
 		struct vsfip_buffer_t *cur_request;

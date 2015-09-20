@@ -225,8 +225,8 @@ struct vsfip_socket_t
 	struct vsfip_socket_t *father;
 	
 	uint32_t timeout_ms;
-	struct vsftimer_timer_t tx_timer;
-	struct vsftimer_timer_t rx_timer;
+	struct vsftimer_t tx_timer;
+	struct vsftimer_t rx_timer;
 	
 	struct
 	{
@@ -253,6 +253,8 @@ void vsfip_bufferlist_remove(struct vsfip_bufferlist_t *list,
 void vsfip_bufferlist_free(struct vsfip_bufferlist_t *list);
 
 vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+							struct vsfip_netif_t *netif);
+vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif);
 
 vsf_err_t vsfip_init(void);

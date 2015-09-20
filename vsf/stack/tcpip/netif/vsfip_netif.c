@@ -360,7 +360,8 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 						// wait for reply with timeout
 						netif->arpc.to.interval = VSFIP_CFG_ARP_TIMEOUT_MS;
 						netif->arpc.to.sm = pt->sm;
-						vsftimer_register(&netif->arpc.to);
+						netif->arpc.to.trigger_cnt = 1;
+						vsftimer_enqueue(&netif->arpc.to);
 						
 						evt = VSFSM_EVT_NONE;
 						vsfsm_pt_entry(pt);
@@ -369,7 +370,7 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 						{
 							return VSFERR_NOT_READY;
 						}
-						vsftimer_unregister(&netif->arpc.to);
+						vsftimer_dequeue(&netif->arpc.to);
 						netif->arpc.sm_pending = NULL;
 					}
 					

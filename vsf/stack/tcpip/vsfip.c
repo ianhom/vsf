@@ -61,7 +61,7 @@ struct vsfip_t
 	struct vsfip_socket_t *tcpconns;
 	
 	struct vsfsm_t tick_sm;
-	struct vsftimer_timer_t tick_timer;
+	struct vsftimer_t tick_timer;
 	
 	uint16_t udp_port;
 	uint16_t tcp_port;
@@ -275,6 +275,38 @@ vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
+vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+							struct vsfip_netif_t *netif)
+{
+	struct vsfip_netif_t *netif_tmp = vsfip.netif_list;
+	
+	vsfsm_pt_begin(pt);
+	
+	if (netif_tmp == netif)
+	{
+		vsfip.netif_list = netif->next;
+		goto remove_netif;
+	}
+	
+	while (netif_tmp != NULL)
+	{
+		if (netif_tmp->next == netif)
+		{
+			netif_tmp->next = netif->next;
+			
+		remove_netif:
+			netif->init_pt.user_data = netif;
+			netif->init_pt.sm = pt->sm;
+			netif->init_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			return vsfip_netif_fini(&netif->init_pt, evt);
+		}
+		netif_tmp = netif_tmp->next;
+	}
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
 struct vsfip_netif_t* vsfip_ip_route(struct vsfip_ipaddr_t *addr)
 {
 	// TODO:
@@ -305,10 +337,11 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfip->tick_timer.evt = VSFIP_EVT_TICK;
 		vsfip->tick_timer.sm = sm;
 		vsfip->tick_timer.interval = 1;
-		vsftimer_register(&vsfip->tick_timer);
+		vsfip->tick_timer.trigger_cnt = 1;
+		vsftimer_enqueue(&vsfip->tick_timer);
 		break;
 	case VSFSM_EVT_FINI:
-		vsftimer_unregister(&vsfip->tick_timer);
+		vsftimer_dequeue(&vsfip->tick_timer);
 		break;
 	case VSFIP_EVT_TICK:
 	{
@@ -661,8 +694,8 @@ static vsf_err_t vsfip_free_socket(struct vsfip_socket_t *socket)
 	
 	// remove pending incoming buffer
 	vsfip_bufferlist_free(&socket->input_bufferlist);
-	vsftimer_unregister(&socket->tx_timer);
-	vsftimer_unregister(&socket->rx_timer);
+	vsftimer_dequeue(&socket->tx_timer);
+	vsftimer_dequeue(&socket->rx_timer);
 	
 	if ((IPPROTO_TCP == socket->protocol) && (socket->pcb.protopcb != NULL))
 	{
@@ -969,7 +1002,8 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		socket->rx_timer.interval = socket->timeout_ms;
 		socket->rx_timer.sm = pt->sm;
 		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
-		vsftimer_register(&socket->rx_timer);
+		socket->rx_timer.trigger_cnt = 1;
+		vsftimer_enqueue(&socket->rx_timer);
 	}
 	
 	while (1)
@@ -986,7 +1020,7 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			
 			if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
 			{
-				vsftimer_unregister(&socket->rx_timer);
+				vsftimer_dequeue(&socket->rx_timer);
 				vsfsm_sync_cancel(&socket->input_sem, pt->sm);
 				return VSFERR_FAIL;
 			}
@@ -995,7 +1029,7 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		*buf = vsfip_udp_match(socket, sockaddr);
 		if (*buf != NULL)
 		{
-			vsftimer_unregister(&socket->rx_timer);
+			vsftimer_dequeue(&socket->rx_timer);
 			return VSFERR_NONE;
 		}
 	}

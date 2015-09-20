@@ -30,7 +30,6 @@ struct vsfip_dhcp_t
 	struct vsfip_netif_t *netif;
 	struct vsfsm_t sm;
 	struct vsfsm_pt_t pt;
-	struct vsftimer_timer_t timer_retry;
 	struct vsfip_socket_t *so;
 	struct vsfip_sockaddr_t sockaddr;
 	struct vsfip_buffer_t *outbuffer;
