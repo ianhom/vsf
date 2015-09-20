@@ -323,7 +323,7 @@ struct vsf_t
 	} stack;
 };
 
-#ifndef VSF_SYS
+#ifdef VSF_STANDALONE_APP
 
 #define VSF_BASE						((struct vsf_t *)VSF_BASE_ADDR)
 #define vsf								(*VSF_BASE)
