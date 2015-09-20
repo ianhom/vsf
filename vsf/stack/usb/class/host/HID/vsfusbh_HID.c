@@ -20,8 +20,8 @@
 #include "app_type.h"
 
 #include "interfaces.h"
-#include "vsfusbh.h"
-#include "class_driver\HID\vsfusbh_hid.h"
+#include "stack/usb/core/vsfusbh.h"
+#include "vsfusbh_HID.h"
 
 #define vsfusbh_hid_check_ret_value()	\
 	do {\

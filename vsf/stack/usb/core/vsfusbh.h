@@ -1,9 +1,9 @@
 #ifndef __VSFUSBH_H_INCLUDED__
 #define __VSFUSBH_H_INCLUDED__
 
-#include "vsfusb.h"
-#include "common/usb_common.h"
-#include "common/usb_ch11.h"
+#include "vsfusbh_cfg.h"
+#include "stack/usb/common/usb_common.h"
+#include "stack/usb/common/usb_ch11.h"
 #include "hcd.h"
 
 #include "tool/list/list.h"

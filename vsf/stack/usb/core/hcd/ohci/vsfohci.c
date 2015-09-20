@@ -23,7 +23,7 @@
 #include "tool/list/list.h"
 #include "tool/buffer/buffer.h"
 
-#include "core/vsfusbh.h"
+#include "stack/usb/core/vsfusbh.h"
 #include "vsfohci_priv.h"
 
 #define CC_TO_ERROR(cc) (cc == 0 ? VSFERR_NONE : VSFERR_FAIL)

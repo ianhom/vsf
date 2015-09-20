@@ -108,7 +108,7 @@ struct hid_report_t
 struct vsfusbh_hid_t
 {
 	/* hub timer */
-	struct vsftimer_timer_t timer;
+	struct vsftimer_t timer;
 
 	/* statemachine */
 	struct vsfsm_t sm;

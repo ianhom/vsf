@@ -22,7 +22,7 @@
 #include "interfaces.h"
 #include "tool/buffer/buffer.h"
 
-#include "core/vsfusbh.h"
+#include "stack/usb/core/vsfusbh.h"
 
 struct vsfusbh_hub_t
 {
