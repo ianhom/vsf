@@ -75,6 +75,7 @@ void vsftimer_enqueue(struct vsftimer_t *timer)
 {
 	struct vsftimer_t *ptimer, *ntimer;
 
+	timer->trigger_tick = timer->interval + core_interfaces.tickclk.get_count();
 	vsftimer_dequeue(timer);
 	sllist_init_node(timer->list);
 
@@ -140,7 +141,6 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			if (cur_tick >= timer->trigger_tick)
 			{
-				timer->trigger_tick += timer->interval;
 				if (timer->trigger_cnt > 0)
 				{
 					timer->trigger_cnt--;
@@ -184,7 +184,6 @@ struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 	timer->evt = evt;
 	timer->interval = interval;
 	timer->trigger_cnt = trigger_cnt;
-	timer->trigger_tick = timer->interval + core_interfaces.tickclk.get_count();
 	vsftimer_enqueue(timer);
 	return timer;
 }
