@@ -44,7 +44,7 @@ static vsf_err_t vsfusbd_CDCData_OUT_hanlder(struct vsfusbd_device_t *device,
 
 	rx_buffer.buffer = buffer;
 	rx_buffer.size = pkg_size;
-	stream_tx(param->stream_rx, &rx_buffer);
+	stream_write(param->stream_rx, &rx_buffer);
 
 	if (stream_get_free_size(param->stream_rx) < ep_size)
 	{
@@ -82,7 +82,7 @@ static vsf_err_t vsfusbd_CDCData_IN_hanlder(struct vsfusbd_device_t *device,
 	pkg_size = device->drv->ep.get_IN_epsize(ep);
 	tx_buffer.buffer = buffer;
 	tx_buffer.size = pkg_size;
-	tx_data_length = stream_rx(param->stream_tx, &tx_buffer);
+	tx_data_length = stream_read(param->stream_tx, &tx_buffer);
 	if (tx_data_length)
 	{
 		device->drv->ep.write_IN_buffer(ep, buffer, tx_data_length);

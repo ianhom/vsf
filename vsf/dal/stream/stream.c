@@ -37,7 +37,7 @@ vsf_err_t stream_fini(struct vsf_stream_t *stream)
 	return VSFERR_NONE;
 }
 
-uint32_t stream_rx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = vsf_fifo_pop(&stream->fifo, buffer->size, buffer->buffer);
 
@@ -48,7 +48,7 @@ uint32_t stream_rx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	return count;
 }
 
-uint32_t stream_tx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = vsf_fifo_push(&stream->fifo, buffer->size, buffer->buffer);
 

@@ -48,8 +48,8 @@ struct vsf_stream_t
 
 vsf_err_t stream_init(struct vsf_stream_t *stream);
 vsf_err_t stream_fini(struct vsf_stream_t *stream);
-uint32_t stream_rx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
-uint32_t stream_tx(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 uint32_t stream_get_data_size(struct vsf_stream_t *stream);
 uint32_t stream_get_free_size(struct vsf_stream_t *stream);
 void stream_connect_rx(struct vsf_stream_t *stream);
