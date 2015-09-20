@@ -133,6 +133,23 @@ ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 			vsf_module_unregister,
 			vsf_module_get,
 		},					// struct module;
+		
+		{
+			vsfshell_init,
+			vsfshell_register_handlers,
+			vsfshell_free_handler_thread,
+		},					// struct shell;
+		
+		{
+			stream_init,
+			stream_fini,
+			stream_read,
+			stream_write,
+			stream_get_data_size,
+			stream_get_free_size,
+			stream_connect_rx,
+			stream_connect_tx,
+		},					// struct stream;
 	},						// struct vsf_framework_t framework;
 	
 	{
@@ -151,4 +168,129 @@ ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 			vsf_bufmgr_free,
 		},					// struct bufmgr;
 	},						// struct buffer;
+	
+	{
+		{
+			BIT_REVERSE_U8,
+			BIT_REVERSE_U16,
+			BIT_REVERSE_U32,
+			BIT_REVERSE_U64,
+			GET_U16_MSBFIRST,
+			GET_U24_MSBFIRST,
+			GET_U32_MSBFIRST,
+			GET_U64_MSBFIRST,
+			GET_U16_LSBFIRST,
+			GET_U24_LSBFIRST,
+			GET_U32_LSBFIRST,
+			GET_U64_LSBFIRST,
+			SET_U16_MSBFIRST,
+			SET_U24_MSBFIRST,
+			SET_U32_MSBFIRST,
+			SET_U64_MSBFIRST,
+			SET_U16_LSBFIRST,
+			SET_U24_LSBFIRST,
+			SET_U32_LSBFIRST,
+			SET_U64_LSBFIRST,
+			SWAP_U16,
+			SWAP_U24,
+			SWAP_U32,
+			SWAP_U64,
+
+			{
+				mskarr_set,
+				mskarr_clr,
+				mskarr_ffz,
+			},				// struct mskarr
+		},					// struct bittool;
+	},						// struct tool;
+	
+	{
+		{
+			{
+				vsfusbd_device_init,
+				vsfusbd_device_fini,
+				vsfusbd_ep_send_nb,
+				vsfusbd_ep_receive_nb,
+				
+				vsfusbd_set_IN_handler,
+				vsfusbd_set_OUT_handler,
+				
+				{
+					{
+						(struct vsfusbd_class_protocol_t *)&vsfusbd_HID_class,
+					},		// struct hid;
+					{
+						(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
+						(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
+					},		// struct cdc;
+				},			// struct classes;
+			},				// struct device;
+			
+			{
+				vsfusbh_init,
+				vsfusbh_fini,
+				vsfusbh_register_driver,
+				vsfusbh_submit_urb,
+				
+#if IFS_HCD_EN
+				{
+					{
+						(struct vsfusbh_hcddrv_t *)&ohci_drv,
+					},		// struct ohci;
+				},			// struct hcd;
+#endif
+				
+				{
+					{
+						(struct vsfusbh_class_drv_t *)&vsfusbh_hub_drv,
+					},		// struct hub;
+				},			// struct classes;
+			},				// struct host;
+		},					// struct usb;
+		
+		{
+			vsfip_init,
+			vsfip_fini,
+			vsfip_netif_add,
+			vsfip_netif_remove,
+			
+			vsfip_socket,
+			vsfip_close,
+			
+			vsfip_listen,
+			vsfip_bind,
+			
+			vsfip_tcp_connect,
+			vsfip_tcp_accept,
+			vsfip_tcp_send,
+			vsfip_tcp_recv,
+			vsfip_tcp_close,
+			
+			vsfip_udp_send,
+			vsfip_udp_recv,
+			
+			{
+				vsfip_buffer_get,
+				vsfip_buffer_reference,
+				vsfip_buffer_release,
+			},				// struct buffer;
+			
+			{
+				{
+					vsfip_dhcp_start,
+				},			// struct dhcp;
+			},				// struct protocol;
+			
+			{
+				{
+					(struct bcm_bus_op_t *)&bcm_bus_spi_op,
+				},			// struct bus;
+				&bcm_wifi_netdrv_op,
+				
+				bcm_wifi_scan,
+				bcm_wifi_join,
+				bcm_wifi_leave,
+			},				// struct broadcom_wifi;
+		},					// struct tcpip;
+	},						// struct stack;
 };
