@@ -481,7 +481,7 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	case VSFSHELL_EVT_STREAMRX_ONIN:
 		if (shell->input_sm == &shell->sm)
 		{
-			// pass to shell->input_sm
+			// pass to shell->input_pt
 			shell->input_pt.thread(&shell->input_pt, evt);
 		}
 		else if (shell->input_sm != NULL)
@@ -490,7 +490,12 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 		break;
 	case VSFSHELL_EVT_STREAMTX_ONOUT:
-		if (shell->output_sm != NULL)
+		if (shell->output_sm == &shell->sm)
+		{
+			// pass to shell->input_pt
+			shell->input_pt.thread(&shell->input_pt, evt);
+		}
+		else if (shell->output_sm != NULL)
 		{
 			vsfsm_post_evt(shell->output_sm, evt);
 		}
