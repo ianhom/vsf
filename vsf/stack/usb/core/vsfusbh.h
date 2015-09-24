@@ -28,7 +28,7 @@ struct vsfusbh_device_t
 
 	uint32_t toggle[2];	// one bit per endpoint
 	uint32_t halted[2];	// one bit per endpoint
-	
+
 	uint16_t epmaxpacketin[USB_MAXENDPOINTS];
 	uint16_t epmaxpacketout[USB_MAXENDPOINTS];
 
@@ -103,11 +103,11 @@ struct vsfusbh_urb_t
 
 	uint32_t start_frame;			/*!< start frame (iso/irq only)		*/
 	uint32_t interval;				/*!< polling interval (irq only)	*/
-#if VSFUSBH_CFG_ENABLE_ISO
+#if USBH_CFG_ENABLE_ISO
 	uint32_t number_of_packets;		/*!< number of packets (iso)		*/
 	uint32_t error_count;			/*!< number of errors (iso only)	*/
-	struct iso_packet_descriptor_t iso_frame_desc[8];
-#endif // VSFUSBH_CFG_ENABLE_ISO
+	struct iso_packet_descriptor_t iso_frame_desc[USBH_CFG_ISO_PACKET_LIMIT];
+#endif // USBH_CFG_ENABLE_ISO
 
 	uint32_t timeout;
 	struct vsfsm_t *sm;

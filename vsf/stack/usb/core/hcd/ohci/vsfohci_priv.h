@@ -27,7 +27,6 @@
 #define ED_MAX_NUM				16
 #define TD_MAX_NUM				64
 #define NUM_INTS				32
-#define VSFUSBH_CFG_ENABLE_ISO	0
 #define MAX_EP_NUM_EACH_DEVICE	8
 #define TD_MAX_NUM_EACH_UARB	12
 /* Maximum number of root hub ports. */
@@ -283,6 +282,11 @@ struct ed_t
 	uint8_t:1;
 	uint8_t state : 4;
 
+#if USBH_CFG_ENABLE_ISO
+	uint16_t last_iso;
+	uint16_t dummy[7];	
+#endif // USBH_CFG_ENABLE_ISO
+
 	struct ed_t *prev;
 	struct ed_t *ed_rm_list;
 	struct vsfusbh_device_t *vsfdev;
@@ -295,22 +299,22 @@ struct td_t
 	uint32_t hwCBP;		/* Current Buffer Pointer */
 	uint32_t hwNextTD;	/* Next TD Pointer */
 	uint32_t hwBE;		/* Memory Buffer End Pointer */
-#if VSFUSBH_CFG_ENABLE_ISO
+#if USBH_CFG_ENABLE_ISO
 	uint32_t hwPSW[4];
-#endif // VSFUSBH_CFG_ENABLE_ISO
+#endif // USBH_CFG_ENABLE_ISO
 
 	uint8_t busy : 1;
 	uint8_t is_iso : 1;
-uint8_t:6;
+	uint8_t:6;
 	uint8_t index;
 	uint16_t num;
 
 	struct ed_t *ed;
 	struct td_t *next_dl_td;
 	struct urb_priv_t *urb_priv;
-#if VSFUSBH_CFG_ENABLE_ISO
+#if USBH_CFG_ENABLE_ISO
 	uint32_t dummy[4];
-#endif // VSFUSBH_CFG_ENABLE_ISO
+#endif // USBH_CFG_ENABLE_ISO
 };
 
 struct ohci_device_t

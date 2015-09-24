@@ -26,6 +26,8 @@
 #include "stack/usb/core/vsfusbh.h"
 #include "vsfohci_priv.h"
 
+#define OHCI_ISO_DELAY			4
+
 #define CC_TO_ERROR(cc) (cc == 0 ? VSFERR_NONE : VSFERR_FAIL)
 
 #define usb_maxpacket(dev, pipe, out) (out \
@@ -117,6 +119,9 @@ static uint8_t ep_rev(uint8_t num_bits, uint8_t word)
 
 static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 {
+	uint32_t inter, i;
+	uint32_t *ed_p;
+
 	switch (ed->type)
 	{
 	case PIPE_CONTROL:
@@ -153,8 +158,6 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 		break;
 	case PIPE_INTERRUPT:
 	{
-		uint32_t inter, i;
-		uint32_t *ed_p;
 		uint8_t load, interval, int_branch;
 		load = ed->int_load;
 		interval = ep_2_n_interval(ed->int_period);
@@ -174,11 +177,31 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 		}
 	}
 		break;
-#if ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
-		// TODO
+		ed->hwNextED = 0;
+		ed->int_interval = 1;
+		if (ohci->ed_isotail != NULL)
+		{
+			ohci->ed_isotail->hwNextED = (uint32_t)ed;
+			ed->prev = ohci->ed_isotail;
+		}
+		else
+		{
+			for (i = 0; i < 32; i+= inter)
+			{
+				inter = 1;
+				for (ed_p = &(ohci->hcca->int_table[ep_rev(5, i)]);
+						(*ed_p != 0) && ed_p;
+						ed_p = &(((struct ed_t *)(*ed_p))->hwNextED))
+				{
+					inter = ep_rev(6, ((struct ed_t *)(*ed_p))->int_interval);
+				}
+				*ed_p = (uint32_t)ed;
+			}
+			ed->prev = NULL;
+		}
+		ohci->ed_isotail = ed;
 		break;
-#endif // ENABLE_ISO
 	}
 }
 
@@ -230,10 +253,6 @@ static void ep_unlink(struct ohci_t *ohci, struct ed_t *ed)
 		else
 			((struct ed_t *)(ed->hwNextED))->prev = ed->prev;
 		break;
-#if ENABLE_ISO
-	case PIPE_ISOCHRONOUS:
-		// TODO
-#endif // ENABLE_ISO
 	case PIPE_INTERRUPT:
 		for (i = 0; i < 32; i++)
 		{
@@ -249,6 +268,14 @@ static void ep_unlink(struct ohci_t *ohci, struct ed_t *ed)
 				}
 			}
 		}
+		break;
+	case PIPE_ISOCHRONOUS:
+		if (ed == ohci->ed_isotail)
+			ohci->ed_isotail = ed->prev;
+		if (ed->hwNextED != 0)
+			((struct ed_t *)(ed->hwNextED))->prev = ed->prev;
+		if (ed->prev != NULL)
+			ed->prev->hwNextED = ed->hwNextED;
 		break;
 	}
 	ed->state = ED_UNLINK;
@@ -366,7 +393,7 @@ static void ep_rm_ed(struct vsfohci_t *vsfohci, struct ed_t *ed)
 }
 
 static void td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
-struct urb_priv_t *urb_priv)
+		struct urb_priv_t *urb_priv)
 {
 	struct td_t *td, *td_pt;
 
@@ -392,13 +419,43 @@ struct urb_priv_t *urb_priv)
 	td_pt->hwNextTD = 0;
 	td->ed->hwTailP = td->hwNextTD;
 }
-#if VSFUSBH_CFG_ENABLE_ISO
+#if USBH_CFG_ENABLE_ISO
 static void iso_td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
-struct urb_priv_t *urb_priv)
+		struct urb_priv_t *urb_priv)
 {
-	// TODO
+	struct td_t *td, *td_pt;
+	uint32_t bufferStart;
+	struct vsfusbh_urb_t *vsfurb = urb_priv->vsfurb;
+
+	if (index > urb_priv->length)
+		return;
+
+	td_pt = urb_priv->td[index];
+
+	// fill the old dummy TD
+	td = urb_priv->td[index] = (struct td_t *)\
+		((uint32_t)urb_priv->ed->hwTailP & 0xfffffff0);
+	td->ed = urb_priv->ed;
+	td->ed->last_iso = info & 0xffff;
+	td->next_dl_td = NULL;
+	td->index = index;
+	td->urb_priv = urb_priv;
+
+	bufferStart = (uint32_t)data + vsfurb->iso_frame_desc[index].offset;
+	len = vsfurb->iso_frame_desc[index].length;
+
+	td->hwINFO = info;
+	td->hwCBP = (uint32_t)((!bufferStart || !len) ? 0 : bufferStart) & 0xfffff000;
+	td->hwBE = (uint32_t)((!bufferStart || !len) ? 0 : (uint32_t)bufferStart + len - 1);
+	td->hwNextTD = (uint32_t)td_pt;
+	td->is_iso = 1;
+
+	td->hwPSW[0] = ((uint32_t)data + vsfurb->iso_frame_desc[index].offset) & 0x0FFF | 0xE000;
+
+	td_pt->hwNextTD = 0;
+	td->ed->hwTailP = td->hwNextTD;
 }
-#endif // VSFUSBH_CFG_ENABLE_ISO
+#endif // USBH_CFG_ENABLE_ISO
 
 static void td_submit_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 {
@@ -458,9 +515,15 @@ static void td_submit_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 			(TD_CC | TD_R | TD_DP_IN | toggle);
 		td_fill(info, data, data_len, cnt++, urb_priv);
 		break;
+#if USBH_CFG_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
-		// TODO
+		for (cnt = 0; cnt < vsfurb->number_of_packets; cnt++)
+		{
+			iso_td_fill(TD_CC | TD_ISO | ((vsfurb->start_frame + cnt) & 0xffff),
+					data, data_len, cnt, urb_priv);
+		}
 		break;
+#endif // USBH_CFG_ENABLE_ISO
 	}
 }
 
@@ -468,11 +531,32 @@ static void dl_transfer_length(struct vsfusbh_urb_t *vsfurb, struct td_t *td)
 {
 	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
 
+#if USBH_CFG_ENABLE_ISO
 	if (td->is_iso)
 	{
-		// TODO
+		uint16_t cc, tdPSW;
+		uint32_t dlen;
+
+		tdPSW = td->hwPSW[0] & 0xffff;
+		cc = (tdPSW >> 12) & 0xf;
+		if (cc < 0xe)
+		{
+			if (usb_pipeout(vsfurb->pipe))
+				dlen = vsfurb->iso_frame_desc[td->index].length;
+			else
+				dlen = tdPSW & 0x3ff;
+			vsfurb->actual_length += dlen;
+			vsfurb->iso_frame_desc[td->index].actual_length = dlen;
+			if ((!vsfurb->transfer_flags & USB_DISABLE_SPD) &&
+					(cc == TD_DATAUNDERRUN))
+			{
+				cc = TD_CC_NOERROR;
+			}
+			vsfurb->iso_frame_desc[td->index].status = CC_TO_ERROR(cc);
+		}
 	}
 	else
+#endif // USBH_CFG_ENABLE_ISO
 	{
 		if (!(usb_pipetype(vsfurb->pipe) == PIPE_CONTROL &&
 			((td->index == 0) || (td->index == urb_priv->length - 1))))
@@ -506,17 +590,6 @@ static struct td_t *dl_reverse_done_list(struct ohci_t *ohci)
 		// error check
 		if (TD_CC_GET(td->hwINFO))
 		{
-			if (td->ed->type == PIPE_ISOCHRONOUS)
-			{
-				if ((td->hwINFO & 0xE0000000) == 0x80000000)
-				{
-					// TODO
-					//td->ed->last_iso += OHCI_ISO_DELAY;
-				}
-				// else error
-			}
-			// else error
-
 			if (td->ed->hwHeadP & 0x1)
 			{
 				struct urb_priv_t *urb_priv = td->urb_priv;
@@ -524,7 +597,7 @@ static struct td_t *dl_reverse_done_list(struct ohci_t *ohci)
 				if ((td->index + 1) < urb_priv->length)
 				{
 					td->ed->hwHeadP = urb_priv->td[urb_priv->length - 1]->hwNextTD & 0xfffffff0 |
-						(td->ed->hwHeadP & 0x02);
+							(td->ed->hwHeadP & 0x02);
 					urb_priv->td_cnt += urb_priv->length - td->index - 1;
 				}
 				else
@@ -533,6 +606,17 @@ static struct td_t *dl_reverse_done_list(struct ohci_t *ohci)
 				}
 			}
 		}
+
+		/*
+		if ((td->ed->type == PIPE_ISOCHRONOUS) &&
+				(td->hwPSW[0] >> 12) &&
+				((td->hwPSW[0] >> 12) != TD_DATAUNDERRUN) &&
+				((td->hwPSW[0] >> 12) != TD_NOTACCESSED))
+		{
+			// error report
+		}
+		*/
+
 		td->next_dl_td = td_prev;
 		td_prev = td;
 		td_next = (struct td_t *)(td->hwNextTD & 0xfffffff0);
@@ -560,9 +644,9 @@ static void sohci_return_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 	switch (usb_pipetype(vsfurb->pipe))
 	{
 	case PIPE_INTERRUPT:
+	case PIPE_ISOCHRONOUS:
 		vsfsm_post_evt_pending(vsfurb->sm, VSFSM_EVT_URB_COMPLETE);
 		break;
-	case PIPE_ISOCHRONOUS:
 	case PIPE_BULK:
 	case PIPE_CONTROL:
 		urb_free_priv(urb_priv);
@@ -976,7 +1060,7 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 
 	if (usb_endpoint_halted(vsfurb->vsfdev, usb_pipeendpoint(pipe), usb_pipeout(pipe)))
 		return VSFERR_FAIL;
-	
+
 	// rh address check
 	if (usb_pipedevice(pipe) == 1)
 		return VSFERR_FAIL;
@@ -1004,9 +1088,18 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	case PIPE_INTERRUPT:
 		size = 1;
 		break;
+#if USBH_CFG_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
-		// TODO
+		size = vsfurb->number_of_packets;
+		if (size == 0)
+			return VSFERR_FAIL;
+		for (i = 0; i < size; i++)
+		{
+			vsfurb->iso_frame_desc[i].actual_length = 0;
+			vsfurb->iso_frame_desc[i].status = URB_XDEV;
+		}
 		break;
+#endif // USBH_CFG_ENABLE_ISO
 	}
 
 	if (size > TD_MAX_NUM_EACH_UARB)
@@ -1039,12 +1132,18 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 		return VSFERR_FAIL;
 	}
 
-#if VSFUSBH_CFG_ENABLE_ISO
+#if USBH_CFG_ENABLE_ISO
 	if (usb_pipetype(pipe) == PIPE_ISOCHRONOUS)
 	{
-		// TODO
+		if (vsfurb->transfer_flags & USB_ISO_ASAP)
+		{
+			vsfurb->start_frame = ((ed->state == ED_OPER) ?
+									(ed->last_iso + 1 + OHCI_ISO_DELAY) :
+									(ohci->hcca->frame_no + OHCI_ISO_DELAY))
+									& 0xffff;
+		}
 	}
-#endif // VSFUSBH_CFG_ENABLE_ISO
+#endif // USBH_CFG_ENABLE_ISO
 
 	vsfurb->actual_length = 0;
 	vsfurb->status = URB_PENDING;
@@ -1140,19 +1239,41 @@ static vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 	return VSFERR_NONE;
 }
 
-// use for int urb
+// use for int/iso urb
 static vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
 	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
 
-	vsfurb->actual_length = 0;
-	if ((urb_priv->state != URB_PRIV_DEL) && (vsfurb->status == URB_OK))
+	switch (usb_pipetype(vsfurb->pipe))
 	{
-		vsfurb->status = URB_PENDING;
-		td_submit_urb(ohci, vsfurb);
-		return VSFERR_NONE;
+	case PIPE_INTERRUPT:
+		vsfurb->actual_length = 0;
+		if ((urb_priv->state != URB_PRIV_DEL) && (vsfurb->status == URB_OK))
+		{
+			vsfurb->status = URB_PENDING;
+			td_submit_urb(ohci, vsfurb);
+			return VSFERR_NONE;
+		}
+		break;
+	case PIPE_ISOCHRONOUS:
+		vsfurb->actual_length = 0;
+		if ((urb_priv->state != URB_PRIV_DEL) && (vsfurb->status == URB_OK))
+		{
+			uint8_t i;
+			vsfurb->status = URB_PENDING;
+			vsfurb->start_frame = (ohci->hcca->frame_no + 1) & 0xffff;
+			for (i = 0; i < vsfurb->number_of_packets; i++)
+			{
+				vsfurb->iso_frame_desc[i].actual_length = 0;
+				vsfurb->iso_frame_desc[i].status = URB_XDEV;
+			}
+			td_submit_urb(ohci, vsfurb);
+			return VSFERR_NONE;
+		}
+	default:
+		break;
 	}
 	return VSFERR_FAIL;
 }
@@ -1206,13 +1327,13 @@ static vsf_err_t vsfohci_roothub_control(void *param,
 	uint32_t datadw[4], temp;
 	uint8_t *data = (uint8_t*)datadw;
 	uint8_t len = 0;
-	
-	
+
+
 	typeReq = (cmd->bRequestType << 8) | cmd->bRequest;
 	wValue = cmd->wValue;
 	wIndex = cmd->wIndex;
 	wLength = cmd->wLength;
-	
+
 	switch (typeReq)
 	{
 	case GetHubStatus:
@@ -1314,7 +1435,7 @@ static vsf_err_t vsfohci_roothub_control(void *param,
 			data[10] = data[9] = 0xff;
 		}
 		len = min(data[0], wLength);
-		break;		
+		break;
 	case DeviceRequest | USB_REQ_GET_DESCRIPTOR:
 		switch (wValue & 0xff00)
 		{
@@ -1333,11 +1454,11 @@ static vsf_err_t vsfohci_roothub_control(void *param,
 		default:
 			goto error;
 		}
-		break;	
+		break;
 	default:
-		goto error;	
+		goto error;
 	}
-	
+
 	if (len)
 	{
 		if (vsfurb->transfer_length < len)
