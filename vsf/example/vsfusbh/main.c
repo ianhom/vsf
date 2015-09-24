@@ -19,6 +19,8 @@
 static struct vsfusbh_t usbh =
 {
 	&ohci_drv,
+	OHCI_PORT_INDEX,
+	
 	NULL,
 };
 

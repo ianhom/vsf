@@ -1020,19 +1020,19 @@ extern struct interface_usbd_callback_t CORE_USBD_CALLBACK(__TARGET_CHIP__);
 
 struct interface_hcd_t
 {
-	vsf_err_t (*init)(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *param);
-	vsf_err_t (*fini)(uint8_t index);
-	void* (*regbase)(uint8_t index);
+	vsf_err_t (*init)(uint32_t index, vsf_err_t (*hcd_irq)(void *), void *param);
+	vsf_err_t (*fini)(uint32_t index);
+	void* (*regbase)(uint32_t index);
 };
 
 #define CORE_HCD_INIT(m)				__CONNECT(m, _hcd_init)
 #define CORE_HCD_FINI(m)				__CONNECT(m, _hcd_fini)
 #define CORE_HCD_REGBASE(m)				__CONNECT(m, _hcd_regbase)
 
-vsf_err_t CORE_HCD_INIT(__TARGET_CHIP__)(uint8_t index,
+vsf_err_t CORE_HCD_INIT(__TARGET_CHIP__)(uint32_t index,
 		vsf_err_t (*hcd_irq)(void *), void *param);
-vsf_err_t CORE_HCD_FINI(__TARGET_CHIP__)(uint8_t index);
-void* CORE_HCD_REGBASE(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_HCD_FINI(__TARGET_CHIP__)(uint32_t index);
+void* CORE_HCD_REGBASE(__TARGET_CHIP__)(uint32_t index);
 #endif
 
 struct interfaces_comm_t

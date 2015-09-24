@@ -154,6 +154,7 @@ struct vsfusbh_hcddrv_t
 struct vsfusbh_t
 {
 	const struct vsfusbh_hcddrv_t *hcd;
+	uint32_t hcd_index;
 
 	// private
 	void *hcd_data; // print to 'struct vsfohci_t *vsfohci'

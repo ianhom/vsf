@@ -963,12 +963,13 @@ static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	err = vsfohci_init_get_resource(usbh, (uint32_t)core_interfaces.hcd.regbase(0));
+	err = vsfohci_init_get_resource(usbh, 
+			(uint32_t)core_interfaces.hcd.regbase(usbh->hcd_index));
 	if (err)
 		return err;
 	vsfohci = (struct vsfohci_t *)usbh->hcd_data;
 
-	core_interfaces.hcd.init(OHCI_PORT_INDEX, vsfohci_interrupt, usbh->hcd_data);
+	core_interfaces.hcd.init(usbh->hcd_index, vsfohci_interrupt, usbh->hcd_data);
 
 	vsfohci->ohci->regs->intrdisable = OHCI_INTR_MIE;
 	vsfohci->ohci->regs->control = 0;
