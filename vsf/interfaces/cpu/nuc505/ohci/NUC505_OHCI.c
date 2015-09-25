@@ -67,9 +67,11 @@ ROOTFUNC void USBH_IRQHandler(void)
 	}
 }
 
-vsf_err_t nuc505_hcd_init(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *param)
+vsf_err_t nuc505_hcd_init(uint32_t index, vsf_err_t (*hcd_irq)(void *), void *param)
 {
-	if ((index & 0x3) == 0)
+	uint8_t port_mask = index & 0xffff;
+	
+	if (port_mask == 0)
 		return VSFERR_NOT_SUPPORT;
 
 	if (hcd_irq != NULL)
@@ -87,7 +89,7 @@ vsf_err_t nuc505_hcd_init(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *par
 		NVIC_SetPriority(USBH_IRQn,5);
 		NVIC_EnableIRQ(USBH_IRQn);
 	}
-	if ((index & nuc505_HCD_PORT1) && !(port_enable_mask & nuc505_HCD_PORT1))
+	if ((port_mask & nuc505_HCD_PORT1) && !(port_enable_mask & nuc505_HCD_PORT1))
 	{
 		#if OHCI_PORT1_PB12_DP_ENABLE
 		PB->PUEN = (PB->PUEN & ~GPIO_PUEN_PULLSEL12_Msk) | (0x2ul << GPIO_PUEN_PULLSEL12_Pos);
@@ -111,7 +113,7 @@ vsf_err_t nuc505_hcd_init(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *par
 		#endif
 		port_enable_mask |= nuc505_HCD_PORT1;
 	}
-	if ((index & nuc505_HCD_PORT2) && !(port_enable_mask & nuc505_HCD_PORT2))
+	if ((port_mask & nuc505_HCD_PORT2) && !(port_enable_mask & nuc505_HCD_PORT2))
 	{
 		PC->PUEN = (PC->PUEN & ~GPIO_PUEN_PULLSEL13_Msk) | (0x2ul << GPIO_PUEN_PULLSEL13_Pos);
 		PC->PUEN = (PC->PUEN & ~GPIO_PUEN_PULLSEL14_Msk) | (0x2ul << GPIO_PUEN_PULLSEL14_Pos);
@@ -123,15 +125,17 @@ vsf_err_t nuc505_hcd_init(uint8_t index, vsf_err_t (*hcd_irq)(void *), void *par
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_hcd_fini(uint8_t index)
+vsf_err_t nuc505_hcd_fini(uint32_t index)
 {
+	uint8_t port_mask = index & 0xffff;
+		
 	if (port_enable_mask == 0)
 		return VSFERR_NONE;
-	if ((index & 0x3) == 0)
+	if (port_mask == 0)
 		return VSFERR_NOT_SUPPORT;
 
 	// TODO
-	if ((index & nuc505_HCD_PORT1) && (port_enable_mask & nuc505_HCD_PORT1))
+	if ((port_mask & nuc505_HCD_PORT1) && (port_enable_mask & nuc505_HCD_PORT1))
 	{
 		#if OHCI_PORT1_PB12_DP_ENABLE
 		SYS->GPB_MFPH &= ~SYS_GPB_MFPH_PB12MFP_Msk;
@@ -147,7 +151,7 @@ vsf_err_t nuc505_hcd_fini(uint8_t index)
 		#endif
 		port_enable_mask &= ~nuc505_HCD_PORT1;
 	}
-	if ((index & nuc505_HCD_PORT2) && (port_enable_mask & nuc505_HCD_PORT2))
+	if ((port_mask & nuc505_HCD_PORT2) && (port_enable_mask & nuc505_HCD_PORT2))
 	{
 		SYS->GPC_MFPH &= ~(SYS_GPC_MFPH_PC13MFP_Msk | SYS_GPC_MFPH_PC14MFP_Msk);
 		port_enable_mask &= ~nuc505_HCD_PORT2;
@@ -162,9 +166,11 @@ vsf_err_t nuc505_hcd_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-void* nuc505_hcd_regbase(uint8_t index)
+void* nuc505_hcd_regbase(uint32_t index)
 {
-	switch (index)
+	uint8_t hcd_id = index >> 16;
+
+	switch (hcd_id)
 	{
 	case 0:
 		return (void*)USBH;

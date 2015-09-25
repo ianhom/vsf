@@ -11,13 +11,16 @@
 #include "framework/vsftimer/vsftimer.h"
 #include "tool/buffer/buffer.h"
 
-#include "vsfusb.h"
-#include "core/hcd/ohci/vsfohci.h"
-#include "class/host/HUB/vsfusbh_HUB.h"
+#include "stack/usb/vsfusb.h"
+#include "stack/usb/core/hcd/ohci/vsfohci.h"
+#include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
+#include "stack/usb/class/host/UVC/vsfusbh_UVC.h"
 
 static struct vsfusbh_t usbh =
 {
 	&ohci_drv,
+	OHCI_PORT_INDEX,
+	
 	NULL,
 };
 
@@ -54,6 +57,7 @@ int main(void)
 	
 	vsfusbh_init(&usbh);
 	vsfusbh_register_driver(&usbh, &vsfusbh_hub_drv);
+	vsfusbh_register_driver(&usbh, &vsfusbh_uvc_drv);
 	
 	while (1)
 	{
