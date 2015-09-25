@@ -20,7 +20,26 @@
 #ifndef __BUFFER_H_INCLUDED__
 #define __BUFFER_H_INCLUDED__
 
+#include "app_type.h"
 #include "tool/list/list.h"
+
+// queue
+struct vsfq_node_t
+{
+	uint32_t addr;
+	struct vsfq_node_t *next;
+};
+struct vsfq_t
+{
+	struct vsfq_node_t *head;
+	struct vsfq_node_t *tail;
+};
+
+void vsfq_init(struct vsfq_t *q);
+void vsfq_append(struct vsfq_t *q, struct vsfq_node_t *n);
+void vsfq_remove(struct vsfq_t *q, struct vsfq_node_t *n);
+void vsfq_enqueue(struct vsfq_t *q, struct vsfq_node_t *n);
+struct vsfq_node_t* vsfq_dequeue(struct vsfq_t *q);
 
 struct vsf_buffer_t
 {

@@ -30,11 +30,10 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt);
 
 struct vsftimer_info_t
 {
-	struct vsftimer_t *timerlist;
 	struct vsfsm_t sm;
+	struct vsfq_t timerlist;
 } static vsftimer =
 {
-	NULL,
 	{
 		{
 			vsftimer_init_handler,
@@ -56,7 +55,7 @@ vsf_err_t vsftimer_init(void)
 	memset(vsftimer_pool, 0, sizeof(vsftimer_pool));
 	memset(vsftimer_poll_mskarr, 0, sizeof(vsftimer_poll_mskarr));
 	
-	vsftimer.timerlist = NULL;
+	vsfq_init(&vsftimer.timerlist);
 	return vsfsm_init(&vsftimer.sm);
 }
 
@@ -73,73 +72,29 @@ static struct vsftimer_t *vsftimer_allocate(void)
 
 void vsftimer_enqueue(struct vsftimer_t *timer)
 {
-	struct vsftimer_t *ptimer, *ntimer;
-
-	timer->trigger_tick = timer->interval + core_interfaces.tickclk.get_count();
+	timer->node.addr = timer->interval + core_interfaces.tickclk.get_count();
 	vsftimer_dequeue(timer);
-	sllist_init_node(timer->list);
-
-	if (NULL == vsftimer.timerlist)
-	{
-		vsftimer.timerlist = timer;
-		return;
-	}
-
-	if (vsftimer.timerlist->trigger_tick > timer->trigger_tick)
-	{
-		sllist_insert(timer->list, vsftimer.timerlist->list);
-		vsftimer.timerlist = timer;
-		return;
-	}
-
-	ptimer = vsftimer.timerlist;
-	ntimer = sllist_get_container(ptimer->list.next, struct vsftimer_t, list);
-	while (ntimer != NULL)
-	{
-		if (ntimer->trigger_tick > timer->trigger_tick)
-		{
-			break;
-		}
-		ptimer = ntimer;
-		ntimer = sllist_get_container(ptimer->list.next,
-										struct vsftimer_t, list);
-	}
-
-	if (ntimer != NULL)
-	{
-		sllist_insert(timer->list, ntimer->list);
-	}
-	sllist_insert(ptimer->list, timer->list);
+	vsfq_enqueue(&vsftimer.timerlist, &timer->node);
 }
 
 void vsftimer_dequeue(struct vsftimer_t *timer)
 {
-	if (vsftimer.timerlist == NULL)
-	{
-		return;
-	}
-
-	if (vsftimer.timerlist == timer)
-	{
-		vsftimer.timerlist = sllist_get_container(timer->list.next,
-								struct vsftimer_t, list);
-		return;
-	}
-	sllist_remove(&vsftimer.timerlist->list.next, &timer->list);
+	vsfq_remove(&vsftimer.timerlist, &timer->node);
 }
 
 static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	uint32_t cur_tick = core_interfaces.tickclk.get_count();
-	struct vsftimer_t *timer = vsftimer.timerlist;
+	struct vsftimer_t *timer;
 	
 	switch (evt)
 	{
 	case VSFSM_EVT_TIMER:
+		timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 		while (timer != NULL)
 		{
-			if (cur_tick >= timer->trigger_tick)
+			if (cur_tick >= timer->node.addr)
 			{
 				if (timer->trigger_cnt > 0)
 				{
@@ -147,7 +102,6 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				}
 				if (timer->trigger_cnt != 0)
 				{
-					vsftimer_dequeue(timer);
 					vsftimer_enqueue(timer);
 				}
 				else
@@ -159,7 +113,7 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					vsfsm_post_evt(timer->sm, timer->evt);
 				}
-				timer = vsftimer.timerlist;
+				timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 			}
 			else
 			{

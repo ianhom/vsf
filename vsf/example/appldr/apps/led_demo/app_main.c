@@ -400,7 +400,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-#ifndef VSF_SYS
+#ifdef VSF_STANDALONE_APP
 // dummy main, make compiler happy
 int main(void)
 {

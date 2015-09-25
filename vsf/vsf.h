@@ -130,6 +130,15 @@ struct vsf_t
 	{
 		struct
 		{
+			void (*init)(struct vsfq_t *q);
+			void (*append)(struct vsfq_t *q, struct vsfq_node_t *n);
+			void (*remove)(struct vsfq_t *q, struct vsfq_node_t *n);
+			void (*enqueue)(struct vsfq_t *q, struct vsfq_node_t *n);
+			struct vsfq_node_t* (*dequeue)(struct vsfq_t *q);
+		} queue;
+		
+		struct
+		{
 			vsf_err_t (*init)(struct vsf_fifo_t *fifo);
 			uint32_t (*push8)(struct vsf_fifo_t *fifo, uint8_t data);
 			uint8_t (*pop8)(struct vsf_fifo_t *fifo);
@@ -367,6 +376,12 @@ struct vsf_t
 #define stream_connect_rx				vsf.framework.stream.connect_rx
 #define stream_connect_tx				vsf.framework.stream.connect_tx
 
+#define vsfq_init						vsf.buffer.queue.init
+#define vsfq_append						vsf.buffer.queue.append
+#define vsfq_remove						vsf.buffer.queue.remove
+#define vsfq_enqueue					vsf.buffer.queue.enqueue
+#define vsfq_dequeue					vsf.buffer.queue.dequeue
+
 #define vsf_fifo_init					vsf.buffer.fifo.init
 #define vsf_fifo_push8					vsf.buffer.fifo.push8
 #define vsf_fifo_pop8					vsf.buffer.fifo.pop8
@@ -448,8 +463,9 @@ struct vsf_t
 
 #else
 
+#define api_ver							vsf.api_ver
 extern const struct vsf_t vsf;
 
-#endif		// VSF_SYS
+#endif		// VSF_STANDALONE_APP
 
 #endif		// __VSF_H_INCLUDED__

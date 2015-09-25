@@ -26,24 +26,26 @@
 struct vsfip_netif_t;
 struct vsfip_buffer_t
 {
+	// inherent from vsfq_node_t
+	struct vsfq_node_t node;
+
 	struct vsf_buffer_t buf;
 	struct vsf_buffer_t app;
-	
+
 	union
 	{
 		uint8_t *ipver;
 		struct vsfip_ip4head_t *ip4head;
 //		struct vsfip_ip6head_t *ip6head;
 	} iphead;
-	
+
 	uint16_t ref;
 	uint16_t ttl;
-	
+
 	uint8_t *buffer;
 //	uint32_t size;
-	
+
 	struct vsfip_netif_t *netif;
-	struct vsfip_buffer_t *next;
 };
 
 void vsfip_buffer_init(void);

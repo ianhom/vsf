@@ -22,6 +22,101 @@
 
 #include "buffer.h"
 
+// queue
+void vsfq_init(struct vsfq_t *q)
+{
+	q->head = q->tail = NULL;
+}
+
+void vsfq_append(struct vsfq_t *q, struct vsfq_node_t *n)
+{
+	n->next = NULL;
+	if (NULL == q->tail)
+	{
+		q->head = q->tail = n;
+	}
+	else
+	{
+		q->tail->next = n;
+		q->tail = n;
+	}
+}
+
+void vsfq_remove(struct vsfq_t *q, struct vsfq_node_t *n)
+{
+	struct vsfq_node_t *head = q->head;
+
+	if (head == n)
+	{
+		q->head = head->next;
+		if (NULL == q->head)
+		{
+			q->tail = NULL;
+		}
+	}
+	else if (head != NULL)
+	{
+		while (head->next != NULL)
+		{
+			if (head->next == n)
+			{
+				head->next = head->next->next;
+				if (NULL == head->next)
+				{
+					q->tail = head;
+				}
+				break;
+			}
+			head = head->next;
+		}
+	}
+}
+
+void vsfq_enqueue(struct vsfq_t *q, struct vsfq_node_t *n)
+{
+	struct vsfq_node_t *tmp = q->head;
+
+	n->next = NULL;
+	if (NULL == tmp)
+	{
+		q->head = q->tail = n;
+	}
+	else if (tmp->addr >= n->addr)
+	{
+		n->next = tmp;
+		q->head = n;
+	}
+	else
+	{
+		while (tmp->next != NULL)
+		{
+			if (tmp->next->addr >= n->addr)
+			{
+				n->next = tmp->next;
+				tmp->next = n;
+				break;
+			}
+			tmp = tmp->next;
+		}
+		// insert last
+		tmp->next = n;
+	}
+}
+
+struct vsfq_node_t* vsfq_dequeue(struct vsfq_t *q)
+{
+	struct vsfq_node_t *head = q->head;
+	if (q->head != NULL)
+	{
+		q->head = q->head->next;
+		if (NULL == q->head)
+		{
+			q->tail = NULL;
+		}
+	}
+	return head;
+}
+
 //#define vsf_fifo_get_next_index(pos, size)	(((pos) + 1) % (size))
 static uint32_t vsf_fifo_get_next_index(uint32_t pos, uint32_t size)
 {

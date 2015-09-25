@@ -49,11 +49,9 @@ struct vsfip_buffer_t * vsfip_buffer_get(uint32_t size)
 			{
 				vsfip_buffer[i].ref++;
 				vsfip_buffer[i].buf.buffer =\
-						vsfip_buffer[i].app.buffer = vsfip_buffer[i].buffer;
-				vsfip_buffer[i].buf.size =\
-						vsfip_buffer[i].app.size = size;
-				vsfip_buffer[i].buf.buffer = vsfip_buffer[i].buffer;
-				vsfip_buffer[i].next = NULL;
+					vsfip_buffer[i].app.buffer = vsfip_buffer[i].buffer;
+				vsfip_buffer[i].buf.size = vsfip_buffer[i].app.size = size;
+				vsfip_buffer[i].node.next = NULL;
 				vsfip_buffer[i].netif = NULL;
 				return &vsfip_buffer[i];
 			}

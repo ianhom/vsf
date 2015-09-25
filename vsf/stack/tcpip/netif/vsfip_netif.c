@@ -59,7 +59,7 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 												vsfsm_evt_t evt);
 vsf_err_t vsfip_netif_construct(struct vsfip_netif_t *netif)
 {
-	vsfip_bufferlist_init(&netif->output_queue);
+	vsfq_init(&netif->outq);
 	netif->arpc.to.evt = VSFIP_NETIF_EVT_ARPC_TIMEOUT;
 	netif->arpc.buf = NULL;
 	netif->arp_time = 1;
@@ -114,7 +114,7 @@ static vsf_err_t vsfip_netif_ip_output_do(struct vsfip_buffer_t *buf,
 	
 	// TODO: there will be problem when vsfsm_sem_post fails,
 	// 			but it SHOULD not fail except BUG in system
-	vsfip_bufferlist_queue(&netif->output_queue, buf);
+	vsfq_append(&netif->outq, (struct vsfq_node_t *)buf);
 	return vsfsm_sem_post(&netif->output_sem);
 }
 
@@ -171,7 +171,7 @@ vsf_err_t vsfip_netif_ip_output(struct vsfip_buffer_t *buf)
 	{
 		// TODO: there will be problem when vsfsm_sem_post fails,
 		// 			but it SHOULD not fail except BUG in system
-		vsfip_bufferlist_queue(&netif->arpc.requestlist, buf);
+		vsfq_append(&netif->arpc.requestq, (struct vsfq_node_t *)buf);
 		return vsfsm_sem_post(&netif->arpc.sem);
 	}
 	else if (buf->buf.size)
@@ -333,7 +333,7 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 		}
 		
 		netif->arpc.cur_request =
-						vsfip_bufferlist_dequeue(&netif->arpc.requestlist);
+				(struct vsfip_buffer_t *)vsfq_dequeue(&netif->arpc.requestq);
 		if (netif->arpc.cur_request != NULL)
 		{
 			vsfip_netif_get_ipaddr(netif->arpc.cur_request, &dest);

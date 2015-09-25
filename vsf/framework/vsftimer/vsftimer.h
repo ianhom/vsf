@@ -20,19 +20,18 @@
 #ifndef __VSFTIMER_H_INCLUDED__
 #define __VSFTIMER_H_INCLUDED__
 
-#include "tool/list/list.h"
+#include "tool/buffer/buffer.h"
 #include "framework/vsfsm/vsfsm.h"
 
 struct vsftimer_t
 {
+	// inherent from vsfq_node_t
+	struct vsfq_node_t node;
+	
 	struct vsfsm_t *sm;
 	vsfsm_evt_t evt;
 	uint32_t interval;
 	int trigger_cnt;
-
-	// private
-	struct sllist list;
-	uint32_t trigger_tick;
 };
 
 vsf_err_t vsftimer_init(void);

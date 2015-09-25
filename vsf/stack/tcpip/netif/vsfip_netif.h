@@ -71,7 +71,7 @@ struct vsfip_netif_t
 	uint16_t mtu;
 	
 	// output bufferlist and semaphore
-	struct vsfip_bufferlist_t output_queue;
+	struct vsfq_t outq;
 	struct vsfsm_sem_t output_sem;
 	
 	// arp client
@@ -84,7 +84,7 @@ struct vsfip_netif_t
 		struct vsfsm_t *sm_pending;
 		struct vsftimer_t to;
 		struct vsfip_buffer_t *buf;
-		struct vsfip_bufferlist_t requestlist;
+		struct vsfq_t requestq;
 		struct vsfip_buffer_t *cur_request;
 		struct vsfip_ipaddr_t ip_for_mac;
 		uint32_t retry;

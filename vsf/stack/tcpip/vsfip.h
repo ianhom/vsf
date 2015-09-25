@@ -44,12 +44,6 @@ struct vsfip_addr_t
 #define vsfip_ipaddr_t		vsfip_addr_t
 #define vsfip_macaddr_t		vsfip_addr_t
 
-struct vsfip_bufferlist_t
-{
-	struct vsfip_buffer_t *head;
-	struct vsfip_buffer_t *tail;
-};
-
 #include "netif/vsfip_netif.h"
 
 enum vsfip_sockfamilt_t
@@ -81,9 +75,9 @@ struct vsfip_ippcb_t
 	struct vsfip_ipaddr_t src;
 	struct vsfip_ipaddr_t dest;
 	struct vsfip_buffer_t *buf;
-	
+
 	struct vsfsm_pt_t output_pt;
-	
+
 	uint32_t len;
 	uint32_t xfed_len;
 	uint16_t id;
@@ -154,7 +148,7 @@ PACKED_HEAD struct PACKED_MID vsfip_icmphead_t
 struct vsfip_socket_t;
 struct vsfip_tcppcb_t
 {
-	enum 
+	enum
 	{
 		VSFIP_TCPSTAT_INVALID,
 		VSFIP_TCPSTAT_CLOSED,
@@ -172,25 +166,24 @@ struct vsfip_tcppcb_t
 	uint32_t rseq;
 	uint32_t acked_rseq;
 	uint32_t rwnd;
-	
+
 	// tx
 	struct vsfsm_t *tx_sm;
 	uint32_t tx_timeout_ms;
 	uint32_t tx_retry;
-	
+
 	// rx
 	struct vsfsm_t *rx_sm;
 	uint32_t rx_timeout_ms;
-	
+
 	uint32_t ack_tick;
 	bool rclose;
 	bool lclose;
 	bool reset;
 	bool ack_timeout;
-	
-	struct vsfip_bufferlist_t input_bufferlist;
+
 	vsf_err_t err;
-	
+
 	struct vsfip_buffer_t *buf;
 };
 
@@ -204,15 +197,15 @@ struct vsfip_socket_t
 {
 	enum vsfip_sockfamilt_t family;
 	enum vsfip_sockproto_t protocol;
-	
+
 	struct vsfip_sockaddr_t local_sockaddr;
 	struct vsfip_sockaddr_t remote_sockaddr;
 	struct vsfip_netif_t *netif;
-	
+
 	struct vsfip_pcb_t pcb;
 	struct vsfsm_sem_t input_sem;
-	struct vsfip_bufferlist_t input_bufferlist;
-	
+	struct vsfq_t inq;
+
 	bool can_rx;
 	struct
 	{
@@ -223,17 +216,17 @@ struct vsfip_socket_t
 	} listener;
 	bool accepted;
 	struct vsfip_socket_t *father;
-	
+
 	uint32_t timeout_ms;
 	struct vsftimer_t tx_timer;
 	struct vsftimer_t rx_timer;
-	
+
 	struct
 	{
 		void (*input)(void *param, struct vsfip_buffer_t *buf);
 		void *param;
 	} callback;
-	
+
 	struct vsfip_socket_t *next;
 };
 
@@ -243,14 +236,7 @@ void vsfip_socket_release(struct vsfip_socket_t *socket);
 struct vsfip_tcppcb_t * vsfip_tcppcb_get(void);
 void vsfip_tcppcb_release(struct vsfip_tcppcb_t *pcb);
 
-void vsfip_bufferlist_init(struct vsfip_bufferlist_t *list);
-void vsfip_bufferlist_queue(struct vsfip_bufferlist_t *list,
-								struct vsfip_buffer_t *buf);
-struct vsfip_buffer_t *
-vsfip_bufferlist_dequeue(struct vsfip_bufferlist_t *list);
-void vsfip_bufferlist_remove(struct vsfip_bufferlist_t *list,
-								struct vsfip_buffer_t *buf);
-void vsfip_bufferlist_free(struct vsfip_bufferlist_t *list);
+void vsfip_bufferlist_free(struct vsfq_t *list);
 
 vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif);

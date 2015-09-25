@@ -4,6 +4,8 @@
 #define VSFIP_CFG_UDP_PORT					40000
 #define VSFIP_CFG_TCP_PORT					40000
 
+#define VSFIP_CFG_TCP_WINDOW				4500
+
 #define VSFIP_CFG_HEADLEN					64
 #define VSFIP_CFG_HOSTNAME					"vsfip"
 

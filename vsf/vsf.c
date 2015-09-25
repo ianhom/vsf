@@ -154,6 +154,13 @@ ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
 	
 	{
 		{
+			vsfq_init,
+			vsfq_append,
+			vsfq_remove,
+			vsfq_enqueue,
+			vsfq_dequeue,
+		},					// struct queue;
+		{
 			vsf_fifo_init,
 			vsf_fifo_push8,
 			vsf_fifo_pop8,
