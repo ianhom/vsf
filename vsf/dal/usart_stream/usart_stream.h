@@ -36,7 +36,7 @@ struct usart_stream_info_t
 	struct vsf_stream_t stream_tx;
 	struct vsf_stream_t stream_rx;
 	struct usart_info_t usart_info;
-	
+
 	// private
 	bool txing;
 };
@@ -44,9 +44,9 @@ struct usart_stream_info_t
 vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream);
 vsf_err_t usart_stream_fini(struct usart_stream_info_t *usart_stream);
 vsf_err_t usart_stream_config(struct usart_stream_info_t *usart_stream);
-uint32_t usart_stream_rx(struct usart_stream_info_t *usart_stream, 
+uint32_t usart_stream_read(struct usart_stream_info_t *usart_stream,
 							struct vsf_buffer_t *buffer);
-uint32_t usart_stream_tx(struct usart_stream_info_t *usart_stream, 
+uint32_t usart_stream_write(struct usart_stream_info_t *usart_stream,
 							struct vsf_buffer_t *buffer);
 
 void usart_stream_ontx_int(void *p);

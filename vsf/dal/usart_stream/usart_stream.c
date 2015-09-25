@@ -27,10 +27,10 @@ static void usart_stream_send_byte(struct usart_stream_info_t *usart_stream)
 {
 	uint8_t data;
 	struct vsf_buffer_t buffer;
-	
+
 	buffer.buffer = &data;
 	buffer.size = 1;
-	if (stream_rx(&usart_stream->stream_tx, &buffer) == buffer.size)
+	if (stream_read(&usart_stream->stream_tx, &buffer) == buffer.size)
 	{
 		usart_stream->txing = true;
 #if IFS_USART_EN
@@ -42,7 +42,7 @@ static void usart_stream_send_byte(struct usart_stream_info_t *usart_stream)
 void usart_stream_ontx_int(void *p)
 {
 	struct usart_stream_info_t *usart_stream = (struct usart_stream_info_t *)p;
-	
+
 	if (stream_get_data_size(&usart_stream->stream_tx))
 	{
 		usart_stream_send_byte(usart_stream);
@@ -58,10 +58,10 @@ void usart_stream_onrx_int(void *p, uint16_t data)
 	struct usart_stream_info_t *usart_stream = (struct usart_stream_info_t *)p;
 	struct vsf_buffer_t buffer;
 	uint8_t byte = (uint8_t)data;
-	
+
 	buffer.buffer = &byte;
 	buffer.size = 1;
-	stream_tx(&usart_stream->stream_rx, &buffer);
+	stream_write(&usart_stream->stream_rx, &buffer);
 }
 
 vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream)
@@ -110,16 +110,16 @@ vsf_err_t usart_stream_config(struct usart_stream_info_t *usart_stream)
 	return VSFERR_NONE;
 }
 
-uint32_t usart_stream_rx(struct usart_stream_info_t *usart_stream,
+uint32_t usart_stream_read(struct usart_stream_info_t *usart_stream,
 							struct vsf_buffer_t *buffer)
 {
-	return stream_rx(&usart_stream->stream_rx, buffer);
+	return stream_read(&usart_stream->stream_rx, buffer);
 }
 
-uint32_t usart_stream_tx(struct usart_stream_info_t *usart_stream,
+uint32_t usart_stream_write(struct usart_stream_info_t *usart_stream,
 							struct vsf_buffer_t *buffer)
 {
-	uint32_t result = stream_tx(&usart_stream->stream_tx, buffer);
+	uint32_t result = stream_write(&usart_stream->stream_tx, buffer);
 	if (!usart_stream->txing && (usart_stream->usart_index != IFS_DUMMY_PORT))
 	{
 		usart_stream_send_byte(usart_stream);
