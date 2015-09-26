@@ -166,6 +166,10 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 	device->drv->ep.set_IN_count(ep, pkg_size);
 	tbuffer->position = pkg_size;
 	remain_size -= pkg_size;
+	if (pkg_size < ep_size)
+	{
+		transact->zlp = false;
+	}
 
 #if VSFUSBD_CFG_DBUFFER_EN
 	if (device->drv->ep.is_IN_dbuffer(ep))
@@ -184,6 +188,10 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 		}
 		device->drv->ep.set_IN_count(ep, pkg_size);
 		tbuffer->position += pkg_size;
+		if (pkg_size < ep_size)
+		{
+			transact->zlp = false;
+		}
 	}
 #endif
 
