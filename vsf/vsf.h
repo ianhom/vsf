@@ -339,6 +339,13 @@ struct vsf_t
 #define api_ver							vsf.api_ver
 #define core_interfaces					(*vsf.ifs)
 
+// interfaces constants
+#define GPIO_INFLOAT					core_interfaces.gpio.constants.INFLOAT
+#define GPIO_INPU						core_interfaces.gpio.constants.INPU
+#define GPIO_INPD						core_interfaces.gpio.constants.INPD
+#define GPIO_OUTPP						core_interfaces.gpio.constants.OUTPP
+#define GPIO_OUTOD						core_interfaces.gpio.constants.OUTOD
+
 #define vsfsm_init						vsf.framework.sm_init
 #define vsfsm_pt_init					vsf.framework.pt_init
 #define vsfsm_post_evt					vsf.framework.post_evt

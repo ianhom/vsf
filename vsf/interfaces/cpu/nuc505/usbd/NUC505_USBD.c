@@ -266,8 +266,7 @@ vsf_err_t nuc505_usbd_ep_set_type(uint8_t idx, enum interface_usbd_eptype_t type
 		index_in -= 2;
 		nuc505_usbd_set_eptype(index_in, eptype);
 		USBD->GINTEN |= USBD_GINTEN_EPAIEN_Msk << index_in;
-		NUC505_USBD_EP_REG(index_in, EPINTEN) = USBD_EPINTEN_NAKIEN_Msk |
-													USBD_EPINTEN_TXPKIEN_Msk;
+		NUC505_USBD_EP_REG(index_in, EPINTEN) = USBD_EPINTEN_TXPKIEN_Msk;
 	}
 	if (index_out > 1)
 	{
@@ -906,15 +905,6 @@ void USB_Istr(void)
 						nuc505_usbd_callback.on_in(\
 								nuc505_usbd_callback.param,\
 								nuc505_usbd_epaddr[i + 2] & 0x0F);
-					}
-				}
-				if (IrqSt & USBD_EPINTSTS_NAKIF_Msk)
-				{
-					NUC505_USBD_EP_REG(i, EPINTSTS) = USBD_EPINTSTS_NAKIF_Msk;
-					NUC505_USBD_EP_REG(i, EPINTEN) &= ~USBD_EPINTEN_NAKIEN_Msk;
-					if( nuc505_usbd_callback.on_nak != NULL )
-					{
-						nuc505_usbd_callback.on_nak(nuc505_usbd_callback.param, i/2+1);
 					}
 				}
 				if (IrqSt & USBD_EPINTSTS_RXPKIF_Msk)

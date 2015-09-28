@@ -223,27 +223,39 @@ static vsf_err_t led_init(struct led_t *led)
 	struct led_hw_t const *hwled = led->hw;
 	
 	led->on = false;
-	core_interfaces.gpio.init(hwled->lport);
-	core_interfaces.gpio.clear(hwled->lport, 1 << hwled->lpin);
-	core_interfaces.gpio.config_pin(hwled->lport, hwled->lpin,
-									core_interfaces.gpio.constants.OUTPP);
-	core_interfaces.gpio.init(hwled->hport);
-	core_interfaces.gpio.clear(hwled->hport, 1 << hwled->hpin);
-	core_interfaces.gpio.config_pin(hwled->hport, hwled->hpin,
-									core_interfaces.gpio.constants.OUTPP);
+	if (hwled->lport != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.init(hwled->lport);
+		core_interfaces.gpio.clear(hwled->lport, 1 << hwled->lpin);
+		core_interfaces.gpio.config_pin(hwled->lport, hwled->lpin, GPIO_OUTPP);
+	}
+	if (hwled->hport != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.init(hwled->hport);
+		core_interfaces.gpio.clear(hwled->hport, 1 << hwled->hpin);
+		core_interfaces.gpio.config_pin(hwled->hport, hwled->hpin, GPIO_OUTPP);
+	}
 	return VSFERR_NONE;
 }
 
 static vsf_err_t led_on(struct led_t *led)
 {
 	led->on = true;
-	return core_interfaces.gpio.set(led->hw->hport, 1 << led->hw->hpin);
+	if (led->hw->hport != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.set(led->hw->hport, 1 << led->hw->hpin);
+	}
+	return VSFERR_NONE;
 }
 
 static vsf_err_t led_off(struct led_t *led)
 {
 	led->on = false;
-	return core_interfaces.gpio.clear(led->hw->hport, 1 << led->hw->hpin);
+	if (led->hw->hport != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.clear(led->hw->hport, 1 << led->hw->hpin);
+	}
+	return VSFERR_NONE;
 }
 
 static bool led_is_on(struct led_t *led)
@@ -381,7 +393,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			core_interfaces.gpio.init(app->hwcfg->usbd.usb_pullup.port);
 			core_interfaces.gpio.clear(app->hwcfg->usbd.usb_pullup.port, 1 << app->hwcfg->usbd.usb_pullup.pin);
-			core_interfaces.gpio.config_pin(app->hwcfg->usbd.usb_pullup.port, app->hwcfg->usbd.usb_pullup.pin, core_interfaces.gpio.constants.OUTPP);
+			core_interfaces.gpio.config_pin(app->hwcfg->usbd.usb_pullup.port, app->hwcfg->usbd.usb_pullup.pin, GPIO_OUTPP);
 		}
 		app->usbd.device.drv->disconnect();
 		vsftimer_create(sm, 200, 1, USB_EVT_PULLUP_TO);

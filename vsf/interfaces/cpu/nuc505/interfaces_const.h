@@ -16,6 +16,7 @@
 #ifndef __INTERFACE_CONST_H_INCLUDED__
 #define __INTERFACE_CONST_H_INCLUDED__
 
+#include "NUC505Series.h"
 
 #define nuc505_SLEEP_WFI			0
 #define nuc505_SLEEP_PWRDOWN		1

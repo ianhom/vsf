@@ -346,8 +346,9 @@ vsf_err_t nuc505_tickclk_fini(void)
 
 uint32_t get_pc(void)
 {
-	asm("MOV	R0,	pc	\n"
-		"BX		lr		\n");
+	uint32_t pc;
+	asm("MOV	%0,	pc" : "=r" (pc));
+	return pc;
 }
 
 // special

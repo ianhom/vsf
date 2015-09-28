@@ -179,7 +179,6 @@ vsf_err_t nuc505_spi_disable(uint8_t index)
 
 vsf_err_t nuc505_spi_get_ability(uint8_t index, struct spi_ability_t *ability)
 {
-	uint8_t spi_idx = index & 0x0F;
 	struct nuc505_info_t *info;
 
 #if __VSF_DEBUG__

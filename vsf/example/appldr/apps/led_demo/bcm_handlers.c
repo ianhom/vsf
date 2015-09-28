@@ -59,8 +59,8 @@ vsfshell_bcm_init_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		core_interfaces.gpio.init(wifi->pwrctrl_port);
 		core_interfaces.gpio.set(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
-		core_interfaces.gpio.config_pin(wifi->pwrctrl_port,
-					wifi->pwrctrl_pin, core_interfaces.gpio.constants.OUTPP);
+		core_interfaces.gpio.config_pin(wifi->pwrctrl_port, wifi->pwrctrl_pin,
+										GPIO_OUTPP);
 		vsfsm_pt_delay(pt, 100);
 		core_interfaces.gpio.clear(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
 	}
@@ -156,7 +156,7 @@ vsfshell_bcm_fini_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		core_interfaces.gpio.set(wifi->pwrctrl_port, 1 << wifi->pwrctrl_pin);
 		core_interfaces.gpio.config_pin(wifi->pwrctrl_port, wifi->pwrctrl_pin,
-						core_interfaces.gpio.constants.INFLOAT);
+										GPIO_INFLOAT);
 	}
 
 handler_thread_end:
