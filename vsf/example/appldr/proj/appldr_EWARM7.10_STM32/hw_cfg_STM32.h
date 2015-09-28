@@ -32,16 +32,23 @@
 #define USB_PULLUP_PIN					13
 
 // bcm wifi
-#define BCM_PORT						BCM_BUS_TYPE_SPI
-#define BCM_SPI_PORT					1
-#define BCM_SPI_CS_PORT					1
-#define BCM_SPI_CS_PIN					10
-#define BCM_SPI_FREQ					9000
+#define BCM_PORT_TYPE					BCM_BUS_TYPE_SPI
+#define BCM_PORT						1
+#define BCM_FREQ						18000
+
 #define BCM_RST_PORT					1
 #define BCM_RST_PIN						11
+#define BCM_WAKEUP_PORT					IFS_DUMMY_PORT
+#define BCM_WAKEUP_PIN					0
+#define BCM_MODE_PORT					IFS_DUMMY_PORT
+#define BCM_MODE_PIN					0
+
+#define BCM_SPI_CS_PORT					1
+#define BCM_SPI_CS_PIN					10
 #define BCM_EINT_PORT					0
 #define BCM_EINT_PIN					8
 #define BCM_EINT						0x08
+
 #define BCM_PWRCTRL_PORT				0
 #define BCM_PWRCTRL_PIN					3
 
