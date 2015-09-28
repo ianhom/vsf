@@ -40,9 +40,6 @@ vsf_err_t nuc505_interface_set_stack(uint32_t sp);
 void nuc505_interface_sleep(uint32_t mode);
 vsf_err_t nuc505_interface_get_info(struct nuc505_info_t **info);
 
-vsf_err_t nuc505_delay_delayus(uint16_t us);
-vsf_err_t nuc505_delay_delayms(uint16_t ms);
-
 vsf_err_t nuc505_tickclk_init(void);
 vsf_err_t nuc505_tickclk_fini(void);
 vsf_err_t nuc505_tickclk_set_interval(uint16_t ms);
@@ -52,11 +49,9 @@ uint32_t nuc505_tickclk_get_count(void);
 vsf_err_t nuc505_tickclk_set_callback(void (*callback)(void*), void *param);
 
 // special
-uint32_t get_pc(void);
 int32_t nuc505_is_running_on_ram(void);
 vsf_err_t nuc505_code_map(uint8_t en, uint8_t rst, uint8_t len_kb, uint32_t addr);
 
-extern const struct nuc505_info_t pll_on_info;
-extern const struct nuc505_info_t pll_off_info;
 
 #endif	// __NUC505_CORE_H_INCLUDED__
+

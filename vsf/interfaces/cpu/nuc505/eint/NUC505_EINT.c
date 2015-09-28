@@ -21,6 +21,7 @@
 #if IFS_EINT_EN
 
 #include "NUC505Series.h"
+#include "NUC505_EINT.h"
 #include "GPIO/NUC505_GPIO.h"
 
 #define NUC505_EINT_INDEX_NUM	4
@@ -47,7 +48,7 @@ vsf_err_t nuc505_eint_init(uint32_t index)
 	//*(uint32_t *)(GPIOA_BASE + 0xac) = 0xffff;
 	//*(uint32_t *)(GPIOA_BASE + 0xb0) = 0xffff;
 
-	NVIC_EnableIRQ((enum IRQn)(EINT0_IRQn + eint_idx));
+	NVIC_EnableIRQ(EINT0_IRQn + eint_idx);
 
 	return VSFERR_NONE;
 }
@@ -56,7 +57,7 @@ vsf_err_t nuc505_eint_fini(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 
-	NVIC_DisableIRQ((enum IRQn)(EINT0_IRQn + eint_idx));
+	NVIC_DisableIRQ(EINT0_IRQn + eint_idx);
 
 	return VSFERR_NONE;
 }
@@ -81,23 +82,23 @@ vsf_err_t nuc505_eint_config(uint32_t index, uint32_t type,
 	if (type & EINT_ONFALL)
 	{
 		// INTEN
-		*(uint32_t *)(GPIOA_BASE + 0x4 * eint_idx) |= 0x1ul << port_idx;
+		*(uint32_t *)(GPIOA_BASE + 0x90 + 0x4 * eint_idx) |= 0x1ul << port_idx;
 	}
 	else
 	{
 		// INTEN
-		*(uint32_t *)(GPIOA_BASE + 0x4 * eint_idx) &= ~(0x1ul << port_idx);
+		*(uint32_t *)(GPIOA_BASE + 0x90 + 0x4 * eint_idx) &= ~(0x1ul << port_idx);
 	}
 
 	if (type & EINT_ONRISE)
 	{
 		// INTEN
-		*(uint32_t *)(GPIOA_BASE + 0x4 * eint_idx) |= 0x10000ul << port_idx;
+		*(uint32_t *)(GPIOA_BASE + 0x90 + 0x4 * eint_idx) |= 0x10000ul << port_idx;
 	}
 	else
 	{
 		// INTEN
-		*(uint32_t *)(GPIOA_BASE + 0x4 * eint_idx) &= ~(0x10000ul << port_idx);
+		*(uint32_t *)(GPIOA_BASE + 0x90 + 0x4 * eint_idx) &= ~(0x10000ul << port_idx);
 	}
 
 	eint_info[i].allocated = 1;
@@ -151,6 +152,9 @@ vsf_err_t nuc505_eint_disable(uint32_t index)
 
 vsf_err_t nuc505_eint_trigger(uint32_t index)
 {
+	uint8_t eint_idx = index & 0x0F;
+	uint32_t mask = 1 << eint_idx;
+
 	return VSFERR_NOT_SUPPORT;
 }
 
@@ -198,7 +202,7 @@ ROOTFUNC void EINT1_IRQHandler(void)
 }
 ROOTFUNC void EINT2_IRQHandler(void)
 {
-	uint8_t i;
+	int8_t i, j;
 	uint32_t intsts = *(uint32_t *)(GPIOA_BASE + 0xb8) & 0xffff;
 
 	*(uint32_t *)(GPIOA_BASE + 0xb8) |= intsts;
@@ -207,7 +211,7 @@ ROOTFUNC void EINT2_IRQHandler(void)
 	{
 		if (intsts & (0x1ul << i))
 		{
-			int8_t j = eint_find(2, i);
+			j = eint_find(2, i);
 			if ((j >= 0) && eint_info[j].enable)
 			{
 				if (eint_info[j].callback)

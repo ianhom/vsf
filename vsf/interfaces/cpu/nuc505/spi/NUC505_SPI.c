@@ -29,10 +29,10 @@ struct
 	void *param;
 	void *in;
 	void *out;
-	uint32_t prt;
+	uint32_t prtrd;
+	uint32_t prtwr;
 	uint32_t len;
-	uint8_t start : 1;
-	uint8_t in_num: 7;
+	uint8_t start;
 } static nuc505_spi_param[SPI_NUM];
 
 vsf_err_t nuc505_spi_init(uint8_t index)
@@ -61,6 +61,7 @@ vsf_err_t nuc505_spi_init(uint8_t index)
 		CLK->APBCLK |= CLK_APBCLK_SPI0CKEN_Msk;
 		SYS->IPRST1 |= SYS_IPRST1_SPI0RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_SPI0RST_Msk;
+		
 		NVIC_EnableIRQ(SPI0_IRQn);
 		break;
 	#endif // SPI0_ENABLE
@@ -77,6 +78,7 @@ vsf_err_t nuc505_spi_init(uint8_t index)
 		CLK->APBCLK |= CLK_APBCLK_SPI1CKEN_Msk;
 		SYS->IPRST1 |= SYS_IPRST1_SPI1RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_SPI1RST_Msk;
+		
 		NVIC_EnableIRQ(SPI1_IRQn);
 		break;
 	#endif // SPI1_ENABLE
@@ -105,6 +107,7 @@ vsf_err_t nuc505_spi_fini(uint8_t index)
 		SYS->IPRST1 |= SYS_IPRST1_SPI0RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_SPI0RST_Msk;
 		CLK->APBCLK &= ~CLK_APBCLK_SPI0CKEN_Msk;
+		
 		NVIC_DisableIRQ(SPI0_IRQn);
 		break;
 	#endif // SPI0_ENABLE
@@ -113,6 +116,7 @@ vsf_err_t nuc505_spi_fini(uint8_t index)
 		SYS->IPRST1 |= SYS_IPRST1_SPI1RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_SPI1RST_Msk;
 		CLK->APBCLK &= ~CLK_APBCLK_SPI1CKEN_Msk;
+		
 		NVIC_DisableIRQ(SPI1_IRQn);
 		break;
 	#endif // SPI1_ENABLE
@@ -179,6 +183,7 @@ vsf_err_t nuc505_spi_disable(uint8_t index)
 
 vsf_err_t nuc505_spi_get_ability(uint8_t index, struct spi_ability_t *ability)
 {
+	uint8_t spi_idx = index & 0x0F;
 	struct nuc505_info_t *info;
 
 #if __VSF_DEBUG__
@@ -222,7 +227,12 @@ vsf_err_t nuc505_spi_config(uint8_t index, uint32_t kHz, uint32_t mode)
 	spi->CTL = mode |
 				(0x1ul << SPI_CTL_SUSPITV_Pos) | 	// suspend interval = 1.5 spiclk
 				(0x8ul << SPI_CTL_DWIDTH_Pos) |		// transmit bit width = 8
-				SPI_CTL_UNITIEN_Msk;
+				//SPI_CTL_UNITIEN_Msk|
+				SPI_CTL_SPIEN_Msk;
+	//close SPI wait transfer start
+	
+	//config thr int
+	spi->FIFOCTL = 		0;
 
 	return VSFERR_NONE;
 }
@@ -274,34 +284,17 @@ vsf_err_t nuc505_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 	nuc505_spi_param[spi_idx].start = 1;
 	nuc505_spi_param[spi_idx].out = (out == NULL) ? &nuc505_spi_dummy : out;
 	nuc505_spi_param[spi_idx].in = in;
-	nuc505_spi_param[spi_idx].prt = 0;
+	nuc505_spi_param[spi_idx].prtwr = 0;
+	nuc505_spi_param[spi_idx].prtrd = 0;
 	nuc505_spi_param[spi_idx].len = len;
 
 	SPI_T *spi = spi_idx ? SPI1 : SPI0;
 
-	if (len <= 8)
+	
+	if(len)
 	{
-		nuc505_spi_param[spi_idx].in_num = len;
-		spi->FIFOCTL = (0x0ul << SPI_FIFOCTL_TXTH_Pos) |
-						//(len << SPI_FIFOCTL_RXTH_Pos) |
-						SPI_FIFOCTL_TXFBCLR_Msk | SPI_FIFOCTL_RXFBCLR_Msk |
-						//(in == NULL ? 0 : SPI_FIFOCTL_RXTOIEN_Msk | SPI_FIFOCTL_RXTHIEN_Msk) |
-						SPI_FIFOCTL_TXTHIEN_Msk |
-						SPI_FIFOCTL_TXRST_Msk | SPI_FIFOCTL_RXRST_Msk;
-		while (nuc505_spi_param[spi_idx].prt < len)
-			spi->TX = out[nuc505_spi_param[spi_idx].prt++];
-	}
-	else
-	{
-		nuc505_spi_param[spi_idx].in_num = 4;
-		spi->FIFOCTL = (0x4ul << SPI_FIFOCTL_TXTH_Pos) |
-						//(0x4ul << SPI_FIFOCTL_RXTH_Pos) |
-						SPI_FIFOCTL_TXFBCLR_Msk | SPI_FIFOCTL_RXFBCLR_Msk |
-						//(in == NULL ? 0 : SPI_FIFOCTL_RXTOIEN_Msk | SPI_FIFOCTL_RXTHIEN_Msk) |
-						SPI_FIFOCTL_TXTHIEN_Msk |
-						SPI_FIFOCTL_TXRST_Msk | SPI_FIFOCTL_RXRST_Msk;
-		while (nuc505_spi_param[spi_idx].prt < 8)
-			spi->TX = out[nuc505_spi_param[spi_idx].prt++];
+		//enable spi to jump into interrupt
+		spi->FIFOCTL |= SPI_FIFOCTL_TXTHIEN_Msk;
 	}
 
 	return VSFERR_NONE;
@@ -322,35 +315,75 @@ uint32_t nuc505_spi_stop(uint8_t index)
 	spi->FIFOCTL = SPI_FIFOCTL_TXRST_Msk | SPI_FIFOCTL_RXRST_Msk;
 	nuc505_spi_param[spi_idx].start = 0;
 
-	return nuc505_spi_param[spi_idx].len - nuc505_spi_param[spi_idx].prt;
+	return nuc505_spi_param[spi_idx].len - nuc505_spi_param[spi_idx].prtwr;
 }
 
 #if SPI0_ENABLE
 ROOTFUNC void SPI0_IRQHandler(void)
 {
-	while (nuc505_spi_param[0].in_num > 0)
+	uint32_t transsize;
+		
+	if(nuc505_spi_param[0].start != 1)
 	{
-		if (nuc505_spi_param[0].in)
+		//err
+		return;
+	}
+	
+	transsize = nuc505_spi_param[0].len - nuc505_spi_param[0].prtwr;
+	
+	if(transsize > 8)
+		transsize = 8;
+	
+	while(!(SPI0->STATUS&SPI_STATUS_RXEMPTY_Msk))
+	{
+		if (nuc505_spi_param[0].in != NULL )
 		{
-			((uint8_t *)(nuc505_spi_param[0].in))[nuc505_spi_param[0].prt - nuc505_spi_param[0].in_num] = SPI0->RX;
-			nuc505_spi_param[0].in_num--;
+			((uint8_t *)(nuc505_spi_param[0].in))[nuc505_spi_param[0].prtrd] = SPI0->RX;
+			
 		}
 		else
 		{
 			volatile uint32_t dummy = SPI0->RX;
 		}
+		nuc505_spi_param[0].prtrd++;
 	}
-
-	if (nuc505_spi_param[0].len > nuc505_spi_param[0].prt)
+	
+	if(transsize == 0)
 	{
-		while ((nuc505_spi_param[0].prt < nuc505_spi_param[0].len) &&(nuc505_spi_param[0].in_num++ < 4))
-			SPI0->TX = ((uint8_t *)(nuc505_spi_param[0].out))[nuc505_spi_param[0].prt++];
-	}
-	else
-	{
+		//close FIFO TX
 		SPI0->FIFOCTL &= ~SPI_FIFOCTL_TXTHIEN_Msk;
-		if (nuc505_spi_param[0].onready)
+		//open FIFO RX INT
+		SPI0->FIFOCTL |= SPI_FIFOCTL_RXTHIEN_Msk;
+	}
+	
+	if(nuc505_spi_param[0].prtrd == nuc505_spi_param[0].len)
+	{
+		//last trans and  have get the rx dat
+		//now close the interface
+		nuc505_spi_param[0].start = 0;
+		//close FIFO RX
+		SPI0->FIFOCTL &= ~SPI_FIFOCTL_RXTHIEN_Msk;
+		
+		//finish cb
+		if (nuc505_spi_param[0].onready != NULL)
+		{
 			nuc505_spi_param[0].onready(nuc505_spi_param[0].param);
+		}
+		
+	}	
+	
+	while (transsize > 0)
+	{
+		if (nuc505_spi_param[0].out != NULL)
+		{
+			SPI0->TX = ((uint8_t *)(nuc505_spi_param[0].out))[nuc505_spi_param[0].prtwr];
+		}
+		else
+		{
+			SPI0->TX = 0xFF;
+		}
+		nuc505_spi_param[0].prtwr++;
+		transsize--;
 	}
 }
 #endif
@@ -358,30 +391,72 @@ ROOTFUNC void SPI0_IRQHandler(void)
 #if SPI1_ENABLE
 ROOTFUNC void SPI1_IRQHandler(void)
 {
-	while (nuc505_spi_param[1].in_num > 0)
+	uint32_t transsize;
+		
+	if(nuc505_spi_param[1].start != 1)
 	{
-		if (nuc505_spi_param[1].in)
+		//err
+		return;
+	}
+	
+	transsize = nuc505_spi_param[1].len - nuc505_spi_param[1].prtwr;
+	
+	if(transsize > 8)
+		transsize = 8;
+	
+	while(!(SPI1->STATUS&SPI_STATUS_RXEMPTY_Msk))
+	{
+		if (nuc505_spi_param[1].in != NULL )
 		{
-			((uint8_t *)(nuc505_spi_param[1].in))[nuc505_spi_param[1].prt - nuc505_spi_param[1].in_num] = SPI1->RX;
-			nuc505_spi_param[1].in_num--;
+			((uint8_t *)(nuc505_spi_param[1].in))[nuc505_spi_param[1].prtrd] = SPI1->RX;
+			
 		}
 		else
 		{
 			volatile uint32_t dummy = SPI1->RX;
 		}
+		nuc505_spi_param[1].prtrd++;
 	}
-
-	if (nuc505_spi_param[1].len > nuc505_spi_param[1].prt)
+	
+	if(transsize == 0)
 	{
-		while ((nuc505_spi_param[1].prt < nuc505_spi_param[1].len) &&(nuc505_spi_param[1].in_num++ < 4))
-			SPI1->TX = ((uint8_t *)(nuc505_spi_param[1].out))[nuc505_spi_param[1].prt++];
-	}
-	else
-	{
+		//close FIFO TX
 		SPI1->FIFOCTL &= ~SPI_FIFOCTL_TXTHIEN_Msk;
-		if (nuc505_spi_param[1].onready)
-			nuc505_spi_param[1].onready(nuc505_spi_param[1].param);
+		//open FIFO RX INT
+		SPI1->FIFOCTL |= SPI_FIFOCTL_RXTHIEN_Msk;
 	}
+	
+	if(nuc505_spi_param[1].prtrd == nuc505_spi_param[1].len)
+	{
+		//last trans and  have get the rx dat
+		//now close the interface
+		nuc505_spi_param[1].start = 0;
+		//close FIFO RX
+		SPI1->FIFOCTL &= ~SPI_FIFOCTL_RXTHIEN_Msk;
+		
+		//finish cb
+		if (nuc505_spi_param[1].onready != NULL)
+		{
+			nuc505_spi_param[1].onready(nuc505_spi_param[1].param);
+		}
+		
+	}	
+	
+	while (transsize > 0)
+	{
+		if (nuc505_spi_param[1].out != NULL)
+		{
+			SPI1->TX = ((uint8_t *)(nuc505_spi_param[1].out))[nuc505_spi_param[1].prtwr];
+		}
+		else
+		{
+			SPI1->TX = 0xFF;
+		}
+		nuc505_spi_param[1].prtwr++;
+		transsize--;
+	}
+	
+
 }
 #endif
 

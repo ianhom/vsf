@@ -66,7 +66,7 @@ vsf_err_t nuc505_i2c_init(uint8_t index)
 		CLK->APBCLK |= CLK_APBCLK_I2C0CKEN_Msk;
 		SYS->IPRST1 |= SYS_IPRST1_I2C0RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_I2C0RST_Msk;
-		break;
+		break:
 	#endif // I2C0_ENABLE
 	#if I2C1_ENABLE
 	case 1:
@@ -97,7 +97,7 @@ vsf_err_t nuc505_i2c_init(uint8_t index)
 		CLK->APBCLK |= CLK_APBCLK_I2C1CKEN_Msk;
 		SYS->IPRST1 |= SYS_IPRST1_I2C1RST_Msk;
 		SYS->IPRST1 &= ~SYS_IPRST1_I2C1RST_Msk;
-		break;
+		break:
 	#endif // I2C1_ENABLE
 	default:
 		return VSFERR_FAIL;
@@ -126,8 +126,8 @@ vsf_err_t nuc505_i2c_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_i2c_config(uint8_t index, uint16_t kHz,
-						void (*callback)(void *, int32_t), void *param)
+vsf_err_t nuc505_i2c_config(uint8_t index, uint16_t kHz, void *param,
+							void (*callback)(void *, int32_t, int32_t))
 {
 	vsf_err_t err;
 	I2C_T *i2c;
@@ -332,7 +332,6 @@ void I2C0_IRQHandler(void)
 			}
 		}
 	}
-	return;
 
 error:
 	I2C_SET_CONTROL_REG(I2C0, I2C_CON_I2C_STS | I2C_CON_STOP);

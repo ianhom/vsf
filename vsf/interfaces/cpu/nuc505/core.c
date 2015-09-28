@@ -5,25 +5,6 @@
 #include "NUC505Series.h"
 #include "core.h"
 
-const struct nuc505_info_t pll_on_info =
-{
-	0, CORE_VECTOR_TABLE,
-	NUC505_CLK_HXT | NUC505_CLK_LIRC | NUC505_CLK_PLL,
-	NUC505_HCLKSRC_PLLFOUT,
-	OSC_FREQ_HZ, OSC32_FREQ_HZ, LIRC_FREQ_HZ,
-	CORE_PLL_FREQ_HZ, CORE_APLL_FREQ_HZ, 96 * 1000 * 1000 , 96 * 1000 * 1000, PCLK_FREQ_HZ,
-};
-const struct nuc505_info_t pll_off_info =
-{
-	0, CORE_VECTOR_TABLE,
-	NUC505_CLK_HXT | NUC505_CLK_LIRC,
-	NUC505_HCLKSRC_HXT,
-	OSC_FREQ_HZ, OSC32_FREQ_HZ, LIRC_FREQ_HZ,
-	CORE_PLL_FREQ_HZ, CORE_APLL_FREQ_HZ, 12 * 1000 * 1000 , 12 * 1000 * 1000, PCLK_FREQ_HZ,
-};
-
-
-
 static struct nuc505_info_t nuc505_info =
 {
 	0, CORE_VECTOR_TABLE,
@@ -178,46 +159,6 @@ vsf_err_t nuc505_interface_init(void *p)
 	return VSFERR_NONE;
 }
 
-#define SYSTICK_ENABLE				(1 << 0)
-#define SYSTICK_CLKSOURCE			(1 << 2)
-#define SYSTICK_COUNTFLAG			(1 << 16)
-
-static vsf_err_t nuc505_delay_init(void)
-{
-	SysTick->CTRL = SYSTICK_CLKSOURCE;
-	SysTick->VAL = 0;
-	return VSFERR_NONE;
-}
-
-static vsf_err_t nuc505_delay_delayus_do(uint32_t tick)
-{
-	uint32_t dly_tmp;
-
-	nuc505_delay_init();
-	while (tick)
-	{
-		dly_tmp = (tick > ((1 << 24) - 1)) ? ((1 << 24) - 1) : tick;
-		SysTick->LOAD = dly_tmp;
-		SysTick->CTRL |= SYSTICK_ENABLE;
-		while (!(SysTick->CTRL & SYSTICK_COUNTFLAG));
-		nuc505_delay_init();
-		tick -= dly_tmp;
-	}
-	return VSFERR_NONE;
-}
-
-vsf_err_t nuc505_delay_delayus(uint16_t us)
-{
-	nuc505_delay_delayus_do(us * (nuc505_info.cpu_freq_hz / (1000 * 1000)));
-	return VSFERR_NONE;
-}
-
-vsf_err_t nuc505_delay_delayms(uint16_t ms)
-{
-	nuc505_delay_delayus_do(ms * (nuc505_info.cpu_freq_hz / 1000));
-	return VSFERR_NONE;
-}
-
 static void (*nuc505_tickclk_callback)(void *param) = NULL;
 static void *nuc505_tickclk_param = NULL;
 static volatile uint32_t nuc505_tickcnt = 0;
@@ -226,6 +167,7 @@ vsf_err_t nuc505_tickclk_start(void)
 {
 	TIMER2->CTL |= TIMER_CTL_CNTEN_Msk;
 	TIMER3->CTL |= TIMER_CTL_CNTEN_Msk;
+	nuc505_tickclk_set_interval(1);
 	return VSFERR_NONE;
 }
 
@@ -307,7 +249,7 @@ ROOTFUNC void TMR3_IRQHandler(void)
 	{
 		nuc505_tickclk_callback(nuc505_tickclk_param);
 	}
-	TIMER3->CMP = 32768 / 1000;
+	//TIMER3->CMP = 32768;
 	TIMER3->INTSTS = TIMER_INTSTS_TIF_Msk;
 }
 
@@ -324,8 +266,6 @@ vsf_err_t nuc505_tickclk_init(void)
 	CLK->CLKDIV4 &= ~(CLK_CLKDIV4_TMR2SEL_Msk | CLK_CLKDIV4_TMR2DIV_Msk);
 	CLK->CLKDIV5 &= ~(CLK_CLKDIV5_TMR3SEL_Msk | CLK_CLKDIV5_TMR3DIV_Msk);
 	TIMER2->CTL = TIMER_CTL_INTEN_Msk | (0x1ul << TIMER_CTL_OPMODE_Pos) |
-					TIMER_CTL_WKEN_Msk;
-	TIMER3->CTL = TIMER_CTL_INTEN_Msk | (0x1ul << TIMER_CTL_OPMODE_Pos) |
 					TIMER_CTL_WKEN_Msk;
 
 	TIMER2->CMP = 32768 * 600;
@@ -344,7 +284,7 @@ vsf_err_t nuc505_tickclk_fini(void)
 	return VSFERR_NONE;
 }
 
-uint32_t get_pc(void)
+static uint32_t get_pc(void)
 {
 	uint32_t pc;
 	asm("MOV	%0,	pc" : "=r" (pc));

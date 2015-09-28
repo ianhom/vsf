@@ -18,11 +18,16 @@
 #include "compiler.h"
 
 #include "NUC505Series.h"
-#include "core.h"
 #include "spim.h"
 #include "spiflash_drv.h"
 
 static uint8_t mfgid;
+
+static uint32_t get_pc(void)
+{
+	asm("MOV	R0,	pc	\n"
+		"BX		lr		\n");
+}
 
 vsf_err_t nuc505_spirom_init(void)
 {
