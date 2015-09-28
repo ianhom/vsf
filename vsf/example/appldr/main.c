@@ -62,22 +62,33 @@ int main(void)
 	vsftimer_init();
 	core_interfaces.tickclk.set_callback(app_tickclk_callback_int, NULL);
 	
-	core_interfaces.gpio.init(app.hwcfg.key.port);
-	core_interfaces.gpio.config_pin(app.hwcfg.key.port, app.hwcfg.key.port, GPIO_INPU);
-	if (core_interfaces.gpio.get(app.hwcfg.key.port, 1 << app.hwcfg.key.pin))
+	if (app.hwcfg.key.port != IFS_DUMMY_PORT)
+	{
+		core_interfaces.gpio.init(app.hwcfg.key.port);
+		core_interfaces.gpio.config_pin(app.hwcfg.key.port, app.hwcfg.key.port,
+										GPIO_INPU);
+	}
+	if ((IFS_DUMMY_PORT == app.hwcfg.key.port) ||
+		core_interfaces.gpio.get(app.hwcfg.key.port, 1 << app.hwcfg.key.pin))
 	{
 		// key release
 		// load and call application
 		app_main_ptr = *(uint32_t *)APP_MAIN_ADDR;
-		if (app_main_ptr != 0xFFFFFFFF)
+		if (app_main_ptr < 128 * 1024)
 		{
 			app_main_ptr += APP_MAIN_ADDR;
 			((int (*)(struct app_hwcfg_t *hwcfg))app_main_ptr)(&app.hwcfg);
+		}
+		else
+		{
+			goto bootlaoder_init;
 		}
 	}
 	else
 	{
 		// run bootloader
+	bootlaoder_init:
+		
 	}
 	
 	while (1)

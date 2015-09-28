@@ -21,8 +21,9 @@
 
 #define OSC_HZ							HSE_VALUE
 
+#define SYS_MAIN_ADDR					0x08000000
 // system locates in the first 64KB area, and followed by application
-#define APP_MAIN_ADDR					(0x08000000 + 512 * 1024)
+#define APP_MAIN_ADDR					(SYS_MAIN_ADDR + 512 * 1024)
 
 #define KEY_PORT						0
 #define KEY_PIN							4

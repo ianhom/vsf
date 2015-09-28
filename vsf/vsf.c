@@ -101,7 +101,8 @@ struct vsf_module_t* vsf_module_get(char *name)
 	return NULL;
 }
 
-ROOTFUNC const struct vsf_t vsf @ 0x08000200 =
+// reserve 512 bytes for vector table
+ROOTFUNC const struct vsf_t vsf @ (SYS_MAIN_ADDR + 0x00000200) =
 {
 	VSF_API_VERSION,		// api_ver
 	&core_interfaces,

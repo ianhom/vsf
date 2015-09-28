@@ -15,7 +15,8 @@
  *      2008-11-22:     rewrite GPIO_Dir(by SimonQian)                    *
  **************************************************************************/
 
-#define APP_MAIN_ADDR					0
+#define SYS_MAIN_ADDR					0
+#define APP_MAIN_ADDR					(SYS_MAIN_ADDR + 512 * 1024)
 
 // USB
 #define USB_PULLUP_PORT					0xFF
@@ -39,7 +40,7 @@
 #define BCM_PWRCTRL_PORT				IFS_DUMMY_PORT
 #define BCM_PWRCTRL_PIN					0
 
-//#define BCM_CFG_FWADDR					0x00020000
+#define BCM_CFG_FWADDR					0x00020000
 
 // LED24
 #define LED24							{IFS_DUMMY_PORT, 0, IFS_DUMMY_PORT, 0},\
