@@ -141,8 +141,6 @@ vsf_err_t nuc505_sdio_start(uint8_t index, uint8_t cmd, uint32_t arg,
 
 	if (extra_param->data_align4 != NULL)
 	{
-		extra_param->data_align4 =
-				(void *)((uint32_t)extra_param->data_align4 | 0x20000000);
 		ctl |= ((uint32_t)cmd << SDH_CTL_CMDCODE_Pos) | SDH_CTL_COEN_Msk |
 				((uint32_t)extra_param->block_cnt << SDH_CTL_BLKCNT_Pos);
 		ctl |= extra_param->read0_write1 ? SDH_CTL_DOEN_Msk : SDH_CTL_DIEN_Msk;

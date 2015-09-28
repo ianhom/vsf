@@ -719,7 +719,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$\proj_sram.icf</state>
+          <state>$PROJ_DIR$\proj_default.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
