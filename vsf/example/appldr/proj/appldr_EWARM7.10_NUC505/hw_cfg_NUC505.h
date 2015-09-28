@@ -30,7 +30,7 @@
 #define BCM_SPI_PORT					1
 #define BCM_SPI_CS_PORT					1
 #define BCM_SPI_CS_PIN					10
-#define BCM_SPI_FREQ					9000
+#define BCM_SPI_FREQ					48000
 #define BCM_RST_PORT					2
 #define BCM_RST_PIN						14
 #define BCM_EINT_PORT					2

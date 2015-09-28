@@ -16,10 +16,10 @@
 
 // Core config for clocks
 #ifndef CORE_CLKEN
-#	define CORE_CLKEN						(NUC505_CLK_HXT | NUC505_CLK_LIRC)
+#	define CORE_CLKEN						(NUC505_CLK_HXT | NUC505_CLK_LIRC | NUC505_CLK_PLL)
 #endif
 #ifndef CORE_HCLKSRC
-#	define CORE_HCLKSRC						NUC505_CLK_HXT
+#	define CORE_HCLKSRC						NUC505_CLK_PLL
 #endif
 #ifndef OSC_FREQ_HZ
 #	define OSC_FREQ_HZ						(12 * 1000 * 1000)
@@ -37,13 +37,13 @@
 #	define CORE_APLL_FREQ_HZ				(0)
 #endif
 #ifndef CPU_FREQ_HZ
-#	define CPU_FREQ_HZ						(12 * 1000 * 1000)
+#	define CPU_FREQ_HZ						(96 * 1000 * 1000)
 #endif
 #ifndef HCLK_FREQ_HZ
 #	define HCLK_FREQ_HZ						CPU_FREQ_HZ
 #endif
 #ifndef PCLK_FREQ_HZ
-#	define PCLK_FREQ_HZ						(12 * 1000 * 1000)
+#	define PCLK_FREQ_HZ						(96 * 1000 * 1000)
 #endif
 #ifndef CORE_VECTOR_TABLE
 #	define CORE_VECTOR_TABLE				(0x00000000)
