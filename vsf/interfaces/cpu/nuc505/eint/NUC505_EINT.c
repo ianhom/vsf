@@ -48,7 +48,7 @@ vsf_err_t nuc505_eint_init(uint32_t index)
 	//*(uint32_t *)(GPIOA_BASE + 0xac) = 0xffff;
 	//*(uint32_t *)(GPIOA_BASE + 0xb0) = 0xffff;
 
-	NVIC_EnableIRQ(EINT0_IRQn + eint_idx);
+	NVIC_EnableIRQ((IRQn_Type)(EINT0_IRQn + eint_idx));
 
 	return VSFERR_NONE;
 }
@@ -57,7 +57,7 @@ vsf_err_t nuc505_eint_fini(uint32_t index)
 {
 	uint8_t eint_idx = index & 0x0F;
 
-	NVIC_DisableIRQ(EINT0_IRQn + eint_idx);
+	NVIC_DisableIRQ((IRQn_Type)(EINT0_IRQn + eint_idx));
 
 	return VSFERR_NONE;
 }
@@ -148,14 +148,6 @@ vsf_err_t nuc505_eint_disable(uint32_t index)
 		eint_info[i].enable = 0;
 
 	return VSFERR_NONE;
-}
-
-vsf_err_t nuc505_eint_trigger(uint32_t index)
-{
-	uint8_t eint_idx = index & 0x0F;
-	uint32_t mask = 1 << eint_idx;
-
-	return VSFERR_NOT_SUPPORT;
 }
 
 ROOTFUNC void EINT0_IRQHandler(void)

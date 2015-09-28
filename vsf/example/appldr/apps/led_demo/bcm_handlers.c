@@ -428,21 +428,37 @@ vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 	wifi->netif.drv = &wifi->netdrv;
 	wifi->netdrv.op = &bcm_wifi_netdrv_op;
 	wifi->netdrv.param = &wifi->bcm_wifi;
+
 	wifi->bcm_wifi.bus.type = hwcfg->bcm_wifi_port.type;
-	wifi->bcm_wifi.bus.op = &bcm_bus_spi_op;
-	wifi->bcm_wifi.bus.port.comm.spi.port = hwcfg->bcm_wifi_port.comm.spi.port;
-	wifi->bcm_wifi.bus.port.comm.spi.cs_port = hwcfg->bcm_wifi_port.comm.spi.cs_port;
-	wifi->bcm_wifi.bus.port.comm.spi.cs_pin = hwcfg->bcm_wifi_port.comm.spi.cs_pin;
-	wifi->bcm_wifi.bus.port.comm.spi.freq_khz = hwcfg->bcm_wifi_port.comm.spi.freq_khz;
+	switch (wifi->bcm_wifi.bus.type)
+	{
+	case BCM_BUS_TYPE_SPI:
+		wifi->bcm_wifi.bus.op = &bcm_bus_spi_op;
+		break;
+	case BCM_BUS_TYPE_SDIO:
+		wifi->bcm_wifi.bus.op = &bcm_bus_sdio_op;
+		break;
+	}
+	wifi->bcm_wifi.bus.port.index = hwcfg->bcm_wifi_port.index;
+	wifi->bcm_wifi.bus.port.freq_khz = hwcfg->bcm_wifi_port.freq_khz;
+
 	wifi->bcm_wifi.bus.port.rst_port = hwcfg->bcm_wifi_port.rst_port;
 	wifi->bcm_wifi.bus.port.rst_pin = hwcfg->bcm_wifi_port.rst_pin;
-	wifi->bcm_wifi.bus.port.eint_port = hwcfg->bcm_wifi_port.eint_port;
-	wifi->bcm_wifi.bus.port.eint_pin = hwcfg->bcm_wifi_port.eint_pin;
-	wifi->bcm_wifi.bus.port.eint = hwcfg->bcm_wifi_port.eint;
-	wifi->bcm_wifi.country = "US";
+	wifi->bcm_wifi.bus.port.wakeup_port = hwcfg->bcm_wifi_port.wakeup_port;
+	wifi->bcm_wifi.bus.port.wakeup_pin = hwcfg->bcm_wifi_port.wakeup_pin;
+	wifi->bcm_wifi.bus.port.mode_port = hwcfg->bcm_wifi_port.mode_port;
+	wifi->bcm_wifi.bus.port.mode_pin = hwcfg->bcm_wifi_port.mode_pin;
+
+	wifi->bcm_wifi.bus.port.spi.cs_port = hwcfg->bcm_wifi_port.spi.cs_port;
+	wifi->bcm_wifi.bus.port.spi.cs_pin = hwcfg->bcm_wifi_port.spi.cs_pin;
+	wifi->bcm_wifi.bus.port.spi.eint_port = hwcfg->bcm_wifi_port.spi.eint_port;
+	wifi->bcm_wifi.bus.port.spi.eint_pin = hwcfg->bcm_wifi_port.spi.eint_pin;
+	wifi->bcm_wifi.bus.port.spi.eint = hwcfg->bcm_wifi_port.spi.eint;
 
 	wifi->pwrctrl_port = hwcfg->bcm_wifi_port.pwrctrl_port;
 	wifi->pwrctrl_pin = hwcfg->bcm_wifi_port.pwrctrl_pin;
+
+	wifi->bcm_wifi.country = "US";
 
 	memset(bcm_handlers, 0, size);
 	bcm_handlers[0].name = "bcm.init";

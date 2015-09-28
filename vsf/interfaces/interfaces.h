@@ -362,7 +362,7 @@ struct interface_gpio_t
 struct interface_gpio_pin_t
 {
 	uint8_t port;
-	uint32_t pin;
+	uint8_t pin;
 };
 
 #define CORE_GPIO_INIT(m)				__CONNECT(m, _gpio_init)
@@ -770,54 +770,59 @@ void CORE_EBI_WRITE32(__TARGET_CHIP__)(uint8_t index, uint32_t address, uint32_t
 
 #if IFS_SDIO_EN
 
-#define CORE_SDIO_RESP_NONE(m)			__CONNECT(m, _SDIO_RESP_NONE)
-#define CORE_SDIO_RESP_SHORT(m)			__CONNECT(m, _SDIO_RESP_SHORT)
-#define CORE_SDIO_RESP_LONG(m)			__CONNECT(m, _SDIO_RESP_LONG)
-#define SDIO_RESP_NONE					CORE_SDIO_RESP_NONE(__TARGET_CHIP__)
-#define SDIO_RESP_SHORT					CORE_SDIO_RESP_SHORT(__TARGET_CHIP__)
-#define SDIO_RESP_LONG					CORE_SDIO_RESP_LONG(__TARGET_CHIP__)
+#define SDIO_WRITE_NORESP		0
+#define SDIO_WRITE_SHORTRESP	0x40
+#define SDIO_WRITE_LONGRESP		0x80
+#define SDIO_READ_SHORTRESP		0xC0
+
+struct sdio_info_t
+{
+	uint8_t crc7_error : 1;
+	uint8_t crc16_error : 1;
+	uint8_t overtime_error : 1;
+	uint8_t unknown_error : 1;
+	uint8_t manual_stop : 1;
+
+	uint8_t need_resp : 1;
+	uint8_t long_resp : 1;
+	uint8_t read0_write1 : 1;
+
+	uint8_t block_cnt;
+	uint16_t block_len;
+	void *data_align4;
+
+	uint32_t resp[4];
+};
 
 struct interface_sdio_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint16_t kHz, uint8_t buswidth);
-	vsf_err_t (*start)(uint8_t index);
+	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint8_t buswidth,
+				void (*callback)(void *), void *param);
+	vsf_err_t (*start)(uint8_t index, uint8_t cmd, uint32_t arg,
+				struct sdio_info_t *extra_param);
 	vsf_err_t (*stop)(uint8_t index);
-	vsf_err_t (*send_cmd)(uint8_t index, uint8_t cmd, uint32_t arg, uint8_t resp);
-	vsf_err_t (*send_cmd_isready)(uint8_t index, uint8_t resp);
-	vsf_err_t (*get_resp)(uint8_t index, uint8_t *cresp, uint32_t *resp, uint8_t resp_num);
-	vsf_err_t (*data_tx)(uint8_t index, uint32_t to_ms, uint32_t size, uint32_t block_size);
-	vsf_err_t (*data_tx_isready)(uint8_t index, uint32_t size, uint8_t *buffer);
-	vsf_err_t (*data_rx)(uint8_t index, uint32_t to_ms, uint32_t size, uint32_t block_size);
-	vsf_err_t (*data_rx_isready)(uint8_t index, uint32_t size, uint8_t *buffer);
 };
+
+#define SDIO_RESP_NONE					0
+#define SDIO_RESP_SHORT					1
+#define SDIO_RESP_LONG					2
 
 #define CORE_SDIO_INIT(m)				__CONNECT(m, _sdio_init)
 #define CORE_SDIO_FINI(m)				__CONNECT(m, _sdio_fini)
 #define CORE_SDIO_CONFIG(m)				__CONNECT(m, _sdio_config)
 #define CORE_SDIO_START(m)				__CONNECT(m, _sdio_start)
 #define CORE_SDIO_STOP(m)				__CONNECT(m, _sdio_stop)
-#define CORE_SDIO_SEND_CMD(m)			__CONNECT(m, _sdio_send_cmd)
-#define CORE_SDIO_SEND_CMD_ISREADY(m)	__CONNECT(m, _sdio_send_cmd_isready)
-#define CORE_SDIO_GET_RESP(m)			__CONNECT(m, _sdio_get_resp)
-#define CORE_SDIO_DATA_TX(m)			__CONNECT(m, _sdio_data_tx)
-#define CORE_SDIO_DATA_TX_ISREADY(m)	__CONNECT(m, _sdio_data_tx_isready)
-#define CORE_SDIO_DATA_RX(m)			__CONNECT(m, _sdio_data_rx)
-#define CORE_SDIO_DATA_RX_ISREADY(m)	__CONNECT(m, _sdio_data_rx_isready)
 
 vsf_err_t CORE_SDIO_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SDIO_FINI(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_SDIO_CONFIG(__TARGET_CHIP__)(uint8_t index, uint16_t kHz, uint8_t buswide);
-vsf_err_t CORE_SDIO_START(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_SDIO_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz,
+		uint8_t buswidth, void (*callback)(void *),
+		void *param);
+vsf_err_t CORE_SDIO_START(__TARGET_CHIP__)(uint8_t index, uint8_t dir_cmd,
+		uint32_t arg, struct sdio_info_t *extra_param);
 vsf_err_t CORE_SDIO_STOP(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_SDIO_SEND_CMD(__TARGET_CHIP__)(uint8_t index, uint8_t cmd, uint32_t arg, uint8_t resp);
-vsf_err_t CORE_SDIO_SEND_CMD_ISREADY(__TARGET_CHIP__)(uint8_t index, uint8_t resp);
-vsf_err_t CORE_SDIO_GET_RESP(__TARGET_CHIP__)(uint8_t index, uint8_t *cresp, uint32_t *resp, uint8_t resp_num);
-vsf_err_t CORE_SDIO_DATA_TX(__TARGET_CHIP__)(uint8_t index, uint32_t to_ms, uint32_t size, uint32_t block_size);
-vsf_err_t CORE_SDIO_DATA_TX_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t size, uint8_t *buffer);
-vsf_err_t CORE_SDIO_DATA_RX(__TARGET_CHIP__)(uint8_t index, uint32_t to_ms, uint32_t size, uint32_t block_size);
-vsf_err_t CORE_SDIO_DATA_RX_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t size, uint8_t *buffer);
 
 #endif
 

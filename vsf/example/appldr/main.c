@@ -23,18 +23,25 @@ struct vsfapp_t
 			LED24
 		},							// struct led_t led[24];
 		{
+			BCM_PORT_TYPE,
+			
 			BCM_PORT,
-			{{
-				BCM_SPI_PORT,
-				BCM_SPI_CS_PORT,
-				BCM_SPI_CS_PIN,
-				BCM_SPI_FREQ,
-			}},
+			BCM_FREQ,
+			
 			BCM_RST_PORT,
 			BCM_RST_PIN,
-			BCM_EINT_PORT,
-			BCM_EINT_PIN,
-			BCM_EINT,
+			BCM_WAKEUP_PORT,
+			BCM_WAKEUP_PIN,
+			BCM_MODE_PORT,
+			BCM_MODE_PIN,
+			
+			{
+				BCM_SPI_CS_PORT,
+				BCM_SPI_CS_PIN,
+				BCM_EINT_PORT,
+				BCM_EINT_PIN,
+				BCM_EINT,
+			},
 			
 			BCM_PWRCTRL_PORT,
 			BCM_PWRCTRL_PIN,

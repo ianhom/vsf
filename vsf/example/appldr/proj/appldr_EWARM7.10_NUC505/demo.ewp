@@ -1964,6 +1964,12 @@
             </file>
           </group>
           <group>
+            <name>sdio</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\sdio\NUC505_SDIO.c</name>
+            </file>
+          </group>
+          <group>
             <name>spi</name>
             <file>
               <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\spi\NUC505_SPI.c</name>
@@ -2122,6 +2128,12 @@
               <name>broadcom</name>
               <group>
                 <name>bus</name>
+                <group>
+                  <name>sdio</name>
+                  <file>
+                    <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bus\sdio\bcm_bus_sdio.c</name>
+                  </file>
+                </group>
                 <group>
                   <name>spi</name>
                   <file>

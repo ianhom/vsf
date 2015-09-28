@@ -1,5 +1,7 @@
 #include "app_type.h"
 
+#include "interfaces.h"
+
 #include "framework/vsfsm/vsfsm.h"
 #include "framework/vsftimer/vsftimer.h"
 
@@ -23,11 +25,34 @@ struct bcm_bus_t;
 struct bcm_bus_op_t
 {
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+	vsf_err_t (*enable)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+	vsf_err_t (*waitf2)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	uint32_t (*fix_u32)(struct bcm_bus_t *bcm_bus, uint32_t value);
 	vsf_err_t (*transact)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						uint8_t rw, uint8_t func, uint32_t addr, uint16_t size,
 						struct vsf_buffer_t *buffer);
 };
+
+#if IFS_SPI_EN
+struct bcm_bus_spi_t
+{
+	uint32_t retry;
+	uint32_t bushead;
+	uint32_t cur_backplane_base;
+};
+#endif
+
+#if IFS_SDIO_EN
+struct bcm_bus_sdio_t
+{
+	struct sdio_info_t info;
+
+	uint8_t index;
+	uint8_t temp_byte;
+	uint8_t logic_retry;
+	uint8_t transfer_retry;
+};
+#endif
 
 struct bcm_bus_t
 {
@@ -36,36 +61,77 @@ struct bcm_bus_t
 		BCM_BUS_TYPE_SPI,
 		BCM_BUS_TYPE_SDIO,
 	} type;
+	vsf_err_t (*firmware_read)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								uint8_t *buf, uint32_t offset, uint32_t len);
 	struct bcm_bus_op_t const *op;
 	struct
 	{
-		union
-		{
-			struct
-			{
-				uint8_t port;
-				uint8_t cs_port;
-				uint8_t cs_pin;
-				uint32_t freq_khz;
-			} spi;
-			struct
-			{
-				uint8_t port;
-				uint32_t freq_khz;
-			} sdio;
-		} comm;
+		uint16_t freq_khz;
+		uint8_t index;
+
 		uint8_t rst_port;
 		uint8_t rst_pin;
-		uint8_t eint_port;
-		uint8_t eint_pin;
-		uint8_t eint;
+		uint8_t wakeup_port;
+		uint8_t wakeup_pin;
+		uint8_t mode_port;
+		uint8_t mode_pin;
+
+		struct
+		{
+			uint8_t cs_port;
+			uint8_t cs_pin;
+			uint8_t eint_port;
+			uint8_t eint_pin;
+			uint8_t eint;
+		} spi;
 	} port;
+
+	union
+	{
+#if IFS_SPI_EN
+		struct bcm_bus_spi_t spi;
+#endif
+#if IFS_SDIO_EN
+		struct bcm_bus_sdio_t sdio;
+#endif
+	} priv;
+
 	struct vsfip_netif_t *sta_netif;
 	struct vsfip_netif_t *ap_netif;
-	
-	// private
-	uint32_t retry;
-	bool is_up;
+
+	// init_pt is used in bcm_bus_init
+	struct vsfsm_crit_t crit_init;
+	struct vsfsm_pt_t init_pt;
+
+	// port_init_pt is used in init procedure in specificed port driver
+	struct vsfsm_pt_t port_init_pt;
+
+	// regacc is used in bcm_bus_read_reg and bcm_bus_write_reg
+	struct vsfsm_crit_t crit_reg;
+	struct vsfsm_pt_t regacc_pt;
+	struct vsf_buffer_t regacc_buffer;
+	uint8_t regacc_mem[8];
+
+	// download_firmware_pt is used in bcm_bus_download_firmware
+	struct vsfsm_pt_t download_firmware_pt;
+	struct vsfsm_pt_t download_image_pt;
+	struct vsf_buffer_t download_image_buffer;
+	uint32_t download_progress;
+	uint8_t download_image_mem[64];
+
+	// core_ctrl_pt is used in bcm_bus_disable_device_core,
+	// 	bcm_bus_reset_device_core and bcm_bus_device_core_isup
+	struct vsfsm_pt_t core_ctrl_pt;
+
+	// bufacc is used in bcm_bus_transact
+	struct vsfsm_crit_t crit_buffer;
+	struct vsfsm_pt_t bufacc_pt;
+	struct vsf_buffer_t bufacc_buffer;
+	uint32_t f2rdy_retrycnt;
+	uint8_t bufacc_mem[8];
+
+	uint8_t is_up : 1;
+
 	uint32_t f1sig;
 	uint16_t intf;
 	uint32_t status;
@@ -80,40 +146,15 @@ struct bcm_bus_t
 		BCM_BUS_WORDLEN_32 = 1,
 	} word_length;
 	uint32_t cur_backplane_base;
-	
-	// port_init_pt is used in init procedure in specificed port driver
-	struct vsfsm_pt_t port_init_pt;
-	// download_firmware_pt is used in bcm_bus_download_firmware
-	struct vsfsm_pt_t download_firmware_pt;
-	struct vsfsm_pt_t download_image_pt;
-	struct vsf_buffer_t download_image_buffer;
-	uint8_t download_image_mem[64];
-	uint32_t download_progress;
-	// core_ctrl_pt is used in bcm_bus_disable_device_core,
-	// 	bcm_bus_reset_device_core and bcm_bus_device_core_isup
-	struct vsfsm_pt_t core_ctrl_pt;
-	// init_pt is used in bcm_bus_init
-	struct vsfsm_crit_t crit_init;
-	struct vsfsm_pt_t init_pt;
-	// regacc is used in bcm_bus_read_reg and bcm_bus_write_reg
-	struct vsfsm_crit_t crit_reg;
-	struct vsfsm_pt_t regacc_pt;
-	struct vsf_buffer_t regacc_buffer;
-	uint8_t regacc_mem[8];
-	// bufacc is used in bcm_bus_transact
-	struct vsfsm_crit_t crit_buffer;
-	struct vsfsm_pt_t bufacc_pt;
-	struct vsf_buffer_t bufacc_buffer;
-	uint32_t f2rdy_retrycnt;
-	uint8_t bufacc_mem[8];
+
 	// for bus drivers
 	struct vsfsm_t *bus_ops_sm;
-	uint32_t bushead;
 	uint32_t buslen;
 	uint32_t tmpreg;
 };
 
 extern const struct bcm_bus_op_t bcm_bus_spi_op;
+extern const struct bcm_bus_op_t bcm_bus_sdio_op;
 
 vsf_err_t bcm_bus_construct(struct bcm_bus_t *bus);
 vsf_err_t bcm_bus_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);

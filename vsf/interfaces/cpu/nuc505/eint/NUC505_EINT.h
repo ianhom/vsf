@@ -20,4 +20,3 @@ vsf_err_t nuc505_eint_config(uint32_t index, uint32_t type,
 			uint32_t int_priority, void (*callback)(void *param), void *param);
 vsf_err_t nuc505_eint_enable(uint32_t index);
 vsf_err_t nuc505_eint_disable(uint32_t index);
-vsf_err_t nuc505_eint_trigger(uint32_t index);

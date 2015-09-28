@@ -26,21 +26,25 @@ struct app_hwcfg_t
 	struct
 	{
 		int type;
-		union
-		{
-			struct
-			{
-				uint8_t port;
-				uint8_t cs_port;
-				uint8_t cs_pin;
-				uint32_t freq_khz;
-			} spi;
-		} comm;
+		
+		uint8_t index;
+		uint32_t freq_khz;
+		
 		uint8_t rst_port;
 		uint8_t rst_pin;
-		uint8_t eint_port;
-		uint8_t eint_pin;
-		uint8_t eint;
+		uint8_t wakeup_port;
+		uint8_t wakeup_pin;
+		uint8_t mode_port;
+		uint8_t mode_pin;
+		
+		struct
+		{
+			uint8_t cs_port;
+			uint8_t cs_pin;
+			uint8_t eint_port;
+			uint8_t eint_pin;
+			uint8_t eint;
+		} spi;
 		
 		uint8_t pwrctrl_port;
 		uint8_t pwrctrl_pin;
