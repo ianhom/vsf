@@ -27,6 +27,10 @@ struct bcm_bus_op_t
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*enable)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*waitf2)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+	void (*enable_int)(struct bcm_bus_t *bus, void (*callback)(void *param),
+						void *param);
+	void (*disable_int)(struct bcm_bus_t *bus);
+	bool (*is_int)(struct bcm_bus_t *bus);
 	uint32_t (*fix_u32)(struct bcm_bus_t *bcm_bus, uint32_t value);
 	vsf_err_t (*transact)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						uint8_t rw, uint8_t func, uint32_t addr, uint16_t size,
