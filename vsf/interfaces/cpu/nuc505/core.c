@@ -14,6 +14,11 @@ static struct nuc505_info_t nuc505_info =
 	CORE_PLL_FREQ_HZ, CORE_APLL_FREQ_HZ, CPU_FREQ_HZ, HCLK_FREQ_HZ, PCLK_FREQ_HZ,
 };
 
+void HardFault_Handler(void)
+{
+	while (1);
+}
+
 vsf_err_t nuc505_interface_get_info(struct nuc505_info_t **info)
 {
 	*info = &nuc505_info;
