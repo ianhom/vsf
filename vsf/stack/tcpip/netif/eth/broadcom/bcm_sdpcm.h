@@ -32,8 +32,9 @@ struct bcm_sdpcm_t
 	struct vsfsm_sem_t async_sem;
 	struct vsfip_buffer_t *async_evt;
 	
+	uint16_t f2_size;
 	struct vsf_buffer_t headbuffer;
-	uint8_t head_buff_mem[12];
+	uint8_t head_buff_mem[16];
 };
 
 vsf_err_t bcm_sdpcm_init(struct bcm_wifi_t *wifi);

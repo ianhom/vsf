@@ -35,6 +35,7 @@ struct bcm_wifi_t
 
 	bool ap_isup;
 	bool p2p_isup;
+	uint32_t retry;
 	uint32_t join_status[3];
 	struct vsfip_netif_t *netif;
 };

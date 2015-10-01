@@ -27,10 +27,19 @@ struct bcm_bus_op_t
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*enable)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*waitf2)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+
 	void (*enable_int)(struct bcm_bus_t *bus, void (*callback)(void *param),
 						void *param);
 	void (*disable_int)(struct bcm_bus_t *bus);
 	bool (*is_int)(struct bcm_bus_t *bus);
+
+	vsf_err_t (*f2_avail)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								uint16_t *size);
+	vsf_err_t (*f2_read)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								uint16_t size, struct vsf_buffer_t *buffer);
+//	vsf_err_t (*f2_can_send)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+//								bool *can_send);
+
 	uint32_t (*fix_u32)(struct bcm_bus_t *bcm_bus, uint32_t value);
 	vsf_err_t (*transact)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						uint8_t rw, uint8_t func, uint32_t addr, uint16_t size,
@@ -55,6 +64,14 @@ struct bcm_bus_sdio_t
 	uint8_t temp_byte;
 	uint8_t logic_retry;
 	uint8_t transfer_retry;
+
+	struct vsf_buffer_t *transact_buf;
+	uint32_t transact_size;
+
+	uint8_t buff[8];
+	struct vsf_buffer_t read_buf;
+	uint16_t header[4];
+	struct vsf_buffer_t header_buf;
 };
 #endif
 
@@ -122,6 +139,9 @@ struct bcm_bus_t
 	struct vsf_buffer_t download_image_buffer;
 	uint32_t download_progress;
 	uint8_t download_image_mem[64];
+#if IFS_SDIO_EN
+	uint8_t verify_image_mem[64];
+#endif
 
 	// core_ctrl_pt is used in bcm_bus_disable_device_core,
 	// 	bcm_bus_reset_device_core and bcm_bus_device_core_isup
@@ -134,10 +154,14 @@ struct bcm_bus_t
 	uint32_t f2rdy_retrycnt;
 	uint8_t bufacc_mem[8];
 
-	uint8_t is_up : 1;
+	// f2_avail_pt is used in bcm_bus_xxx_f2_avail and bcm_bus_xxx_f2_read
+	struct vsfsm_pt_t f2_pt;
+
+	uint8_t is_up;
+	uint8_t retry;
 
 	uint32_t f1sig;
-	uint16_t intf;
+	uint32_t intf;
 	uint32_t status;
 	enum
 	{
