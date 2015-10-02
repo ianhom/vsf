@@ -146,12 +146,19 @@ vsf_err_t nuc505_sdio_start(uint8_t index, uint8_t cmd, uint32_t arg,
 		ctl |= extra_param->read0_write1 ? SDH_CTL_DOEN_Msk : SDH_CTL_DIEN_Msk;
 		SD->BLEN = extra_param->block_len - 1;
 		SD->DMASA = (uint32_t)extra_param->data_align4;
-
+		
+		if (extra_param->read0_write1 == 0)
+		{
+			SD->TOUT = (extra_param->block_len * extra_param->block_cnt) * 2 +
+					0x100000;
+		}
+		
 		SD->CTL = ctl;
 		return VSFERR_NONE;
 	}
 	
 noblk:
+	SD->TOUT = 0x400;
 	ctl |= ((uint32_t)cmd << SDH_CTL_CMDCODE_Pos) | SDH_CTL_COEN_Msk |
 			(1ul << SDH_CTL_BLKCNT_Pos);
 	SD->CTL = ctl;
@@ -260,6 +267,7 @@ ROOTFUNC void SDH_IRQHandler(void)
 			sdio_callback(sdio_callback_param);
 		}
 	}
+	SD->TOUT = 0;
 }
 
 //#endif

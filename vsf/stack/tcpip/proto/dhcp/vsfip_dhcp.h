@@ -50,7 +50,8 @@ struct vsfip_dhcp_t
 	uint32_t leasetime;
 	uint32_t t1;
 	uint32_t t2;
-	bool resume;
+	unsigned resume : 1;
+	unsigned ready : 1;
 };
 
 vsf_err_t vsfip_dhcp_start(struct vsfip_netif_t *netif,

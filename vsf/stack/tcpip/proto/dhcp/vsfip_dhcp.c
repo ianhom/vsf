@@ -208,6 +208,7 @@ static vsf_err_t vsfip_dhcp_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	
 	vsfsm_pt_begin(pt);
 	
+	dhcp->ready = 0;
 	dhcp->retry = 0;
 retry:
 	dhcp->xid = vsfip_dhcp_xid++;
@@ -249,7 +250,7 @@ retry:
 	if (err < 0) {vsfip_buffer_release(dhcp->outbuffer); goto cleanup;}
 	vsfip_buffer_release(dhcp->outbuffer);
 	
-	// wait OFFER
+wait_offer:
 	dhcp->so->timeout_ms = 5000;
 	dhcp->sockaddr.sin_addr.addr.s_addr = VSFIP_IPADDR_ANY;
 	dhcp->caller_pt.state = 0;
@@ -262,11 +263,15 @@ retry:
 		head = (struct vsfip_dhcphead_t *)dhcp->inbuffer->app.buffer;
 		if ((head->op != VSFIP_DHCP_TOCLIENT) ||
 			memcmp(head->chaddr, netif->macaddr.addr.s_addr_buf,
-					netif->macaddr.size) ||
-			(head->xid != dhcp->xid))
+					netif->macaddr.size))
 		{
 			vsfip_buffer_release(dhcp->inbuffer);
 			goto cleanup;
+		}
+		if (head->xid != dhcp->xid)
+		{
+			// wrong sequence
+			goto wait_offer;
 		}
 		
 		optlen = vsfip_dhcp_get_opt(dhcp->inbuffer, VSFIP_DHCPOPT_MSGTYPE,
@@ -303,7 +308,7 @@ dhcp_request:
 	if (err < 0) {vsfip_buffer_release(dhcp->outbuffer); goto cleanup;}
 	vsfip_buffer_release(dhcp->outbuffer);
 	
-	// wait ACK
+wait_ack:
 	dhcp->so->timeout_ms = 2000;
 	dhcp->sockaddr.sin_addr.addr.s_addr = VSFIP_IPADDR_ANY;
 	dhcp->caller_pt.state = 0;
@@ -316,11 +321,15 @@ dhcp_request:
 		head = (struct vsfip_dhcphead_t *)dhcp->inbuffer->app.buffer;
 		if ((head->op != VSFIP_DHCP_TOCLIENT) ||
 			memcmp(head->chaddr, netif->macaddr.addr.s_addr_buf,
-					netif->macaddr.size) ||
-			(head->xid != dhcp->xid))
+					netif->macaddr.size))
 		{
 			vsfip_buffer_release(dhcp->inbuffer);
 			goto cleanup;
+		}
+		if (head->xid != dhcp->xid)
+		{
+			// wrong sequence
+			goto wait_ack;
 		}
 		
 		optlen = vsfip_dhcp_get_opt(dhcp->inbuffer, VSFIP_DHCPOPT_MSGTYPE,
@@ -370,6 +379,7 @@ dhcp_request:
 	}
 	
 	// update netif->ipaddr
+	dhcp->ready = 1;
 	netif->ipaddr = dhcp->ipaddr;
 	netif->gateway = dhcp->gw;
 	netif->netmask = dhcp->netmask;
@@ -401,6 +411,10 @@ cleanup:
 		goto retry;
 	}
 	
+	if (dhcp->update_sem.evt != VSFSM_EVT_NONE)
+	{
+		vsfsm_sem_post(&dhcp->update_sem);
+	}
 	vsfsm_pt_end(pt);
 	return err;
 }

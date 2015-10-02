@@ -325,12 +325,17 @@ vsfshell_bcm_join_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfshell_printf(output_pt, "%s connected" VSFSHELL_LINEEND, param->argv[1]);
 
 	// start dhcp
+dhcp_retry:
 	memset(&wifi->dhcp, 0, sizeof(wifi->dhcp));
 	vsfsm_sem_init(&wifi->dhcp.update_sem, 0, VSFSM_EVT_USER_LOCAL);
 	vsfip_dhcp_start(&wifi->netif, &wifi->dhcp);
 	if (vsfsm_sem_pend(&wifi->dhcp.update_sem, pt->sm))
 	{
 		vsfsm_pt_wfe(pt, VSFSM_EVT_USER_LOCAL);
+	}
+	if (!wifi->dhcp.ready)
+	{
+		goto dhcp_retry;
 	}
 	vsfshell_printf(output_pt, "dhcp update:" VSFSHELL_LINEEND);
 	vsfshell_printf(output_pt, "IP: %d:%d:%d:%d" VSFSHELL_LINEEND,
