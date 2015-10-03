@@ -799,10 +799,13 @@ struct interface_sdio_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint8_t buswidth,
-				void (*callback)(void *), void *param);
+			void (*callback)(void *), void *param);
 	vsf_err_t (*start)(uint8_t index, uint8_t cmd, uint32_t arg,
-				struct sdio_info_t *extra_param);
+			struct sdio_info_t *extra_param);
 	vsf_err_t (*stop)(uint8_t index);
+	vsf_err_t (*config_int)(uint8_t index,
+			void (*callback)(void *param), void *param);
+	vsf_err_t (*enable_int)(uint8_t index);
 };
 
 #define SDIO_RESP_NONE					0
@@ -814,6 +817,8 @@ struct interface_sdio_t
 #define CORE_SDIO_CONFIG(m)				__CONNECT(m, _sdio_config)
 #define CORE_SDIO_START(m)				__CONNECT(m, _sdio_start)
 #define CORE_SDIO_STOP(m)				__CONNECT(m, _sdio_stop)
+#define CORE_SDIO_CONFIG_INT(m)			__CONNECT(m, _sdio_config_int)
+#define CORE_SDIO_ENABLE_INT(m)			__CONNECT(m, _sdio_enable_int)
 
 vsf_err_t CORE_SDIO_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SDIO_FINI(__TARGET_CHIP__)(uint8_t index);
@@ -823,6 +828,9 @@ vsf_err_t CORE_SDIO_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz,
 vsf_err_t CORE_SDIO_START(__TARGET_CHIP__)(uint8_t index, uint8_t dir_cmd,
 		uint32_t arg, struct sdio_info_t *extra_param);
 vsf_err_t CORE_SDIO_STOP(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_SDIO_CONFIG_INT(__TARGET_CHIP__)(uint8_t index,
+		void (*callback)(void *param), void *param);
+vsf_err_t CORE_SDIO_ENABLE_INT(__TARGET_CHIP__)(uint8_t index);
 
 #endif
 

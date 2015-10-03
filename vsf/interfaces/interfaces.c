@@ -311,6 +311,8 @@ const struct interfaces_info_t core_interfaces =
 		CORE_SDIO_CONFIG(__TARGET_CHIP__),
 		CORE_SDIO_START(__TARGET_CHIP__),
 		CORE_SDIO_STOP(__TARGET_CHIP__),
+		CORE_SDIO_CONFIG_INT(__TARGET_CHIP__),
+		CORE_SDIO_ENABLE_INT(__TARGET_CHIP__),
 	}
 #endif
 #if IFS_HCD_EN

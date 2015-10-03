@@ -437,12 +437,16 @@ vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 	wifi->bcm_wifi.bus.type = hwcfg->bcm_wifi_port.type;
 	switch (wifi->bcm_wifi.bus.type)
 	{
+#if IFS_SPI_EN
 	case BCM_BUS_TYPE_SPI:
 		wifi->bcm_wifi.bus.op = &bcm_bus_spi_op;
 		break;
+#endif
+#if IFS_SDIO_EN
 	case BCM_BUS_TYPE_SDIO:
 		wifi->bcm_wifi.bus.op = &bcm_bus_sdio_op;
 		break;
+#endif
 	}
 	wifi->bcm_wifi.bus.port.index = hwcfg->bcm_wifi_port.index;
 	wifi->bcm_wifi.bus.port.freq_khz = hwcfg->bcm_wifi_port.freq_khz;

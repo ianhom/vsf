@@ -28,17 +28,16 @@ struct bcm_bus_op_t
 	vsf_err_t (*enable)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*waitf2)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 
-	void (*enable_int)(struct bcm_bus_t *bus, void (*callback)(void *param),
+	void (*init_int)(struct bcm_bus_t *bus, void (*callback)(void *param),
 						void *param);
-	void (*disable_int)(struct bcm_bus_t *bus);
+	void (*fini_int)(struct bcm_bus_t *bus);
+	void (*enable_int)(struct bcm_bus_t *bus);
 	bool (*is_int)(struct bcm_bus_t *bus);
 
 	vsf_err_t (*f2_avail)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								uint16_t *size);
 	vsf_err_t (*f2_read)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								uint16_t size, struct vsf_buffer_t *buffer);
-//	vsf_err_t (*f2_can_send)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-//								bool *can_send);
 
 	uint32_t (*fix_u32)(struct bcm_bus_t *bcm_bus, uint32_t value);
 	vsf_err_t (*transact)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
