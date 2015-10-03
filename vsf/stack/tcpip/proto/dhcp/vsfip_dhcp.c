@@ -271,6 +271,7 @@ wait_offer:
 		if (head->xid != dhcp->xid)
 		{
 			// wrong sequence
+			vsfip_buffer_release(dhcp->inbuffer);
 			goto wait_offer;
 		}
 		
@@ -329,6 +330,7 @@ wait_ack:
 		if (head->xid != dhcp->xid)
 		{
 			// wrong sequence
+			vsfip_buffer_release(dhcp->inbuffer);
 			goto wait_ack;
 		}
 		
