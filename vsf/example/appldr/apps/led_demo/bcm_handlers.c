@@ -338,17 +338,17 @@ dhcp_retry:
 		goto dhcp_retry;
 	}
 	vsfshell_printf(output_pt, "dhcp update:" VSFSHELL_LINEEND);
-	vsfshell_printf(output_pt, "IP: %d:%d:%d:%d" VSFSHELL_LINEEND,
+	vsfshell_printf(output_pt, "IP: %d.%d.%d.%d" VSFSHELL_LINEEND,
 			wifi->netif.ipaddr.addr.s_addr_buf[0],
 			wifi->netif.ipaddr.addr.s_addr_buf[1],
 			wifi->netif.ipaddr.addr.s_addr_buf[2],
 			wifi->netif.ipaddr.addr.s_addr_buf[3]);
-	vsfshell_printf(output_pt, "subnet: %d:%d:%d:%d" VSFSHELL_LINEEND,
+	vsfshell_printf(output_pt, "subnet: %d.%d.%d.%d" VSFSHELL_LINEEND,
 			wifi->netif.netmask.addr.s_addr_buf[0],
 			wifi->netif.netmask.addr.s_addr_buf[1],
 			wifi->netif.netmask.addr.s_addr_buf[2],
 			wifi->netif.netmask.addr.s_addr_buf[3]);
-	vsfshell_printf(output_pt, "gateway: %d:%d:%d:%d" VSFSHELL_LINEEND,
+	vsfshell_printf(output_pt, "gateway: %d.%d.%d.%d" VSFSHELL_LINEEND,
 			wifi->netif.gateway.addr.s_addr_buf[0],
 			wifi->netif.gateway.addr.s_addr_buf[1],
 			wifi->netif.gateway.addr.s_addr_buf[2],

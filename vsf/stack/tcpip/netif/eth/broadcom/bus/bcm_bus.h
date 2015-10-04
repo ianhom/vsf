@@ -157,6 +157,7 @@ struct bcm_bus_t
 	struct vsfsm_pt_t f2_pt;
 
 	uint8_t is_up;
+	uint8_t receiving;
 	uint8_t retry;
 
 	uint32_t f1sig;
