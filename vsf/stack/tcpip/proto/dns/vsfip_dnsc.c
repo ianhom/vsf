@@ -317,6 +317,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		// recv success
 		err = vsfip_decode_dnsans(dns.inbuf->app.buffer, dns.inbuf->app.size,
 									dns.id, domainip);
+		vsfip_buffer_release(dns.inbuf);
 		if (err != 0) continue; else break;
 	}
 
@@ -325,9 +326,6 @@ close:
 
 	if (dns.outbuf != NULL)
 		vsfip_buffer_release(dns.outbuf);
-
-	if (dns.inbuf != NULL)
-		vsfip_buffer_release(dns.inbuf);
 
 	if (dns.so != NULL)
 		vsfip_close(dns.so);
