@@ -274,13 +274,26 @@ vsfshell_search_handler(struct vsfshell_t *shell, char *name)
 	return handler;
 }
 
+static void vsfshell_free_param(struct vsfshell_handler_param_t *param)
+{
+	uint32_t i;
+
+	for (i = 0; i < dimof(param->argv); i++)
+	{
+		if (param->argv[i] != NULL)
+		{
+			vsf_bufmgr_free(param->argv[i]);
+		}
+	}
+	vsf_bufmgr_free(param);
+}
+
 static vsf_err_t
 vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 {
 	struct vsfshell_handler_param_t *param =
 		(struct vsfshell_handler_param_t *)vsf_bufmgr_malloc(sizeof(*param));
 	struct vsfshell_handler_t *handler;
-	uint32_t i;
 	vsf_err_t err = VSFERR_NONE;
 	
 	if (NULL == param)
@@ -317,14 +330,7 @@ vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 	goto exit;
 	
 exit_free_argv:
-	for (i = 0; i < dimof(param->argv); i++)
-	{
-		if (param->argv[i] != NULL)
-		{
-			vsf_bufmgr_free(param->argv[i]);
-		}
-	}
-	vsf_bufmgr_free(param);
+	vsfshell_free_param(param);
 	err = VSFERR_FAIL;
 exit:
 	return err;
@@ -338,9 +344,12 @@ void vsfshell_free_handler_thread(struct vsfshell_t *shell, struct vsfsm_t *sm)
 		
 		if (pt != NULL)
 		{
-			if (pt->user_data != NULL)
+			struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+
+			if (param != NULL)
 			{
-				vsf_bufmgr_free(pt->user_data);
+				vsfshell_free_param(param);
 			}
 		}
 	}
