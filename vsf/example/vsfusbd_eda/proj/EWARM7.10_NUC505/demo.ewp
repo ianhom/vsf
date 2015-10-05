@@ -30,7 +30,7 @@
         <option>
           <name>Variant</name>
           <version>21</version>
-          <state>38</state>
+          <state>39</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -70,16 +70,16 @@
         <option>
           <name>GRuntimeLibSelect</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelectSlave</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>RTDescription</name>
-          <state>Use the full configuration of the C/C++ runtime library. Full locale interface, C locale, file descriptor support, multibytes in printf and scanf, and hex floats in strtod.</state>
+          <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
         </option>
         <option>
           <name>OGProductVersion</name>
@@ -99,7 +99,7 @@
         </option>
         <option>
           <name>OGChipSelectEditMenu</name>
-          <state>STM32F103xE	ST STM32F103xE</state>
+          <state>NUC505 series	Nuvoton NUC505 series</state>
         </option>
         <option>
           <name>GenLowLevelInterface</name>
@@ -133,17 +133,17 @@
         </option>
         <option>
           <name>RTConfigPath2</name>
-          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Full.h</state>
+          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Normal.h</state>
         </option>
         <option>
           <name>GFPUCoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>39</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>39</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -172,10 +172,7 @@
         </option>
         <option>
           <name>CCDefines</name>
-          <state>STM32F10X_XL</state>
-          <state>__TARGET_CHIP__=stm32</state>
-          <state>FLASH_LOAD_OFFSET=0x0000</state>
-          <state>CORE_DEBUG=STM32_DBG_JTAG_SWD</state>
+          <state>__TARGET_CHIP__=nuc505</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -236,7 +233,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>00000000</state>
+          <state>11111110</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -310,7 +307,8 @@
           <state>$PROJ_DIR$\..\..\..\..\..\vsf</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\compiler\IAR</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces</state>
-          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\stm32</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\nuc505</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\nuc505\core</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -330,7 +328,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -339,7 +337,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -594,15 +592,15 @@
         <option>
           <name>OOCOutputFormat</name>
           <version>2</version>
-          <state>1</state>
+          <state>2</state>
         </option>
         <option>
           <name>OCOutputOverride</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>demo.hex</state>
+          <state>demo.bin</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -721,7 +719,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$\STM32.icf</state>
+          <state>$PROJ_DIR$\proj_default.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
@@ -1038,7 +1036,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.10.3.6927</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -1125,6 +1123,7 @@
           <name>CCDefines</name>
           <state>NDEBUG</state>
           <state>STM32F10X_XL</state>
+          <state>VSF_SYS</state>
           <state>__TARGET_CHIP__=stm32</state>
           <state>FLASH_LOAD_OFFSET=0x8000</state>
           <state>CORE_DEBUG=STM32_DBG_NONE</state>
@@ -1907,6 +1906,7 @@
   </configuration>
   <mfc_discard>
     <configuration>Debug</configuration>
+    <configuration>Release</configuration>
   </mfc_discard>
   <group>
     <name>vsf</name>
@@ -1948,7 +1948,52 @@
       <group>
         <name>cpu</name>
         <group>
+          <name>nuc505</name>
+          <group>
+            <name>eint</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\eint\NUC505_EINT.c</name>
+            </file>
+          </group>
+          <group>
+            <name>gpio</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\gpio\NUC505_GPIO.c</name>
+            </file>
+          </group>
+          <group>
+            <name>sdio</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\sdio\NUC505_SDIO.c</name>
+            </file>
+          </group>
+          <group>
+            <name>spi</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\spi\NUC505_SPI.c</name>
+            </file>
+          </group>
+          <group>
+            <name>startup</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\startup\IAR\startup_NUC505Series.s</name>
+            </file>
+          </group>
+          <group>
+            <name>usbd</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\usbd\NUC505_USBD.c</name>
+            </file>
+          </group>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\core.c</name>
+          </file>
+        </group>
+        <group>
           <name>stm32</name>
+          <excluded>
+            <configuration>Debug</configuration>
+          </excluded>
           <group>
             <name>adc</name>
             <file>
@@ -2090,11 +2135,44 @@
               </file>
             </group>
           </group>
+          <group>
+            <name>host</name>
+            <group>
+              <name>HID</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HID\vsfusbh_HID.c</name>
+                <excluded>
+                  <configuration>Debug</configuration>
+                </excluded>
+              </file>
+            </group>
+            <group>
+              <name>HUB</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HUB\vsfusbh_HUB.c</name>
+              </file>
+            </group>
+          </group>
         </group>
         <group>
           <name>core</name>
+          <group>
+            <name>hcd</name>
+            <group>
+              <name>ohci</name>
+              <excluded>
+                <configuration>Debug</configuration>
+              </excluded>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\hcd\ohci\vsfohci.c</name>
+              </file>
+            </group>
+          </group>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbd.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbh.c</name>
           </file>
         </group>
       </group>
@@ -2154,7 +2232,7 @@
   <group>
     <name>vsf_cfg</name>
     <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\dal_cfg.h</name>
+      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfip_cfg.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
@@ -2162,7 +2240,13 @@
     <file>
       <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
     </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbh_cfg.h</name>
+    </file>
   </group>
+  <file>
+    <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
+  </file>
   <file>
     <name>$PROJ_DIR$\..\..\main.c</name>
   </file>

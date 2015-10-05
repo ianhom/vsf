@@ -9,14 +9,13 @@
 #include "interfaces.h"
 #include "framework/vsfsm/vsfsm.h"
 #include "framework/vsftimer/vsftimer.h"
+#include "framework/vsfshell/vsfshell.h"
 
 #include "dal/stream/stream.h"
 
 #include "stack/usb/core/vsfusbd.h"
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
 #include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
-
-#include "vsfshell/vsfshell.h"
 
 // USB descriptors
 static const uint8_t USB_DeviceDescriptor[] =
@@ -339,6 +338,7 @@ struct vsfapp_t
 	} shell;
 	
 	struct vsfsm_t sm;
+	uint8_t bufmgr_buffer[8 * 1024];
 } static app =
 {
 	{
@@ -444,6 +444,8 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		core_interfaces.tickclk.start();
 		vsftimer_init();
 		core_interfaces.tickclk.set_callback(app_tickclk_callback_int, NULL);
+		
+		vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 		
 		stream_init(&app.usbd.cdc.stream_rx);
 		stream_init(&app.usbd.cdc.stream_tx);
