@@ -121,6 +121,7 @@ struct vsfip_buffer_t *vsfip_build_dnsquery(uint8_t *domain, uint16_t id)
 	head->ques = 0x100;
 	head->answ = 0;
 	head->auth = 0;
+	head->addrrs = 0;
 	name = (uint8_t *)head + sizeof(struct vsfip_dns_head_t);
 	// fill name array
 	// empty next size
@@ -303,9 +304,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		dns.dnsaddr.sin_addr = vsfip_dns_server[i];
 		dns.socket_pt.state = 0;
 		vsfsm_pt_entry(pt);
-		err = vsfip_udp_send(&dns.socket_pt, evt, dns.so, &dns.dnsaddr,
-								dns.outbuf);
-		if (err > 0) return err; else if (err < 0) goto close;
+		vsfip_udp_send(NULL, 0, dns.so, &dns.dnsaddr, dns.outbuf);
 
 		// receive
 		dns.socket_pt.state = 0;

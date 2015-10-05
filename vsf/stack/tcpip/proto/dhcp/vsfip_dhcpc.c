@@ -231,7 +231,8 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			goto cleanup;
 		}
-		vsfip_dhcp_append_opt(dhcp->outbuffer, &dhcp->optlen, VSFIP_DHCPOPT_REQIP, dhcp->ipaddr.size,
+		vsfip_dhcp_append_opt(dhcp->outbuffer, &dhcp->optlen,
+								VSFIP_DHCPOPT_REQIP, dhcp->ipaddr.size,
 								dhcp->ipaddr.addr.s_addr_buf);
 		vsfip_dhcp_end_opt(dhcp->outbuffer, &dhcp->optlen);
 		dhcp->sockaddr.sin_addr.addr.s_addr = 0xFFFFFFFF;

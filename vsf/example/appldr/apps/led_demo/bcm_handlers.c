@@ -830,8 +830,8 @@ vsfshell_bcm_dns_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *output_pt = &param->output_pt;
 	struct vsfshell_bcm_dns_t *dns = (struct vsfshell_bcm_dns_t *)param->priv;
 	vsf_err_t err;
-	vsfsm_pt_begin(pt);
 
+	vsfsm_pt_begin(pt);
 	if (param->argc != 2)
 	{
 		vsfshell_printf(output_pt, "invalid format." VSFSHELL_LINEEND);
