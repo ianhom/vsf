@@ -14,7 +14,7 @@ struct vsfshell_bcm_wifi_t
 {
 	struct bcm_wifi_t bcm_wifi;
 	struct vsfip_netdrv_t netdrv;
-	struct vsfip_dhcp_t dhcp;
+	struct vsfip_dhcpc_t dhcpc;
 	struct vsfip_netif_t netif;
 
 	uint8_t pwrctrl_port;
@@ -326,14 +326,14 @@ vsfshell_bcm_join_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	// start dhcp
 dhcp_retry:
-	memset(&wifi->dhcp, 0, sizeof(wifi->dhcp));
-	vsfsm_sem_init(&wifi->dhcp.update_sem, 0, VSFSM_EVT_USER_LOCAL);
-	vsfip_dhcp_start(&wifi->netif, &wifi->dhcp);
-	if (vsfsm_sem_pend(&wifi->dhcp.update_sem, pt->sm))
+	memset(&wifi->dhcpc, 0, sizeof(wifi->dhcpc));
+	vsfsm_sem_init(&wifi->dhcpc.update_sem, 0, VSFSM_EVT_USER_LOCAL);
+	vsfip_dhcpc_start(&wifi->netif, &wifi->dhcpc);
+	if (vsfsm_sem_pend(&wifi->dhcpc.update_sem, pt->sm))
 	{
 		vsfsm_pt_wfe(pt, VSFSM_EVT_USER_LOCAL);
 	}
-	if (!wifi->dhcp.ready)
+	if (!wifi->dhcpc.ready)
 	{
 		goto dhcp_retry;
 	}
@@ -814,13 +814,88 @@ handler_thread_end:
 	return VSFERR_NONE;
 }
 
+struct vsfshell_bcm_dns_t
+{
+	struct vsfsm_pt_t local_pt;
+	struct vsfip_ipaddr_t domainip;
+};
+static vsf_err_t
+vsfshell_bcm_dns_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfshell_bcm_wifi_t *wifi =
+						(struct vsfshell_bcm_wifi_t *)param->context;
+	struct vsfip_netif_t *netif = &wifi->netif;
+	struct vsfsm_pt_t *output_pt = &param->output_pt;
+	struct vsfshell_bcm_dns_t *dns = (struct vsfshell_bcm_dns_t *)param->priv;
+	vsf_err_t err;
+	vsfsm_pt_begin(pt);
+
+	if (param->argc != 2)
+	{
+		vsfshell_printf(output_pt, "invalid format." VSFSHELL_LINEEND);
+		vsfshell_printf(output_pt, "format: bcm.dns TARGET " VSFSHELL_LINEEND);
+		goto handler_thread_end;
+	}
+
+	if ((0 == netif->ipaddr.addr.s_addr) || (0 == netif->ipaddr.size))
+	{
+		vsfshell_printf(output_pt, "ipaddr not configured" VSFSHELL_LINEEND);
+		goto handler_thread_end;
+	}
+
+	param->priv = vsf_bufmgr_malloc(sizeof(struct vsfshell_bcm_dns_t));
+	if (NULL == param->priv)
+	{
+		vsfshell_printf(output_pt, "not enough resources." VSFSHELL_LINEEND);
+		goto handler_thread_end;
+	}
+	dns = (struct vsfshell_bcm_dns_t *)param->priv;
+
+	vsfip_dns_init();
+	err = vsfip_dns_setserver(0, &netif->dns[0]);
+	if (err != VSFERR_NONE)
+		goto failed;
+
+	vsfshell_printf(output_pt, "dns server: %d:%d:%d:%d" VSFSHELL_LINEEND,
+					netif->dns[0].addr.s_addr_buf[0], netif->dns[0].addr.s_addr_buf[1],
+					netif->dns[0].addr.s_addr_buf[2], netif->dns[0].addr.s_addr_buf[3]);
+
+	dns->local_pt.sm = pt->sm;
+	dns->local_pt.state = 0;
+	dns->local_pt.user_data = NULL;
+	vsfsm_pt_entry(pt);
+	err = vsfip_gethostbyname(&dns->local_pt, evt, param->argv[1], &dns->domainip);
+	if (err > 0) return err; else if (err < 0)
+	{
+	failed:
+		vsfshell_printf(output_pt, "Failed" VSFSHELL_LINEEND);
+		goto handler_thread_end;
+	}
+
+	vsfshell_printf(output_pt, "domainip: %d:%d:%d:%d" VSFSHELL_LINEEND,
+					dns->domainip.addr.s_addr_buf[0], dns->domainip.addr.s_addr_buf[1],
+					dns->domainip.addr.s_addr_buf[2], dns->domainip.addr.s_addr_buf[3]);
+
+handler_thread_end:
+	if (param->priv != NULL)
+	{
+		free(param->priv);
+	}
+
+	vsfshell_handler_exit(pt);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
 #endif		// VSF_STANDALONE_APP
 
 vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 							struct app_hwcfg_t const *hwcfg)
 {
 #ifndef VSF_STANDALONE_APP
-	uint32_t size = sizeof(struct vsfshell_handler_t) * 10;
+	uint32_t size = sizeof(struct vsfshell_handler_t) * 11;
 #else
 	uint32_t size = sizeof(struct vsfshell_handler_t) * 6;
 #endif
@@ -911,6 +986,9 @@ vsf_err_t bcm_handlers_init(struct vsfshell_t *shell,
 	bcm_handlers[8].name = "bcm.writereg";
 	bcm_handlers[8].thread = vsfshell_bcm_writereg_handler;
 	bcm_handlers[8].context = wifi;
+	bcm_handlers[9].name = "bcm.dns";
+	bcm_handlers[9].thread = vsfshell_bcm_dns_handler;
+	bcm_handlers[9].context = wifi;
 #endif
 
 	vsfshell_register_handlers(shell, bcm_handlers);

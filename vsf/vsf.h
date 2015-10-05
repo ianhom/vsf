@@ -45,7 +45,8 @@
 #include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
 
 #include "stack/tcpip/vsfip.h"
-#include "stack/tcpip/proto/dhcp/vsfip_dhcp.h"
+#include "stack/tcpip/proto/dhcp/vsfip_dhcpc.h"
+#include "stack/tcpip/proto/dns/vsfip_dnsc.h"
 
 #include "stack/tcpip/netif/eth/broadcom/bcm_wifi.h"
 #include "stack/tcpip/netif/eth/broadcom/bus/bcm_bus.h"
@@ -307,8 +308,8 @@ struct vsf_t
 				struct
 				{
 					vsf_err_t (*start)(struct vsfip_netif_t *netif,
-										struct vsfip_dhcp_t *dhcp);
-				} dhcp;
+										struct vsfip_dhcpc_t *dhcp);
+				} dhcpc;
 			} protocol;
 			
 			struct
@@ -460,7 +461,7 @@ struct vsf_t
 #define vsfip_buffer_reference			vsf.stack.tcpip.buffer.reference
 #define vsfip_buffer_release			vsf.stack.tcpip.buffer.release
 
-#define vsfip_dhcp_start				vsf.stack.tcpip.protocol.dhcp.start
+#define vsfip_dhcpc_start				vsf.stack.tcpip.protocol.dhcpc.start
 
 #define bcm_bus_spi_op					(*vsf.stack.tcpip.broadcom_wifi.bus.spi_op)
 #define bcm_wifi_netdrv_op				(*vsf.stack.tcpip.broadcom_wifi.netdrv_op)

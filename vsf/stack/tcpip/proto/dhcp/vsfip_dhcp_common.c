@@ -16,45 +16,36 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef __VSFIP_DHCP_H_INCLUDED__
-#define __VSFIP_DHCP_H_INCLUDED__
+#include "app_type.h"
+#include "compiler.h"
 
-struct vsfip_dhcp_t
+#include "../../vsfip.h"
+#include "../../vsfip_buffer.h"
+
+#include "vsfip_dhcp_common.h"
+
+// buf MUST be large enough for all the data
+void vsfip_dhcp_append_opt(struct vsfip_buffer_t *buf, uint32_t *optlen,
+						uint8_t option, uint8_t len, uint8_t *data)
 {
-	enum vsfip_dhcp_state_t
-	{
-		VSFIP_DHCPSTAT_OFF,
-		VSFIP_DHCPSTAT_EXIT,
-	} state;
+	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
 	
-	struct vsfip_netif_t *netif;
-	struct vsfsm_t sm;
-	struct vsfsm_pt_t pt;
-	struct vsfip_socket_t *so;
-	struct vsfip_sockaddr_t sockaddr;
-	struct vsfip_buffer_t *outbuffer;
-	struct vsfip_buffer_t *inbuffer;
-	struct vsfip_ipaddr_t ipaddr;
-	struct vsfip_ipaddr_t gw;
-	struct vsfip_ipaddr_t netmask;
-	struct vsfip_ipaddr_t dns[2];
-	struct vsfip_buffer_t fakebuffer;
-	struct vsfsm_pt_t caller_pt;
-	struct vsfsm_sem_t update_sem;
-	struct vsfsm_sem_t release_sem;
-	uint32_t optlen;
-	uint32_t starttick;
-	uint32_t xid;
-	uint32_t retry;
-	uint32_t arp_retry;
-	uint32_t leasetime;
-	uint32_t t1;
-	uint32_t t2;
-	unsigned resume : 1;
-	unsigned ready : 1;
-};
+	head->options[(*optlen)++] = option;
+	head->options[(*optlen)++] = len;
+	memcpy(&head->options[*optlen], data, len);
+	*optlen += len;
+}
 
-vsf_err_t vsfip_dhcp_start(struct vsfip_netif_t *netif,
-							struct vsfip_dhcp_t *dhcp);
-
-#endif		// __VSFIP_DHCP_H_INCLUDED__
+void vsfip_dhcp_end_opt(struct vsfip_buffer_t *buf, uint32_t *optlen)
+{
+	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
+	
+	head->options[(*optlen)++] = VSFIP_DHCPOPT_END;
+	while ((*optlen < VSFIP_DHCPOPT_MINLEN) || (*optlen & 3))
+	{
+		head->options[(*optlen)++] = 0;
+	}
+	// tweak options length
+	buf->app.size -= sizeof(head->options);
+	buf->app.size += *optlen;
+}

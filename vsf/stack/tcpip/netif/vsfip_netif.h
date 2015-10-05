@@ -98,7 +98,7 @@ struct vsfip_netif_t
 	bool quit;
 	
 	// for DHCP
-	struct vsfip_dhcp_t *dhcp;
+	struct vsfip_dhcpc_t *dhcpc;
 	
 	struct vsfip_netif_t *next;
 };

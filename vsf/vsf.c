@@ -285,7 +285,7 @@ ROOTFUNC const struct vsf_t vsf @ (SYS_MAIN_ADDR + 0x00000200) =
 			
 			{
 				{
-					vsfip_dhcp_start,
+					vsfip_dhcpc_start,
 				},			// struct dhcp;
 			},				// struct protocol;
 			
