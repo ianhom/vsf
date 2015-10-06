@@ -185,7 +185,7 @@ vsf_err_t nuc505_tickclk_stop(void)
 	cnt = TIMER2->CNT;
 	if (cnt > 0)
 	{
-		nuc505_tickcnt += (cnt * 1000) / 32768;
+		nuc505_tickcnt += (cnt * 100) / 3276;
 		TIMER2->CTL |= TIMER_CTL_RSTCNT_Msk;
 	}
 	return VSFERR_NONE;
@@ -194,7 +194,7 @@ vsf_err_t nuc505_tickclk_stop(void)
 static uint32_t nuc505_tickclk_get_count_local(void)
 {
 	uint32_t cnt = TIMER2->CNT;
-	return nuc505_tickcnt + ((cnt * 1000) / 32768);
+	return nuc505_tickcnt + ((cnt * 100) / 3276);
 }
 
 uint32_t nuc505_tickclk_get_count(void)
