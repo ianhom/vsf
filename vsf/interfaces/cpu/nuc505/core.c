@@ -242,7 +242,7 @@ vsf_err_t nuc505_tickclk_set_interval(uint16_t ms)
 
 ROOTFUNC void TMR2_IRQHandler(void)
 {
-	nuc505_tickcnt += 600 * 1000;
+	nuc505_tickcnt += 500 * 1000;
 	if (nuc505_tickcnt > 0xffffffff - 1200 * 1000)
 		nuc505_interface_reset(NULL);
 	TIMER2->INTSTS = TIMER_INTSTS_TIF_Msk;
@@ -273,7 +273,7 @@ vsf_err_t nuc505_tickclk_init(void)
 	TIMER2->CTL = TIMER_CTL_INTEN_Msk | (0x1ul << TIMER_CTL_OPMODE_Pos) |
 					TIMER_CTL_WKEN_Msk;
 
-	TIMER2->CMP = 32768 * 600;
+	TIMER2->CMP = 32768 * 500;
 	TIMER3->CMP = 32768 / 1000;
 
 	return VSFERR_NONE;
