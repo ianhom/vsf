@@ -1497,7 +1497,7 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	// wait for VSFIP_EVT_TCP_CONNECTOK or VSFIP_EVT_TCP_CONNECTFAIL
 	evt = VSFSM_EVT_NONE;
 	vsfsm_pt_entry(pt);
-	if ((evt != VSFIP_EVT_TCP_CONNECTOK) || (evt != VSFIP_EVT_TCP_CONNECTFAIL))
+	if ((evt != VSFIP_EVT_TCP_CONNECTOK) && (evt != VSFIP_EVT_TCP_CONNECTFAIL))
 	{
 		return VSFERR_NOT_READY;
 	}

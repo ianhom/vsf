@@ -223,10 +223,11 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfip_udp_send(NULL, 0, dhcp->so, &dhcp->sockaddr, dhcp->outbuffer);
 		dhcp->so->remote_sockaddr.sin_addr.addr.s_addr = VSFIP_IPADDR_ANY;
 
-		vsftimer_create(sm, 5000, 1, VSFIP_DHCP_EVT_TIMEROUT);
+		dhcp->to = vsftimer_create(sm, 5000, 1, VSFIP_DHCP_EVT_TIMEROUT);
 		break;
 	case VSFIP_DHCP_EVT_SEND_REQUEST:
 	dhcp_request:
+		vsftimer_dequeue(dhcp->to);
 		if (vsfip_dhcpc_init_msg(dhcp, (uint8_t)VSFIP_DHCPOP_REQUEST) < 0)
 		{
 			goto cleanup;
@@ -239,9 +240,10 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfip_udp_send(NULL, 0, dhcp->so, &dhcp->sockaddr, dhcp->outbuffer);
 		dhcp->so->remote_sockaddr.sin_addr.addr.s_addr = VSFIP_IPADDR_ANY;
 
-		vsftimer_create(sm, 2000, 1, VSFIP_DHCP_EVT_TIMEROUT);
+		dhcp->to = vsftimer_create(sm, 2000, 1, VSFIP_DHCP_EVT_TIMEROUT);
 		break;
 	case VSFIP_DHCP_EVT_READY:
+		vsftimer_dequeue(dhcp->to);
 		// update netif->ipaddr
 		dhcp->ready = 1;
 		netif->ipaddr = dhcp->ipaddr;

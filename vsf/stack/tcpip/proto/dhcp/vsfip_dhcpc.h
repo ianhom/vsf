@@ -32,6 +32,7 @@ struct vsfip_dhcpc_t
 	struct vsfip_ipaddr_t netmask;
 	struct vsfip_ipaddr_t dns[2];
 	struct vsfsm_sem_t update_sem;
+	struct vsftimer_t *to;
 	uint32_t xid;
 	uint32_t optlen;
 	uint32_t starttick;
