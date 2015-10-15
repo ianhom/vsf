@@ -38,6 +38,7 @@ struct bcm_bus_op_t
 								uint16_t *size);
 	vsf_err_t (*f2_read)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								uint16_t size, struct vsf_buffer_t *buffer);
+	vsf_err_t (*f2_abort)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 
 	uint32_t (*fix_u32)(struct bcm_bus_t *bcm_bus, uint32_t value);
 	vsf_err_t (*transact)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,

@@ -1,4 +1,3 @@
-
 /***************************************************************************
  *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
  *                                                                         *
@@ -27,6 +26,7 @@
 
 #define VSFIP_IPADDR_ANY				0
 
+#define VSFIP_IP_HEADLEN				20
 #define VSFIP_UDP_HEADLEN				8
 #define VSFIP_TCP_HEADLEN				20
 
@@ -146,21 +146,22 @@ PACKED_HEAD struct PACKED_MID vsfip_icmphead_t
 }; PACKED_TAIL
 
 struct vsfip_socket_t;
+enum vsfip_tcp_stat_t
+{
+	VSFIP_TCPSTAT_INVALID,
+	VSFIP_TCPSTAT_CLOSED,
+	VSFIP_TCPSTAT_LISTEN,
+	VSFIP_TCPSTAT_SYN_SENT,
+	VSFIP_TCPSTAT_SYN_GET,
+	VSFIP_TCPSTAT_ESTABLISHED,
+	VSFIP_TCPSTAT_FINWAIT1,
+	VSFIP_TCPSTAT_FINWAIT2,
+	VSFIP_TCPSTAT_CLOSEWAIT,
+	VSFIP_TCPSTAT_LASTACK,
+};
 struct vsfip_tcppcb_t
 {
-	enum
-	{
-		VSFIP_TCPSTAT_INVALID,
-		VSFIP_TCPSTAT_CLOSED,
-		VSFIP_TCPSTAT_LISTEN,
-		VSFIP_TCPSTAT_SYN_SENT,
-		VSFIP_TCPSTAT_SYN_GET,
-		VSFIP_TCPSTAT_ESTABLISHED,
-		VSFIP_TCPSTAT_FINWAIT1,
-		VSFIP_TCPSTAT_FINWAIT2,
-		VSFIP_TCPSTAT_CLOSEWAIT,
-		VSFIP_TCPSTAT_LASTACK,
-	} state;
+	enum vsfip_tcp_stat_t state;
 	uint32_t lseq;
 	uint32_t acked_lseq;
 	uint32_t rseq;
@@ -169,8 +170,8 @@ struct vsfip_tcppcb_t
 
 	// tx
 	struct vsfsm_t *tx_sm;
-	uint32_t tx_timeout_ms;
-	uint32_t tx_retry;
+	uint32_t tx_timeout_ms;		// only for FIN and SYN
+	uint32_t tx_retry;			// only for FIN and SYN
 
 	// rx
 	struct vsfsm_t *rx_sm;
@@ -184,7 +185,7 @@ struct vsfip_tcppcb_t
 
 	vsf_err_t err;
 
-	struct vsfip_buffer_t *buf;
+	uint8_t flags;
 };
 
 struct vsfip_pcb_t
@@ -205,6 +206,7 @@ struct vsfip_socket_t
 	struct vsfip_pcb_t pcb;
 	struct vsfsm_sem_t input_sem;
 	struct vsfq_t inq;
+	struct vsfq_t outq;
 
 	bool can_rx;
 	struct
@@ -217,7 +219,8 @@ struct vsfip_socket_t
 	bool accepted;
 	struct vsfip_socket_t *father;
 
-	uint32_t timeout_ms;
+	uint32_t tx_timeout_ms;
+	uint32_t rx_timeout_ms;
 	struct vsftimer_t tx_timer;
 	struct vsftimer_t rx_timer;
 
@@ -263,7 +266,7 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-		struct vsfip_buffer_t *buf);
+		struct vsfip_buffer_t *buf, bool flush);
 vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);

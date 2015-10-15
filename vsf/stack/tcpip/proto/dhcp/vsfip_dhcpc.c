@@ -48,15 +48,12 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcp, uint8_t op)
 	struct vsfip_buffer_t *buf;
 	struct vsfip_dhcphead_t *head;
 
-	dhcp->outbuffer = vsfip_buffer_get(VSFIP_CFG_HEADLEN + VSFIP_UDP_HEADLEN +
-										sizeof(struct vsfip_dhcphead_t));
+	dhcp->outbuffer = VSFIP_UDPBUF_GET(sizeof(struct vsfip_dhcphead_t));
 	if (NULL == dhcp->outbuffer)
 	{
 		return VSFERR_FAIL;
 	}
 	buf = dhcp->outbuffer;
-	buf->app.buffer += VSFIP_CFG_HEADLEN + VSFIP_UDP_HEADLEN;
-	buf->app.size -= VSFIP_CFG_HEADLEN + VSFIP_UDP_HEADLEN;
 
 	head = (struct vsfip_dhcphead_t *)buf->app.buffer;
 	memset(head, 0, sizeof(struct vsfip_dhcphead_t));

@@ -106,13 +106,11 @@ struct vsfip_buffer_t *vsfip_build_dnsquery(uint8_t *domain, uint16_t id)
 	uint8_t *name;
 	uint16_t count;
 
-	buf = vsfip_buffer_get(VSFIP_CFG_HEADLEN + VSFIP_UDP_HEADLEN +
-							VSFIP_DNS_PKG_SIZE);
+	buf = VSFIP_UDPBUF_GET(VSFIP_DNS_PKG_SIZE);
 	if (NULL == buf)
 	{
 		return NULL;
 	}
-	buf->app.buffer = buf->buf.buffer + VSFIP_CFG_HEADLEN + VSFIP_UDP_HEADLEN;
 
 	// fill header
 	head = (struct vsfip_dns_head_t *)buf->app.buffer;
@@ -296,7 +294,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	dns.id = VSFIP_DNS_ID;
 	dns.outbuf = vsfip_build_dnsquery(domain, dns.id);
 	dns.socket_pt.sm = pt->sm;
-	dns.so->timeout_ms = 4000;
+	dns.so->rx_timeout_ms = 4000;
 
 	for (i = 0 ; i < VSFIP_DNS_SERVERCOUNT ; i++)
 	{

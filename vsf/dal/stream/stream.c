@@ -27,7 +27,10 @@ vsf_err_t stream_init(struct vsf_stream_t *stream)
 	stream->overflow = false;
 	stream->tx_ready = false;
 	stream->rx_ready = false;
-	vsf_fifo_init(&stream->fifo);
+	if (stream->op->init != NULL)
+	{
+		stream->op->init(stream);
+	}
 	return VSFERR_NONE;
 }
 
@@ -39,7 +42,7 @@ vsf_err_t stream_fini(struct vsf_stream_t *stream)
 
 uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
-	uint32_t count = vsf_fifo_pop(&stream->fifo, buffer->size, buffer->buffer);
+	uint32_t count = stream->op->read(stream, buffer);
 
 	if ((stream->callback_tx.on_out_int != NULL) && (count > 0))
 	{
@@ -50,7 +53,7 @@ uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
-	uint32_t count = vsf_fifo_push(&stream->fifo, buffer->size, buffer->buffer);
+	uint32_t count = stream->op->write(stream, buffer);
 
 	if (count < buffer->size)
 	{
@@ -65,12 +68,12 @@ uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 uint32_t stream_get_data_size(struct vsf_stream_t *stream)
 {
-	return vsf_fifo_get_data_length(&stream->fifo);
+	return stream->op->get_data_length(stream);
 }
 
 uint32_t stream_get_free_size(struct vsf_stream_t *stream)
 {
-	return vsf_fifo_get_avail_length(&stream->fifo);
+	return stream->op->get_avail_length(stream);
 }
 
 void stream_connect_rx(struct vsf_stream_t *stream)
@@ -98,3 +101,39 @@ void stream_connect_tx(struct vsf_stream_t *stream)
 	}
 	stream->tx_ready = true;
 }
+
+// fifo stream
+static void fifo_stream_init(struct vsf_stream_t *stream)
+{
+	vsf_fifo_init((struct vsf_fifo_t *)stream->user_mem);
+}
+
+static uint32_t fifo_stream_get_data_length(struct vsf_stream_t *stream)
+{
+	return vsf_fifo_get_data_length((struct vsf_fifo_t *)stream->user_mem);
+}
+
+static uint32_t fifo_stream_get_avail_length(struct vsf_stream_t *stream)
+{
+	return vsf_fifo_get_avail_length((struct vsf_fifo_t *)stream->user_mem);
+}
+
+static uint32_t
+fifo_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+{
+	return vsf_fifo_push((struct vsf_fifo_t *)stream->user_mem,
+							buffer->size, buffer->buffer);
+}
+
+static uint32_t
+fifo_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+{
+	return vsf_fifo_pop((struct vsf_fifo_t *)stream->user_mem,
+							buffer->size, buffer->buffer);
+}
+
+const struct vsf_stream_op_t fifo_stream_op =
+{
+	fifo_stream_init, fifo_stream_write, fifo_stream_read,
+	fifo_stream_get_data_length, fifo_stream_get_avail_length
+};

@@ -47,6 +47,7 @@
 #include "stack/tcpip/vsfip.h"
 #include "stack/tcpip/proto/dhcp/vsfip_dhcpc.h"
 #include "stack/tcpip/proto/dns/vsfip_dnsc.h"
+#include "stack/tcpip/proto/http/vsfip_httpd.h"
 
 #include "stack/tcpip/netif/eth/broadcom/bcm_wifi.h"
 #include "stack/tcpip/netif/eth/broadcom/bus/bcm_bus.h"
@@ -282,7 +283,7 @@ struct vsf_t
 						struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
 			vsf_err_t (*tcp_send)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-						struct vsfip_buffer_t *buf);
+						struct vsfip_buffer_t *buf, bool flush);
 			vsf_err_t (*tcp_recv)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 						struct vsfip_buffer_t **buf);

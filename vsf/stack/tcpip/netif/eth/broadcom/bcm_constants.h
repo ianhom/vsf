@@ -82,6 +82,7 @@
 #define BCM_BPREG_DEVICE_CTL					(uint32_t)0x10009
 #define BCM_BPREG_SBADDR						(uint32_t)0x1000A
 #define BCM_BPREG_FRAMECTRL						(uint32_t)0x1000D
+#	define BCM_BPREG_FRAMECTRL_RF_TERM			(1 << 0)
 #define BCM_BPREG_CHIPCLKCSR					(uint32_t)0x1000E
 #define BCM_BPREG_SDIOPU						(uint32_t)0x1000F
 #define BCM_BPREG_WFRAME_BYTECOUNT				(uint32_t)0x10019

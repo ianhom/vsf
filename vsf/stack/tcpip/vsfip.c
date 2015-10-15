@@ -27,6 +27,9 @@
 #include "vsfip.h"
 #include "vsfip_buffer.h"
 
+#define VSFIP_TCP_RETRY			3
+#define VSFIP_TCP_ATO			10
+
 // TODO:
 // add ICMP support
 // add ip_router
@@ -43,9 +46,8 @@ enum vsfip_EVT_t
 	VSFIP_EVT_TCP_CONNECTFAIL	= VSFSM_EVT_USER_LOCAL + 6,
 	VSFIP_EVT_TCP_CLOSED		= VSFSM_EVT_USER_LOCAL + 7,
 	VSFIP_EVT_TCP_TXOK			= VSFSM_EVT_USER_LOCAL + 8,
-	VSFIP_EVT_TCP_TXFAIL		= VSFSM_EVT_USER_LOCAL + 9,
-	VSFIP_EVT_TCP_RXOK			= VSFSM_EVT_USER_LOCAL + 10,
-	VSFIP_EVT_TCP_RXFAIL		= VSFSM_EVT_USER_LOCAL + 11,
+	VSFIP_EVT_TCP_RXOK			= VSFSM_EVT_USER_LOCAL + 9,
+	VSFIP_EVT_TCP_RXFAIL		= VSFSM_EVT_USER_LOCAL + 10,
 
 	// semaphore and timer use instant event, so that they can be exclusive
 	VSFIP_EVT_SOCKET_TIMEOUT	= VSFSM_EVT_USER_LOCAL_INSTANT + 0,
@@ -126,11 +128,13 @@ void vsfip_tcppcb_release(struct vsfip_tcppcb_t *pcb)
 // bufferlist
 void vsfip_bufferlist_free(struct vsfq_t *list)
 {
+	struct vsfq_node_t *node;
 	struct vsfip_buffer_t *tmpbuf;
 
 	while (1)
 	{
-		tmpbuf = (struct vsfip_buffer_t *)vsfq_dequeue(list);
+		node = vsfq_dequeue(list);
+		tmpbuf = container_of(node, struct vsfip_buffer_t, proto_node);
 		if (tmpbuf != NULL)
 		{
 			vsfip_buffer_release(tmpbuf);
@@ -140,6 +144,22 @@ void vsfip_bufferlist_free(struct vsfq_t *list)
 			break;
 		}
 	}
+}
+
+static uint32_t vsfip_bufferlist_len(struct vsfq_t *list)
+{
+	struct vsfq_node_t *node = list->head;
+	struct vsfip_buffer_t *tmpbuf =
+					container_of(node, struct vsfip_buffer_t, proto_node);
+	uint32_t size = 0;
+
+	while (tmpbuf != NULL)
+	{
+		size += tmpbuf->app.size;
+		node = node->next;
+		tmpbuf = container_of(node, struct vsfip_buffer_t, proto_node);
+	}
+	return size;
 }
 
 static void vsfip_socketlist_add(struct vsfip_socket_t **head,
@@ -261,15 +281,18 @@ struct vsfip_netif_t* vsfip_ip_route(struct vsfip_ipaddr_t *addr)
 
 static void vsfip_check_buff(struct vsfip_socket_t *socket)
 {
-	struct vsfip_buffer_t *buf = (struct vsfip_buffer_t *)socket->inq.head;
+	struct vsfq_node_t *node = socket->inq.head;
+	struct vsfip_buffer_t *buf =
+					container_of(node, struct vsfip_buffer_t, proto_node);
 
 	while (buf != NULL)
 	{
 		if (!buf->ttl || !--buf->ttl)
 		{
-			vsfq_remove(&socket->inq, (struct vsfq_node_t *)buf);
+			vsfq_remove(&socket->inq, &buf->proto_node);
 		}
-		buf = (struct vsfip_buffer_t *)buf->node.next;
+		node = node->next;
+		buf = container_of(node, struct vsfip_buffer_t, proto_node);
 	}
 }
 
@@ -284,7 +307,7 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfip->tick_timer.evt = VSFIP_EVT_TICK;
 		vsfip->tick_timer.sm = sm;
 		vsfip->tick_timer.interval = 1;
-		vsfip->tick_timer.trigger_cnt = 1;
+		vsfip->tick_timer.trigger_cnt = -1;
 		vsftimer_enqueue(&vsfip->tick_timer);
 		break;
 	case VSFSM_EVT_FINI:
@@ -591,6 +614,7 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 		socket->tx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		vsfq_init(&socket->inq);
+		vsfq_init(&socket->outq);
 		socket->callback.input = NULL;
 		vsfsm_sem_init(&socket->input_sem, 0, VSFIP_EVT_SOCKET_RECV);
 
@@ -640,6 +664,7 @@ static vsf_err_t vsfip_free_socket(struct vsfip_socket_t *socket)
 
 	// remove pending incoming buffer
 	vsfip_bufferlist_free(&socket->inq);
+	vsfip_bufferlist_free(&socket->outq);
 	vsftimer_dequeue(&socket->tx_timer);
 	vsftimer_dequeue(&socket->rx_timer);
 
@@ -806,7 +831,7 @@ static void vsfip_proto_input(struct vsfip_socket_t *list,
 	else
 	{
 		buf->ttl = VSFIP_CFG_TTL_INPUT;
-		vsfq_append(&socket->inq, (struct vsfq_node_t *)buf);
+		vsfq_append(&socket->inq, &buf->proto_node);
 		vsfsm_sem_post(&socket->input_sem);
 	}
 	return;
@@ -897,7 +922,9 @@ cleanup:
 static struct vsfip_buffer_t *
 vsfip_udp_match(struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *addr)
 {
-	struct vsfip_buffer_t *buf = (struct vsfip_buffer_t *)socket->inq.head;
+	struct vsfq_node_t *node = socket->inq.head;
+	struct vsfip_buffer_t *buf =
+					container_of(node, struct vsfip_buffer_t, proto_node);
 	struct vsfip_ip4head_t *iphead;
 
 	while (buf != NULL)
@@ -909,12 +936,13 @@ vsfip_udp_match(struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *addr)
 		}
 		if (addr->sin_addr.addr.s_addr == iphead->ipsrc)
 		{
-			vsfq_remove(&socket->inq, (struct vsfq_node_t *)buf);
+			vsfq_remove(&socket->inq, &buf->proto_node);
 			buf->app.buffer = buf->buf.buffer + sizeof(struct vsfip_udphead_t);
 			buf->app.size = buf->buf.size - sizeof(struct vsfip_udphead_t);
 			break;
 		}
-		buf = (struct vsfip_buffer_t *)buf->node.next;
+		node = node->next;
+		buf = container_of(node, struct vsfip_buffer_t, proto_node);
 	}
 
 	return buf;
@@ -942,9 +970,9 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	// set pending with timeout
 	// TODO: implement pcb for UDP and put these resources in
-	if (socket->timeout_ms)
+	if (socket->rx_timeout_ms)
 	{
-		socket->rx_timer.interval = socket->timeout_ms;
+		socket->rx_timer.interval = socket->rx_timeout_ms;
 		socket->rx_timer.sm = pt->sm;
 		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		socket->rx_timer.trigger_cnt = 1;
@@ -1010,6 +1038,8 @@ static struct vsfip_socket_t* vsfip_new_childsocket(
 	if (new_socket != NULL)
 	{
 		new_socket->can_rx = father->can_rx;
+		new_socket->tx_timeout_ms = father->tx_timeout_ms;
+		new_socket->rx_timeout_ms = father->rx_timeout_ms;
 		new_socket->netif = father->netif;
 		memcpy(&new_socket->remote_sockaddr, sockaddr,
 					sizeof(struct vsfip_sockaddr_t));
@@ -1035,7 +1065,7 @@ static void vsfip_tcp_input(struct vsfip_buffer_t *buf)
 	tcphead->checksum = BE_TO_SYS_U16(tcphead->checksum);
 	tcphead->urgent_ptr = BE_TO_SYS_U16(tcphead->urgent_ptr);
 
-	buf->node.addr = tcphead->seq;
+	buf->proto_node.addr = tcphead->seq;
 	buf->app.buffer = buf->buf.buffer + tcphead->headlen;
 	buf->app.size = buf->buf.size - tcphead->headlen;
 	vsfip_proto_input(vsfip.tcpconns, buf,&tcphead->port);
@@ -1044,7 +1074,6 @@ static void vsfip_tcp_input(struct vsfip_buffer_t *buf)
 static vsf_err_t vsfip_add_tcphead(struct vsfip_socket_t *socket,
 									struct vsfip_buffer_t *buf, uint8_t flags)
 {
-	struct vsfip_buffer_t *bufhead = (struct vsfip_buffer_t *)socket->inq.head;
 	uint16_t window_size;
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfip_tcphead_t *head;
@@ -1069,19 +1098,13 @@ static vsf_err_t vsfip_add_tcphead(struct vsfip_socket_t *socket,
 	head->port.src = SYS_TO_BE_U16(socket->local_sockaddr.sin_port);
 	head->port.dst = SYS_TO_BE_U16(socket->remote_sockaddr.sin_port);
 	head->seq = SYS_TO_BE_U32(pcb->lseq);
+	buf->proto_node.addr = pcb->lseq;
 	head->ackseq = SYS_TO_BE_U32(pcb->rseq);
 	head->headlen = (headlen >> 2) << 4;
 	flags |= (pcb->rseq != 0) ? VSFIP_TCPFLAG_ACK : 0;
 	head->flags = flags;
 
-	if (NULL == bufhead)
-	{
-		window_size = VSFIP_CFG_TCP_WINDOW;
-	}
-	else
-	{
-		window_size = VSFIP_CFG_TCP_WINDOW + bufhead->node.addr - pcb->rseq;
-	}
+	window_size = VSFIP_CFG_TCP_RX_WINDOW - vsfip_bufferlist_len(&socket->inq);
 	head->window_size = SYS_TO_BE_U16(window_size);
 
 	head->checksum = SYS_TO_BE_U16(0);
@@ -1099,27 +1122,6 @@ static vsf_err_t vsfip_add_tcphead(struct vsfip_socket_t *socket,
 	return VSFERR_NONE;
 }
 
-static uint8_t *vsfip_tcp_buffer(struct vsfip_socket_t *socket, uint8_t flags)
-{
-	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
-
-	pcb->buf = vsfip_buffer_get(VSFIP_CFG_HEADLEN + VSFIP_TCP_HEADLEN + 32);
-	if (NULL == pcb->buf)
-	{
-		return NULL;
-	}
-
-	pcb->buf->app.buffer += pcb->buf->app.size;
-	pcb->buf->app.size = 0;
-	if (vsfip_add_tcphead(socket, pcb->buf, flags) < 0)
-	{
-		vsfip_buffer_release(pcb->buf);
-		return NULL;
-	}
-
-	return pcb->buf->app.buffer;
-}
-
 static void vsfip_add_tcpchecksum(struct vsfip_socket_t *socket,
 									struct vsfip_buffer_t *buf)
 {
@@ -1129,20 +1131,49 @@ static void vsfip_add_tcpchecksum(struct vsfip_socket_t *socket,
 	head->checksum = SYS_TO_BE_U16(checksum);
 }
 
+static vsf_err_t vsfip_tcp_send_do(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf, uint8_t flags)
+{
+	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+
+	if (vsfip_add_tcphead(socket, buf, flags) < 0)
+	{
+		vsfip_buffer_release(buf);
+		return VSFERR_FAIL;
+	}
+	vsfip_add_tcpchecksum(socket, buf);
+	socket->pcb.ippcb.buf = buf;
+	vsfip_ip_output(socket);
+
+	if ((flags & (VSFIP_TCPFLAG_FIN | VSFIP_TCPFLAG_SYN)) ||
+		(buf->app.size > 0))
+	{
+		pcb->flags = flags;
+	}
+	pcb->lseq += buf->app.size;
+	return VSFERR_NONE;
+}
+
 static vsf_err_t vsfip_tcp_sendflags(struct vsfip_socket_t *socket,
 										uint8_t flags)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+	struct vsfip_buffer_t *buffer;
+	vsf_err_t err = VSFERR_NONE;
 
-	if (NULL == vsfip_tcp_buffer(socket, flags))
+	// even if buffer not available, also need timeout to resend
+	if (flags & (VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_FIN))
+	{
+		pcb->tx_timeout_ms = socket->tx_timeout_ms;
+	}
+
+	buffer = VSFIP_TCPBUF_GET(0);
+	if (NULL == buffer)
 	{
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
-	pcb->buf->netif = socket->netif;
-
-	vsfip_add_tcpchecksum(socket, pcb->buf);
-	socket->pcb.ippcb.buf = pcb->buf;
-	return vsfip_ip_output(socket);
+	buffer->netif = socket->netif;
+	return vsfip_tcp_send_do(socket, buffer, flags);
 }
 
 static void vsfip_tcp_postevt(struct vsfsm_t **sm, vsfsm_evt_t evt)
@@ -1160,40 +1191,103 @@ static void vsfip_tcp_postevt(struct vsfsm_t **sm, vsfsm_evt_t evt)
 static void vsfip_tcp_socket_tick(struct vsfip_socket_t *socket)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
-
-	if ((0 == pcb->tx_timeout_ms) && (0 == pcb->rx_timeout_ms))
-	{
-		return;
-	}
+	struct vsfq_node_t *node;
+	struct vsfip_buffer_t *buf;
 
 	if (pcb->tx_timeout_ms > 0)
 	{
 		pcb->tx_timeout_ms--;
 		if (0 == pcb->tx_timeout_ms)
 		{
+			if (--pcb->tx_retry)
+			{
+				pcb->lseq = pcb->acked_lseq;
+				vsfip_tcp_sendflags(socket, pcb->flags);
+				if (pcb->flags & (VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_FIN))
+				{
+					pcb->lseq++;
+				}
+				goto check_rx_to;
+			}
+
+			// timer out
+			if (socket->father && (pcb->flags & VSFIP_TCPFLAG_SYN))
+			{
+				// child socket fail to connect, no need to send event
+				vsfip_close(socket);
+				goto check_rx_to;
+			}
+
 			switch (pcb->state)
 			{
 			case VSFIP_TCPSTAT_SYN_SENT:
 			case VSFIP_TCPSTAT_SYN_GET:
 			case VSFIP_TCPSTAT_LASTACK:
 				pcb->state = VSFIP_TCPSTAT_CLOSED;
-			default:
-				vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
-				break;
 			}
+			vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
+			return;
 		}
 	}
+
+check_rx_to:
 	if (pcb->rx_timeout_ms > 0)
 	{
 		pcb->rx_timeout_ms--;
 		if (0 == pcb->rx_timeout_ms)
 		{
 			vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
+			return;
 		}
 	}
+
+	node = socket->outq.head;
+	buf = container_of(node, struct vsfip_buffer_t, proto_node);
+	while (buf != NULL)
+	{
+		if (!--buf->ttl)
+		{
+			// if buf->retry is 0
+			// 		always retry
+			// if passive close(remote sent FIN, VSFIP_TCPSTAT_CLOSEWAIT mode)
+			// if timer_out and retry count reach 0
+			// 		free bufferlist
+			if ((!buf->retry || --buf->retry) &&
+				(pcb->state != VSFIP_TCPSTAT_CLOSEWAIT))
+			{
+				uint32_t lseq = pcb->lseq;
+				pcb->lseq = buf->proto_node.addr;
+				vsfip_buffer_reference(buf);
+				buf->ttl = socket->tx_timeout_ms;
+				vsfip_tcp_send_do(socket, buf, VSFIP_TCPFLAG_PSH);
+				pcb->lseq = lseq;
+			}
+			else
+			{
+				// flush bufferlist
+				vsfip_bufferlist_free(&socket->outq);
+				pcb->lseq = pcb->acked_lseq;
+
+				// TODO: how to fix if tcp packet time out?
+				pcb->tx_retry = 3;
+				vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_FIN);
+				pcb->lseq++;
+				pcb->state = pcb->rclose ?
+					VSFIP_TCPSTAT_LASTACK : VSFIP_TCPSTAT_FINWAIT1;
+				pcb->lclose = true;
+
+				vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
+				return;
+			}
+		}
+		node = node->next;
+		buf = container_of(node, struct vsfip_buffer_t, proto_node);
+	}
+
 	if ((pcb->acked_rseq != pcb->rseq) && !--pcb->ack_tick)
 	{
 		vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_ACK);
+		pcb->ack_tick = VSFIP_TCP_ATO;
 	}
 }
 
@@ -1203,8 +1297,33 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfip_tcphead_t head = *(struct vsfip_tcphead_t *)buf->buf.buffer;
 	bool release_buffer = true;
+	enum vsfip_tcp_stat_t pre_state = pcb->state;
+
+	if ((socket->listener.backlog > 0) && (head.flags != VSFIP_TCPFLAG_SYN))
+	{
+		// for listern socket, can only accept SYN packet
+		// maybe some child socket fails and close, but remote still send packet
+		// the packet will be directed to the listener socket
+		vsfip_buffer_release(buf);
+		return;
+	}
 
 	pcb->rwnd = head.window_size;
+	if (head.flags & VSFIP_TCPFLAG_RST)
+	{
+		vsfip_buffer_release(buf);
+		pcb->tx_timeout_ms = 0;
+		pcb->rx_timeout_ms = 0;
+		pcb->state = VSFIP_TCPSTAT_CLOSED;
+		vsfip_bufferlist_free(&socket->inq);
+		vsfip_bufferlist_free(&socket->outq);
+
+		vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
+		vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_SOCKET_TIMEOUT);
+		return;
+	}
+
+re_process:
 	switch (pcb->state)
 	{
 	case VSFIP_TCPSTAT_INVALID:
@@ -1220,6 +1339,7 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 			struct vsfip_sockaddr_t sockaddr;
 			struct vsfip_ip4head_t *iphead = buf->iphead.ip4head;
 			struct vsfip_socket_t *new_socket;
+			struct vsfip_tcppcb_t *new_pcb;
 
 			sockaddr.sin_port = head.port.src;
 			sockaddr.sin_addr.addr.s_addr = iphead->ipsrc;
@@ -1233,22 +1353,21 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 			}
 			socket->listener.accepted_num++;
 
-			pcb = (struct vsfip_tcppcb_t *)new_socket->pcb.protopcb;
-			pcb->lseq = pcb->acked_lseq = vsfip_get_tsn();
-			pcb->rseq = 0;
-			pcb->tx_retry = 3;
-			pcb->state = VSFIP_TCPSTAT_SYN_GET;
-			pcb->rseq = head.seq + 1;
-			pcb->acked_lseq = pcb->lseq;
-			pcb->tx_timeout_ms = socket->timeout_ms;
+			new_pcb = (struct vsfip_tcppcb_t *)new_socket->pcb.protopcb;
+			new_pcb->lseq = new_pcb->acked_lseq = vsfip_get_tsn();
+			new_pcb->rseq = 0;
+			new_pcb->state = VSFIP_TCPSTAT_SYN_GET;
+			new_pcb->rseq = head.seq + 1;
+			new_pcb->acked_lseq = new_pcb->lseq;
+			// tx_sm is notifier to vsfip_tcp_accept
+			// in vsfip_tcp_accept, tx_sm of the listener socket will be cleared
+			new_pcb->tx_sm = pcb->tx_sm;
 
+			new_pcb->tx_retry = 3;
 			vsfip_tcp_sendflags(new_socket,
 								VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_ACK);
-			pcb->lseq++;
-			pcb->rclose = 0;
-
-			pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
-			vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_TCP_CONNECTOK);
+			new_pcb->lseq++;
+			new_pcb->rclose = false;
 		}
 		goto release_buf;
 		break;
@@ -1258,13 +1377,16 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 			// simultaneous open
 			pcb->rseq = head.seq + 1;
 
+			pcb->tx_retry = 3;
 			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_ACK);
-			pcb->tx_timeout_ms = socket->timeout_ms;
+			pcb->lseq++;
 			pcb->state = VSFIP_TCPSTAT_SYN_GET;
 		}
 		else if ((head.flags & (VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_ACK)) &&
 					(head.ackseq == pcb->lseq))
 		{
+			pcb->tx_timeout_ms = 0;
+
 			// send ACK
 			pcb->rseq = head.seq + 1;
 			pcb->acked_lseq = pcb->lseq;
@@ -1286,11 +1408,15 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 		if (VSFIP_TCPFLAG_SYN == head.flags)
 		{
 			// get resend SYN(previous SYN + ACK lost), reply again
+			pcb->lseq = pcb->acked_lseq;
+			pcb->tx_retry = 3;
 			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_ACK);
+			pcb->lseq++;
 		}
 		else if ((head.flags & VSFIP_TCPFLAG_ACK) &&
 					(head.ackseq == (pcb->acked_lseq + 1)))
 		{
+			pcb->tx_timeout_ms = 0;
 			pcb->acked_lseq = pcb->lseq = head.ackseq;
 			if (buf->app.size > 0)
 			{
@@ -1298,8 +1424,8 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 				{
 					release_buffer = false;
 					pcb->rseq += buf->app.size;
-					pcb->ack_tick = 200;
-					vsfq_append(&socket->inq, (struct vsfq_node_t *)buf);
+					pcb->ack_tick = VSFIP_TCP_ATO;
+					vsfq_append(&socket->inq, &buf->proto_node);
 				}
 				else
 				{
@@ -1311,8 +1437,11 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 		}
 		else if (VSFIP_TCPFLAG_FIN & head.flags)
 		{
+			pcb->tx_retry = 3;
 			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_FIN);
+			pcb->lseq++;
 			pcb->state = VSFIP_TCPSTAT_FINWAIT1;
+			pcb->lclose = true;
 		}
 		goto release_buf;
 	case VSFIP_TCPSTAT_ESTABLISHED:
@@ -1322,9 +1451,13 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 			{
 				release_buffer = false;
 				pcb->rseq += buf->app.size;
-				pcb->ack_tick = 200;
-				vsfq_append(&socket->inq, (struct vsfq_node_t *)buf);
+				pcb->ack_tick = VSFIP_TCP_ATO;
+				vsfq_append(&socket->inq, &buf->proto_node);
 				vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_TCP_RXOK);
+				if (pcb->state != pre_state)
+				{
+					goto re_process;
+				}
 			}
 			else
 			{
@@ -1336,10 +1469,32 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 			(head.ackseq != pcb->acked_lseq))
 		{
 			// ACK received
+			struct vsfq_node_t *node;
+			struct vsfip_buffer_t *buf;
+
+			pcb->tx_timeout_ms = 0;
 			pcb->acked_lseq = head.ackseq;
-			if (pcb->acked_lseq == pcb->lseq)
+
+			node = socket->outq.head;
+			buf = container_of(node, struct vsfip_buffer_t, proto_node);
+			while (buf != NULL)
 			{
-				vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_TCP_TXOK);
+				if (pcb->acked_lseq >= (buf->proto_node.addr + buf->app.size))
+				{
+					vsfq_dequeue(&socket->outq);
+					vsfip_buffer_release(buf);
+					node = socket->outq.head;
+					buf = container_of(node, struct vsfip_buffer_t, proto_node);
+				}
+				else
+				{
+					break;
+				}
+			}
+			vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_TCP_TXOK);
+			if (pcb->state != pre_state)
+			{
+				goto re_process;
 			}
 		}
 
@@ -1347,15 +1502,21 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 		{
 			// passive close
 		remote_close:
+			// clear FIN, in case next state is CLOSEWAIT, and process again
+			head.flags &= ~VSFIP_TCPFLAG_FIN;
 			pcb->rclose = true;
-			pcb->rseq++;
+			pcb->rseq = head.seq + 1;
 			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_ACK);
 
 			// remote close, when local socket is closed
 			// set the pcb->state = VSFIP_TCPSTAT_LASTACK
-			pcb->state = pcb->lclose ?
+			pre_state = pcb->state = pcb->lclose ?
 					VSFIP_TCPSTAT_CLOSED : VSFIP_TCPSTAT_CLOSEWAIT;
 			vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_TCP_RXFAIL);
+			if (pcb->state != pre_state)
+			{
+				goto re_process;
+			}
 			if (VSFIP_TCPSTAT_CLOSED == pcb->state)
 			{
 				vsfip_tcp_postevt(&pcb->tx_sm, VSFIP_EVT_TCP_CLOSED);
@@ -1368,29 +1529,44 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 		}
 		break;
 	case VSFIP_TCPSTAT_FINWAIT1:
+		// local close, but still can receive data from remote
 		if ((head.flags & VSFIP_TCPFLAG_ACK) && (head.ackseq == pcb->lseq))
 		{
-			pcb->acked_lseq = pcb->lseq;
 			pcb->lclose = true;
+			pcb->tx_timeout_ms = 0;
+			pcb->acked_lseq = pcb->lseq;
 			if (head.flags & VSFIP_TCPFLAG_FIN)
 			{
 				goto remote_close;
 			}
 			pcb->state = VSFIP_TCPSTAT_FINWAIT2;
 		}
-		goto release_buf;
+		goto check_data_in_FIN;
 	case VSFIP_TCPSTAT_FINWAIT2:
 		if (head.flags & VSFIP_TCPFLAG_FIN)
 		{
 			goto remote_close;
 		}
-		else
+	check_data_in_FIN:
+		if (buf->app.size > 0)
 		{
-			goto release_buf;
+			if (pcb->rseq == head.seq)
+			{
+				pcb->rseq += buf->app.size;
+			}
+			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_ACK);
 		}
+		goto release_buf;
 	case VSFIP_TCPSTAT_LASTACK:
+		// maybe receive FIN again because previous ACK is lost
+		if (head.flags & VSFIP_TCPFLAG_FIN)
+		{
+			vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_ACK);
+		}
 		if ((VSFIP_TCPFLAG_ACK == head.flags) && (head.ackseq == pcb->lseq))
 		{
+			pcb->lclose = true;
+			pcb->tx_timeout_ms = 0;
 			pcb->acked_lseq = pcb->lseq;
 			pcb->state = VSFIP_TCPSTAT_CLOSED;
 			vsfip_buffer_release(buf);
@@ -1408,7 +1584,6 @@ static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
 	}
 }
 
-
 vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr)
 {
@@ -1420,6 +1595,10 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		(pcb->state != VSFIP_TCPSTAT_CLOSED))
 	{
 		return VSFERR_INVALID_PARAMETER;
+	}
+	if (pcb->tx_sm != NULL)
+	{
+		return VSFERR_BUG;
 	}
 	socket->remote_sockaddr = *sockaddr;
 
@@ -1439,18 +1618,13 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	pcb->lseq = pcb->acked_lseq = vsfip_get_tsn();
 	pcb->rseq = 0;
+
 	pcb->tx_retry = 3;
-
-retry:
 	vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_SYN);
-
 	pcb->lseq++;
-	pcb->tx_timeout_ms = socket->timeout_ms;
-	pcb->tx_sm = pt->sm;
 	pcb->state = VSFIP_TCPSTAT_SYN_SENT;
 
-	// wait VSFIP_EVT_TCP_CONNECTOK, VSFIP_EVT_TCP_CONNECTFAIL,
-	// 		VSFIP_EVT_SOCKET_TIMEOUT
+	pcb->tx_sm = pt->sm;
 	evt = VSFSM_EVT_NONE;
 	vsfsm_pt_entry(pt);
 	if ((evt != VSFIP_EVT_TCP_CONNECTOK) &&
@@ -1460,28 +1634,33 @@ retry:
 	}
 
 	pcb->lseq = pcb->acked_lseq;
-	if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
-	{
-		if (--pcb->tx_retry)
-		{
-			goto retry;
-		}
-		else
-		{
-			return VSFERR_FAIL;
-		}
-	}
-	else
-	{
-		return (VSFIP_EVT_TCP_CONNECTOK == evt) ? VSFERR_NONE : VSFERR_FAIL;
-	}
+	return (VSFIP_EVT_TCP_CONNECTOK == evt) ? VSFERR_NONE : VSFERR_FAIL;
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 }
 
+static struct vsfip_socket_t*
+vsfip_tcp_accept_try(struct vsfip_socket_t *socket)
+{
+	struct vsfip_tcppcb_t *pcb;
+
+	socket = socket->listener.child;
+	while (socket != NULL)
+	{
+		pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+		if ((pcb->state == VSFIP_TCPSTAT_ESTABLISHED) && !socket->accepted)
+		{
+			socket->accepted = true;
+			return socket;
+		}
+		socket = socket->next;
+	}
+	return NULL;
+}
+
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-		struct vsfip_socket_t *socket, struct vsfip_socket_t ** acceptsocket)
+		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 
@@ -1491,16 +1670,29 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		return VSFERR_FAIL;
 	}
+	if (pcb->tx_sm != NULL)
+	{
+		return VSFERR_BUG;
+	}
 
-	pcb->rx_sm = pt->sm;
+	// try find one first
+	*acceptsocket = vsfip_tcp_accept_try(socket);
+	if (*acceptsocket != NULL)
+	{
+		return VSFERR_NONE;
+	}
 
 	// wait for VSFIP_EVT_TCP_CONNECTOK or VSFIP_EVT_TCP_CONNECTFAIL
+	pcb->tx_sm = pt->sm;
 	evt = VSFSM_EVT_NONE;
 	vsfsm_pt_entry(pt);
 	if ((evt != VSFIP_EVT_TCP_CONNECTOK) && (evt != VSFIP_EVT_TCP_CONNECTFAIL))
 	{
 		return VSFERR_NOT_READY;
 	}
+	// when post event, will only clear tx_sm of child socket
+	// so clear tx_sm of listener socket manually
+	pcb->tx_sm = NULL;
 	if (VSFIP_EVT_TCP_CONNECTFAIL == evt)
 	{
 		return VSFERR_FAIL;
@@ -1508,79 +1700,90 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfsm_pt_end(pt);
 
-	socket = socket->listener.child;
-	while (socket != NULL)
+	*acceptsocket = vsfip_tcp_accept_try(socket);
+	if (*acceptsocket != NULL)
 	{
-		if (!socket->accepted)
-		{
-			socket->accepted = true;
-			*acceptsocket = socket;
-			return VSFERR_NONE;
-		}
+		return VSFERR_NONE;
 	}
-	return VSFERR_NOT_AVAILABLE;
+	return VSFERR_BUG;
 }
 
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf)
+			struct vsfip_buffer_t *buf, bool flush)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	vsf_err_t err = VSFERR_NONE;
+	uint32_t size, window;
 
 	vsfsm_pt_begin(pt);
+	if (pcb->tx_sm != NULL)
+	{
+		err = VSFERR_BUG;
+		goto cleanup;
+	}
 	if (pcb->lclose)
 	{
 		err = VSFERR_FAIL;
 		goto cleanup;
 	}
+
 	buf->netif = socket->netif;
+	buf->retry = VSFIP_TCP_RETRY;
+	while (1)
+	{
+		size = vsfip_bufferlist_len(&socket->outq);
+		window = min(VSFIP_CFG_TCP_TX_WINDOW, pcb->rwnd);
+		if ((size + buf->app.size) <= window)
+		{
+			break;
+		}
 
-	pcb->tx_retry = 3;
+		pcb->tx_sm = pt->sm;
+		evt = VSFSM_EVT_NONE;
+		vsfsm_pt_entry(pt);
+		if ((evt != VSFIP_EVT_TCP_TXOK) &&
+			(evt != VSFIP_EVT_SOCKET_TIMEOUT))
+		{
+			return VSFERR_NOT_READY;
+		}
 
-retry:
-	if (vsfip_add_tcphead(socket, buf, VSFIP_TCPFLAG_PSH) < 0)
+		if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
+		{
+			err = VSFERR_FAIL;
+			goto cleanup;
+		}
+	}
+
+	buf->ttl = socket->tx_timeout_ms;
+	vsfq_append(&socket->outq, &buf->proto_node);
+	vsfip_buffer_reference(buf);
+	if (vsfip_tcp_send_do(socket, buf, VSFIP_TCPFLAG_PSH) != 0)
 	{
 		err = VSFERR_FAIL;
 		goto cleanup;
 	}
-	vsfip_add_tcpchecksum(socket, buf);
 
-	vsfip_buffer_reference(buf);
-	socket->pcb.ippcb.buf = buf;
-	vsfip_ip_output(socket);
-
-	pcb->lseq += buf->app.size;
-	pcb->tx_timeout_ms = socket->timeout_ms;
-	pcb->tx_sm = pt->sm;
-
-	// wait VSFIP_EVT_TCP_TXOK, VSFIP_EVT_TCP_TXFAIL, VSFIP_EVT_SOCKET_TIMEOUT
-	evt = VSFSM_EVT_NONE;
-	vsfsm_pt_entry(pt);
-	if ((evt != VSFIP_EVT_TCP_TXOK) && (evt != VSFIP_EVT_SOCKET_TIMEOUT) &&
-		(evt != VSFIP_EVT_TCP_TXFAIL))
+	if (flush)
 	{
-		return VSFERR_NOT_READY;
-	}
+		while (socket->outq.head != NULL)
+		{
+			pcb->tx_sm = pt->sm;
+			evt = VSFSM_EVT_NONE;
+			vsfsm_pt_entry(pt);
+			if ((evt != VSFIP_EVT_TCP_TXOK) &&
+				(evt != VSFIP_EVT_SOCKET_TIMEOUT))
+			{
+				return VSFERR_NOT_READY;
+			}
 
-	// NO need to release the buffer because low level driver will release it
-	pcb->lseq = pcb->acked_lseq;
-	if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
-	{
-		if (--pcb->tx_retry)
-		{
-			goto retry;
-		}
-		else
-		{
-			err = VSFERR_FAIL;
+			if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
+			{
+				err = VSFERR_FAIL;
+				goto cleanup;
+			}
 		}
 	}
-	else
-	{
-		err = (VSFIP_EVT_TCP_TXOK == evt) ? VSFERR_NONE : VSFERR_FAIL;
-	}
-	buf->ref--;
 
 	vsfsm_pt_end(pt);
 	return err;
@@ -1594,21 +1797,27 @@ vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			struct vsfip_buffer_t **buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+	struct vsfq_node_t *node;
 
 	vsfsm_pt_begin(pt);
+	if (pcb->rx_sm != NULL)
+	{
+		return VSFERR_BUG;
+	}
 	if (pcb->rclose)
 	{
 		return VSFERR_FAIL;
 	}
 
-	*buf = (struct vsfip_buffer_t *)vsfq_dequeue(&socket->inq);
+	node = vsfq_dequeue(&socket->inq);
+	*buf = container_of(node, struct vsfip_buffer_t, proto_node);
 	if (NULL == *buf)
 	{
-		pcb->rx_timeout_ms = socket->timeout_ms;
-		pcb->rx_sm = pt->sm;
+		pcb->rx_timeout_ms = socket->rx_timeout_ms;
 
 		// wait VSFIP_EVT_TCP_RXOK, VSFIP_EVT_TCP_RXFAIL,
 		// 			VSFIP_EVT_SOCKET_TIMEOUT
+		pcb->rx_sm = pt->sm;
 		evt = VSFSM_EVT_NONE;
 		vsfsm_pt_entry(pt);
 		if ((evt != VSFIP_EVT_TCP_RXOK) && (evt != VSFIP_EVT_SOCKET_TIMEOUT) &&
@@ -1617,9 +1826,9 @@ vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			return VSFERR_NOT_READY;
 		}
 
-		*buf = (struct vsfip_buffer_t *)vsfq_dequeue(&socket->inq);
-		return ((VSFIP_EVT_SOCKET_TIMEOUT == evt) ||
-			(VSFIP_EVT_TCP_RXFAIL == evt)) ? VSFERR_FAIL : VSFERR_NONE;
+		node = vsfq_dequeue(&socket->inq);
+		*buf = container_of(node, struct vsfip_buffer_t, proto_node);
+		return (NULL == *buf) ? VSFERR_FAIL : VSFERR_NONE;
 	}
 
 	vsfsm_pt_end(pt);
@@ -1636,42 +1845,59 @@ vsf_err_t vsfip_tcp_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		return VSFERR_NONE;
 	}
+	if (pcb->tx_sm != NULL)
+	{
+		return VSFERR_BUG;
+	}
 
-	pcb->tx_retry = 3;
+	// wait outq free
+	while (socket->outq.head != NULL)
+	{
+		pcb->tx_sm = pt->sm;
+		evt = VSFSM_EVT_NONE;
+		vsfsm_pt_entry(pt);
+		if ((evt != VSFIP_EVT_TCP_TXOK) && (evt != VSFIP_EVT_SOCKET_TIMEOUT))
+		{
+			return VSFERR_NOT_READY;
+		}
 
-retry:
-	vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_FIN);
+		if (VSFIP_EVT_TCP_TXOK == evt)
+		{
+			continue;
+		}
+		else
+		{
+			// try to continue to send FIN
+			break;
+		}
+	}
 
-	pcb->lseq++;
-	pcb->tx_timeout_ms = socket->timeout_ms;
-	pcb->tx_sm = pt->sm;
-	pcb->state = (VSFIP_TCPSTAT_CLOSEWAIT == pcb->state) ?
-					VSFIP_TCPSTAT_LASTACK : VSFIP_TCPSTAT_FINWAIT1;
+	if (!pcb->lclose)
+	{
+		pcb->lseq = pcb->acked_lseq;
+		pcb->tx_retry = 3;
+		vsfip_tcp_sendflags(socket, VSFIP_TCPFLAG_FIN);
+		pcb->lseq++;
+		pcb->state = pcb->rclose ?
+						VSFIP_TCPSTAT_LASTACK : VSFIP_TCPSTAT_FINWAIT1;
+	}
 
 	// wait VSFIP_EVT_TCP_CLOSED, VSFIP_EVT_SOCKET_TIMEOUT
+	pcb->tx_sm = pt->sm;
 	evt = VSFSM_EVT_NONE;
 	vsfsm_pt_entry(pt);
 	if ((evt != VSFIP_EVT_TCP_CLOSED) && (evt != VSFIP_EVT_SOCKET_TIMEOUT))
 	{
 		return VSFERR_NOT_READY;
 	}
+	// packet is sending and waiting
+	if (pcb->tx_timeout_ms > 0)
+	{
+		return VSFERR_NOT_READY;
+	}
 
 	pcb->lseq = pcb->acked_lseq;
-	if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
-	{
-		if (--pcb->tx_retry)
-		{
-			goto retry;
-		}
-		else
-		{
-			return VSFERR_FAIL;
-		}
-	}
-	else
-	{
-		return (VSFIP_EVT_TCP_CLOSED == evt) ? VSFERR_NONE : VSFERR_FAIL;
-	}
+	return (VSFIP_EVT_TCP_CLOSED == evt) ? VSFERR_NONE : VSFERR_FAIL;
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;

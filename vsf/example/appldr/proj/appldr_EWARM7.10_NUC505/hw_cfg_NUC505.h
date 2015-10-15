@@ -26,10 +26,10 @@
 #define KEY_PIN							0
 
 // bcm wifi
-#define BCM_PORT_TYPE					BCM_BUS_TYPE_SPI
+#define BCM_PORT_TYPE					BCM_BUS_TYPE_SDIO
 
 #define BCM_PORT						1
-#define BCM_FREQ						48000 //48000
+#define BCM_FREQ						32000 //48000
 
 #if BCM_PORT_TYPE == BCM_BUS_TYPE_SPI
 #define BCM_RST_PORT					2

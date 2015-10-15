@@ -24,6 +24,8 @@
 #include "vsfip.h"
 #include "vsfip_buffer.h"
 
+static uint8_t vsfip_buffer128_mem[VSFIP_BUFFER_NUM][128];
+static struct vsfip_buffer_t vsfip_buffer128[VSFIP_BUFFER_NUM];
 static uint8_t vsfip_buffer_mem[VSFIP_BUFFER_NUM][VSFIP_BUFFER_SIZE];
 static struct vsfip_buffer_t vsfip_buffer[VSFIP_BUFFER_NUM];
 
@@ -36,28 +38,63 @@ void vsfip_buffer_init(void)
 		vsfip_buffer[i].buffer = vsfip_buffer_mem[i];
 //		vsfip_buffer[i].size = sizeof(vsfip_buffer_mem[i]);
 	}
+	for (i = 0; i < VSFIP_BUFFER_NUM; i++)
+	{
+		vsfip_buffer128[i].ref = 0;
+		vsfip_buffer128[i].buffer = vsfip_buffer128_mem[i];
+//		vsfip_buffer128[i].size = sizeof(vsfip_buffer128_mem[i]);
+	}
 }
 
-struct vsfip_buffer_t * vsfip_buffer_get(uint32_t size)
+struct vsfip_buffer_t* vsfip_buffer_get(uint32_t size)
 {
-	if (size < VSFIP_BUFFER_SIZE)
+	struct vsfip_buffer_t *base;
+	int i;
+
+	if (size <= sizeof(vsfip_buffer128_mem[0]))
 	{
-		int i;
-		for (i = 0; i < VSFIP_BUFFER_NUM; i++)
+		base = vsfip_buffer128;
+	}
+	else if (size <= VSFIP_BUFFER_SIZE)
+	{
+		base = vsfip_buffer;
+	}
+	else
+	{
+		return NULL;
+	}
+
+retry:
+	for (i = 0; i < VSFIP_BUFFER_NUM; i++)
+	{
+		if (!base[i].ref)
 		{
-			if (!vsfip_buffer[i].ref)
-			{
-				vsfip_buffer[i].ref++;
-				vsfip_buffer[i].buf.buffer =\
-					vsfip_buffer[i].app.buffer = vsfip_buffer[i].buffer;
-				vsfip_buffer[i].buf.size = vsfip_buffer[i].app.size = size;
-				vsfip_buffer[i].node.next = NULL;
-				vsfip_buffer[i].netif = NULL;
-				return &vsfip_buffer[i];
-			}
+			base[i].ref++;
+			base[i].buf.buffer = base[i].app.buffer = base[i].buffer;
+			base[i].buf.size = base[i].app.size = size;
+			base[i].proto_node.next = base[i].netif_node.next = NULL;
+			base[i].netif = NULL;
+			return &base[i];
 		}
 	}
+	if (base == vsfip_buffer128)
+	{
+		base = vsfip_buffer;
+		goto retry;
+	}
 	return NULL;
+}
+
+struct vsfip_buffer_t* vsfip_appbuffer_get(uint32_t header, uint32_t app)
+{
+	struct vsfip_buffer_t *buf = vsfip_buffer_get(header + app);
+
+	if (buf != NULL)
+	{
+		buf->app.buffer += header;
+		buf->app.size -= header;
+	}
+	return buf;
 }
 
 void vsfip_buffer_reference(struct vsfip_buffer_t *buf)

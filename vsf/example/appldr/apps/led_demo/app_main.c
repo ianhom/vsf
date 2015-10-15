@@ -205,6 +205,8 @@ struct vsfapp_t
 			struct vsfusbd_CDCACM_param_t param;
 			struct vsf_stream_t stream_tx;
 			struct vsf_stream_t stream_rx;
+			struct vsf_fifo_t fifo_tx;
+			struct vsf_fifo_t fifo_rx;
 			uint8_t txbuff[65];
 			uint8_t rxbuff[65];
 		} cdc;
@@ -324,10 +326,16 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		app->usbd.cdc.param.CDC_param.ep_in = 3;
 		app->usbd.cdc.param.CDC_param.stream_tx = &app->usbd.cdc.stream_tx;
 		app->usbd.cdc.param.CDC_param.stream_rx = &app->usbd.cdc.stream_rx;
-		app->usbd.cdc.stream_tx.fifo.buffer.buffer = app->usbd.cdc.txbuff;
-		app->usbd.cdc.stream_tx.fifo.buffer.size = sizeof(app->usbd.cdc.txbuff);
-		app->usbd.cdc.stream_rx.fifo.buffer.buffer = app->usbd.cdc.rxbuff;
-		app->usbd.cdc.stream_rx.fifo.buffer.size = sizeof(app->usbd.cdc.rxbuff);
+
+		app->usbd.cdc.fifo_tx.buffer.buffer = app->usbd.cdc.txbuff;
+		app->usbd.cdc.fifo_tx.buffer.size = sizeof(app->usbd.cdc.txbuff);
+		app->usbd.cdc.fifo_rx.buffer.buffer = app->usbd.cdc.rxbuff;
+		app->usbd.cdc.fifo_rx.buffer.size = sizeof(app->usbd.cdc.rxbuff);
+		app->usbd.cdc.stream_tx.user_mem = &app->usbd.cdc.fifo_tx;
+		app->usbd.cdc.stream_tx.op = &fifo_stream_op;
+		app->usbd.cdc.stream_rx.user_mem = &app->usbd.cdc.fifo_rx;
+		app->usbd.cdc.stream_rx.op = &fifo_stream_op;
+
 		app->usbd.ifaces[0].class_protocol =
 				(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class;
 		app->usbd.ifaces[0].protocol_param = (void *)&app->usbd.cdc.param;

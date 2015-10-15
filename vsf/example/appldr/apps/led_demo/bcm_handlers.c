@@ -559,7 +559,7 @@ static void vsfshell_bcm_transact_sniffer(struct sniffer_t *s,
 {
 	if ((s->filter != NULL) && s->filter(buf))
 	{
-		vsfq_append(&s->list, &buf->node);
+		vsfq_append(&s->list, &buf->netif_node);
 		vsfsm_sem_post(&s->sem);
 	}
 	else if (s->transact != NULL)
@@ -586,6 +586,7 @@ vsfshell_bcm_sniffer_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct sniffer_t *sniffer = (struct sniffer_t *)pt->user_data;
 	struct vsfsm_pt_t *output_pt = &sniffer->output_pt;
+	struct vsfq_node_t *node;
 	uint8_t byte;
 	uint32_t i;
 	
@@ -598,7 +599,8 @@ vsfshell_bcm_sniffer_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		
 		// print the buffer if available
-		sniffer->cur_buf = (struct vsfip_buffer_t *)vsfq_dequeue(&sniffer->list);
+		node = vsfq_dequeue(&sniffer->list);
+		sniffer->cur_buf = container_of(node, struct vsfip_buffer_t, netif_node);
 		if (sniffer->cur_buf != NULL)
 		{
 			sniffer->cur_bufptr = sniffer->cur_buf->buf.buffer;

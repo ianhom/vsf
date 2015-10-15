@@ -22,9 +22,22 @@
 
 #include "tool/buffer/buffer.h"
 
+struct vsf_stream_t;
+struct vsf_stream_op_t
+{
+	void (*init)(struct vsf_stream_t *stream);
+	uint32_t (*write)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+	uint32_t (*read)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+	uint32_t (*get_data_length)(struct vsf_stream_t *stream);
+	uint32_t (*get_avail_length)(struct vsf_stream_t *stream);
+};
+
 struct vsf_stream_t
 {
-	struct vsf_fifo_t fifo;
+	// user_mem points to user structure, eg queue/fifo
+	void *user_mem;
+	struct vsf_stream_op_t const *op;
+
 	// callback_tx is notification for tx end of the stream
 	// when rx end read the data out, will notify the tx end
 	struct
@@ -54,5 +67,8 @@ uint32_t stream_get_data_size(struct vsf_stream_t *stream);
 uint32_t stream_get_free_size(struct vsf_stream_t *stream);
 void stream_connect_rx(struct vsf_stream_t *stream);
 void stream_connect_tx(struct vsf_stream_t *stream);
+
+// fifo stream
+extern const struct vsf_stream_op_t fifo_stream_op;
 
 #endif	// __STREAM_H_INCLUDED__
