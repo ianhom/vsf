@@ -45,9 +45,9 @@ struct vsfusbh_uvc_param_t
 	uint8_t video_format : 3;
 	uint8_t : 2;
 
-	uint8_t video_width;
-	uint8_t video_height;
 	uint8_t video_fps;
+	uint16_t video_width;
+	uint16_t video_height;
 };
 
 vsf_err_t vsfusbh_uvc_set(void *dev_data, struct vsfusbh_uvc_param_t *param);

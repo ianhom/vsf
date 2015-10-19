@@ -32,6 +32,9 @@
 #define nuc505_EINT_ONLOW			0		// not support
 #define nuc505_EINT_ONHIGH			0		// not support
 
+#define nuc505_HCD_PORT1			(0x1 << 0)
+#define nuc505_HCD_PORT2			(0x1 << 1)
+
 #define nuc505_USART_MODE0
 #define nuc505_USART_MODE1
 #define nuc505_USART_MODE2

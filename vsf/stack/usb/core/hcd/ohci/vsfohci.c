@@ -298,7 +298,7 @@ struct vsfusbh_device_t *vsfdev, uint32_t pipe,
 	{
 		if ((ohci_device->ed[i] != NULL) &&
 			(((ohci_device->ed[i]->hwINFO >> 7) & 0xf) == ep_num) &&
-			((ohci_device->in_flag >> i) == is_in))
+			(((ohci_device->in_flag >> i) & 0x1) == is_in))
 		{
 			ed = ohci_device->ed[i];
 			break;
@@ -935,13 +935,13 @@ static uint32_t vsfohci_init_hc_start(struct vsfohci_t *vsfohci)
 
 	ohci->regs->hcca = (uint32_t)ohci->hcca;
 
-	ohci->regs->fminterval = 0x2edf | (((0x2edf - 210) * 6 / 7) << 16);
-	ohci->regs->periodicstart = (0x2edf * 9) / 10;
-	ohci->regs->lsthresh = 0x628;
-
 	ohci->hc_control = OHCI_CONTROL_INIT | OHCI_USB_OPER;
 	ohci->disabled = 0;
 	ohci->regs->control = ohci->hc_control;
+
+	ohci->regs->fminterval = 0x2edf | (((0x2edf - 210) * 6 / 7) << 16);
+	ohci->regs->periodicstart = (0x2edf * 9) / 10;
+	ohci->regs->lsthresh = 0x628;
 
 	temp = OHCI_INTR_MIE | OHCI_INTR_UE | OHCI_INTR_WDH | OHCI_INTR_SO;
 	ohci->regs->intrstatus = temp;

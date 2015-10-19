@@ -45,7 +45,7 @@ struct vsfusbh_device_t
 	// *deiver[num]
 	// driver_cnt
 
-	// save hcd pointer
+	// save priv device pointer
 	void *priv;
 };
 
@@ -88,13 +88,14 @@ struct iso_packet_descriptor_t
 
 struct vsfusbh_urb_t
 {
-	struct urb_priv_t *urb_priv;
+	struct urb_priv_t *urb_priv;	// TODO: void *urb_priv;
 
 	struct vsfusbh_device_t *vsfdev;
 	uint32_t pipe;					/*!< pipe information						*/
 	int32_t status;					/*!< returned status						*/
 
-	uint32_t transfer_flags;		/*!< USB_DISABLE_SPD | USB_ISO_ASAP | etc.	*/
+	uint16_t packet_size;
+	uint16_t transfer_flags;		/*!< USB_DISABLE_SPD | USB_ISO_ASAP | etc.	*/
 	void *transfer_buffer;
 	uint32_t transfer_length;
 	uint32_t actual_length;

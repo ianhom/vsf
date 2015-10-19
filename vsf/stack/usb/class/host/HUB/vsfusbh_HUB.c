@@ -47,31 +47,28 @@ struct vsfusbh_hub_t
 };
 
 static vsf_err_t hub_set_port_feature(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb,
-	uint16_t port, uint16_t feature)
+		struct vsfusbh_urb_t *vsfurb, uint16_t port, uint16_t feature)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_SET_FEATURE,
 		feature, port);
 }
 static vsf_err_t hub_get_port_status(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb,
-	uint16_t port)
+		struct vsfusbh_urb_t *vsfurb, uint16_t port)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_PORT,
 		USB_REQ_GET_STATUS, 0, port);
 }
 static vsf_err_t hub_clear_port_feature(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb,
-	int port, int feature)
+		struct vsfusbh_urb_t *vsfurb, int port, int feature)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_CLEAR_FEATURE,
 		feature, port);
 }
 static vsf_err_t hub_get_status(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb)
+		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
@@ -95,7 +92,7 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		vsfurb->transfer_buffer = NULL;
 		vsfurb->transfer_length = 0;
 		err = hub_set_port_feature(hdata->usbh, vsfurb, hdata->counter,
-			USB_PORT_FEAT_RESET);
+				USB_PORT_FEAT_RESET);
 		if (err != VSFERR_NONE)
 			return err;
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -104,7 +101,21 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 		/* delay 100ms after port reset*/
 		vsfsm_pt_delay(pt, 100);
-
+		
+		// clear reset
+		vsfurb->transfer_buffer = NULL;
+		vsfurb->transfer_length = 0;
+		err = hub_clear_port_feature(hdata->usbh, vsfurb,
+				hdata->counter, USB_PORT_FEAT_C_RESET);
+		if (err != VSFERR_NONE)
+			return err;
+		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
+		if (vsfurb->status != URB_OK)
+			return VSFERR_FAIL;
+		
+		/* delay 100ms after port reset*/
+		vsfsm_pt_delay(pt, 50);
+		
 		/* get port status for check */
 		vsfurb->transfer_buffer = &hdata->hub_portsts;
 		vsfurb->transfer_length = sizeof(hdata->hub_portsts);
@@ -118,17 +129,6 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		/* check port status after reset */
 		if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_ENABLE)
 		{
-			/* clear the reset state */
-			vsfurb->transfer_buffer = NULL;
-			vsfurb->transfer_length = 0;
-			err = hub_clear_port_feature(hdata->usbh, vsfurb,
-				hdata->counter, USB_PORT_FEAT_C_RESET);
-			if (err != VSFERR_NONE)
-				return err;
-			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-			if (vsfurb->status != URB_OK)
-				return VSFERR_FAIL;
-
 			return VSFERR_NONE;
 		}
 		else
@@ -209,6 +209,8 @@ static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_LOW_SPEED)
 		usb->speed = USB_SPEED_LOW;
+	else if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_HIGH_SPEED)
+		usb->speed = USB_SPEED_HIGH;
 	else
 		usb->speed = USB_SPEED_FULL;
 

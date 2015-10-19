@@ -13,17 +13,17 @@
  *      YYYY-MM-DD:     What(by Who)                                      *
  *      2008-11-07:     created(by SimonQian)                             *
  **************************************************************************/
-
+#include "app_cfg.h"
 #include "app_type.h"
 #include "interfaces.h"
 
-#if IFS_OHCI_EN
+#if IFS_HCD_EN
 
-#include "NUC400_OHCI.h"
-#include "NUC472_442.h"
+#include "NUC505_OHCI.h"
+#include "NUC505Series.h"
 
-extern void nuc400_unlock_reg(void);
-extern void nuc400_lock_reg(void);
+extern void nuc505_unlock_reg(void);
+extern void nuc505_lock_reg(void);
 
 //GPB_MFPL_PB0MFP
 #define SYS_GPB_MFPL_PB0MFP_GPIO			(0x0UL<<SYS_GPB_MFPL_PB0MFP_Pos)
@@ -51,55 +51,120 @@ extern void nuc400_lock_reg(void);
 #define SYS_GPB_MFPL_PB3MFP_USB1_D_P		(0x3UL<<SYS_GPB_MFPL_PB3MFP_Pos)
 #define SYS_GPB_MFPL_PB3MFP_EBI_AD5			(0x7UL<<SYS_GPB_MFPL_PB3MFP_Pos)
 
-struct interface_ohci_irq_t nuc400_ohci_irq;
+struct interface_ohci_irq_t
+{
+	void *param;
+	vsf_err_t (*irq)(void*);
+} static nuc505_ohci_irq;
+
+static uint8_t port_enable_mask;
 
 ROOTFUNC void USBH_IRQHandler(void)
 {
-	if (nuc400_ohci_irq.irq != NULL)
+	if (nuc505_ohci_irq.irq != NULL)
 	{
-		nuc400_ohci_irq.irq(nuc400_ohci_irq.param);
+		nuc505_ohci_irq.irq(nuc505_ohci_irq.param);
 	}
 }
 
-vsf_err_t nuc400_ohci_init(uint8_t index)
+vsf_err_t nuc505_hcd_init(uint32_t index, vsf_err_t (*ohci_irq)(void *), void *param)
 {
-	switch (index)
+	if ((index & 0x3) == 0)
+		return VSFERR_NOT_SUPPORT;
+
+	if (ohci_irq != NULL)
 	{
-	case 0:
-		nuc400_unlock_reg();
-		// host-only
-		SYS->GPB_MFPL = (SYS->GPB_MFPL & ~(SYS_GPB_MFPL_PB0MFP_USB0_OTG5V_ST | SYS_GPB_MFPL_PB1MFP_USB0_OTG5V_EN)) | 0x11;
-		SYS->GPB_MFPL = (SYS->GPB_MFPL & ~(SYS_GPB_MFPL_PB2MFP_USB1_D_N | SYS_GPB_MFPL_PB3MFP_USB1_D_P)) | 0x3300;
-		CLK->CLKDIV0 = (CLK->CLKDIV0 & ~CLK_CLKDIV0_USBHDIV_Msk) | (2 << CLK_CLKDIV0_USBHDIV_Pos);
-		CLK->CLKSEL0 |= CLK_CLKSEL0_USBHSEL_Msk;
+		nuc505_ohci_irq.irq = ohci_irq;
+		nuc505_ohci_irq.param = param;
+	}
+
+	if (port_enable_mask == 0)
+	{
+		// usbh clock 48M
+		CLK->CLKDIV0 = (CLK->CLKDIV0 & ~CLK_CLKDIV0_USBHDIV_Msk) | CLK_CLKDIV0_USBHSEL_Msk | (9 << CLK_CLKDIV0_USBHDIV_Pos);
 		CLK->AHBCLK |= CLK_AHBCLK_USBHCKEN_Msk;
-		nuc400_lock_reg();
-		
-		if (nuc400_ohci_irq.irq != NULL)
-		{
-			NVIC_SetPriority(USBH_IRQn,5);
-			NVIC_EnableIRQ(USBH_IRQn);
-		}
-		return VSFERR_NONE;
-	default:
-		return VSFERR_NOT_SUPPORT;
-	}
-}
 
-vsf_err_t nuc400_ohci_fini(uint8_t index)
-{
-	switch (index)
+		NVIC_SetPriority(USBH_IRQn,5);
+		NVIC_EnableIRQ(USBH_IRQn);
+	}
+	if ((index & nuc505_HCD_PORT1) && !(port_enable_mask & nuc505_HCD_PORT1))
 	{
-	case 0:
-		return VSFERR_NONE;
-	default:
-		return VSFERR_NOT_SUPPORT;
+		#if OHCI_PORT1_PB12_DP_ENABLE
+		PB->PUEN = (PB->PUEN & ~GPIO_PUEN_PULLSEL12_Msk) | (0x2ul << GPIO_PUEN_PULLSEL12_Pos);
+		SYS->GPB_MFPH = (SYS->GPB_MFPH & ~SYS_GPB_MFPH_PB12MFP_Msk) |
+						(2 << SYS_GPB_MFPH_PB12MFP_Pos);
+		#endif
+		#if OHCI_PORT1_PB13_DM_ENABLE
+		PB->PUEN = (PB->PUEN & ~GPIO_PUEN_PULLSEL13_Msk) | (0x2ul << GPIO_PUEN_PULLSEL13_Pos);
+		SYS->GPB_MFPH = (SYS->GPB_MFPH & ~SYS_GPB_MFPH_PB13MFP_Msk) |
+						(2 << SYS_GPB_MFPH_PB13MFP_Pos);
+		#endif
+		#if OHCI_PORT1_PB14_DP_ENABLE
+		PB->PUEN = (PB->PUEN & ~GPIO_PUEN_PULLSEL14_Msk) | (0x2ul << GPIO_PUEN_PULLSEL14_Pos);
+		SYS->GPB_MFPH = (SYS->GPB_MFPH & ~SYS_GPB_MFPH_PB14MFP_Msk) |
+						(1 << SYS_GPB_MFPH_PB14MFP_Pos);
+		#endif
+		#if OHCI_PORT1_PB15_DM_ENABLE
+		PB->PUEN = (PB->PUEN & ~GPIO_PUEN_PULLSEL15_Msk) | (0x2ul << GPIO_PUEN_PULLSEL15_Pos);
+		SYS->GPB_MFPH = (SYS->GPB_MFPH & ~SYS_GPB_MFPH_PB15MFP_Msk) |
+						(1 << SYS_GPB_MFPH_PB15MFP_Pos);
+		#endif
+		port_enable_mask |= nuc505_HCD_PORT1;
 	}
+	if ((index & nuc505_HCD_PORT2) && !(port_enable_mask & nuc505_HCD_PORT2))
+	{
+		PC->PUEN = (PC->PUEN & ~GPIO_PUEN_PULLSEL13_Msk) | (0x2ul << GPIO_PUEN_PULLSEL13_Pos);
+		PC->PUEN = (PC->PUEN & ~GPIO_PUEN_PULLSEL14_Msk) | (0x2ul << GPIO_PUEN_PULLSEL14_Pos);
+		SYS->GPC_MFPH = (SYS->GPC_MFPH & ~(SYS_GPC_MFPH_PC13MFP_Msk | SYS_GPC_MFPH_PC14MFP_Msk)) |
+						(1 << SYS_GPC_MFPH_PC13MFP_Pos) | (1 << SYS_GPC_MFPH_PC14MFP_Pos);
+		port_enable_mask |= nuc505_HCD_PORT2;
+	}
+
+	return VSFERR_NONE;
 }
 
-void* nuc400_ohci_regbase(uint8_t index)
+vsf_err_t nuc505_hcd_fini(uint32_t index)
 {
-	switch (index)
+	if (port_enable_mask == 0)
+		return VSFERR_NONE;
+	if ((index & 0x3) == 0)
+		return VSFERR_NOT_SUPPORT;
+
+	// TODO
+	if ((index & nuc505_HCD_PORT1) && (port_enable_mask & nuc505_HCD_PORT1))
+	{
+		#if OHCI_PORT1_PB12_DP_ENABLE
+		SYS->GPB_MFPH &= ~SYS_GPB_MFPH_PB12MFP_Msk;
+		#endif
+		#if OHCI_PORT1_PB13_DM_ENABLE
+		SYS->GPB_MFPH &= ~SYS_GPB_MFPH_PB13MFP_Msk;
+		#endif
+		#if OHCI_PORT1_PB14_DP_ENABLE
+		SYS->GPB_MFPH &= ~SYS_GPB_MFPH_PB14MFP_Msk;
+		#endif
+		#if OHCI_PORT1_PB15_DM_ENABLE
+		SYS->GPB_MFPH &= ~SYS_GPB_MFPH_PB15MFP_Msk;
+		#endif
+		port_enable_mask &= ~nuc505_HCD_PORT1;
+	}
+	if ((index & nuc505_HCD_PORT2) && (port_enable_mask & nuc505_HCD_PORT2))
+	{
+		SYS->GPC_MFPH &= ~(SYS_GPC_MFPH_PC13MFP_Msk | SYS_GPC_MFPH_PC14MFP_Msk);
+		port_enable_mask &= ~nuc505_HCD_PORT2;
+	}
+
+	if (port_enable_mask == 0)
+	{
+		NVIC_DisableIRQ(USBH_IRQn);
+		CLK->AHBCLK &= ~CLK_AHBCLK_USBHCKEN_Msk;
+	}
+
+	return VSFERR_NONE;
+}
+
+void* nuc505_hcd_regbase(uint32_t index)
+{
+	switch (index >> 16)
 	{
 	case 0:
 		return (void*)USBH;

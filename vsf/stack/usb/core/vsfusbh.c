@@ -13,7 +13,7 @@ void sllist_append(struct sllist *head, struct sllist *new)
 	while (next->next != NULL)
 		next = next->next;
 
-	next->next = new;	
+	next->next = new;
 	new->next = NULL;
 }
 void sllist_delete_next(struct sllist *head)
@@ -422,6 +422,11 @@ error:
 
 vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb)
 {
+	if (usb_pipein(vsfurb->pipe))
+		vsfurb->packet_size = vsfurb->vsfdev->epmaxpacketin[usb_pipeendpoint(vsfurb->pipe)];
+	else	
+		vsfurb->packet_size = vsfurb->vsfdev->epmaxpacketout[usb_pipeendpoint(vsfurb->pipe)];
+	
 	if (vsfurb->vsfdev == usbh->rh_dev)
 		return vsfusbh_rh_submit_urb(usbh, vsfurb);
 	else
@@ -491,28 +496,28 @@ static void vsfusbh_set_maxpacket_ep(struct vsfusbh_device_t *dev)
 
 
 vsf_err_t vsfusbh_set_address(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb)
+		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_snddefctrl(vsfurb->vsfdev);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_OUT, USB_REQ_SET_ADDRESS,
 		vsfurb->vsfdev->devnum, 0);
 }
 vsf_err_t vsfusbh_get_descriptor(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb, uint8_t type, uint8_t index)
+		struct vsfusbh_urb_t *vsfurb, uint8_t type, uint8_t index)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
 		(type << 8) + index, index);
 }
 vsf_err_t vsfusbh_set_configuration(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb, uint8_t configuration)
+		struct vsfusbh_urb_t *vsfurb, uint8_t configuration)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_OUT,
 		USB_REQ_SET_CONFIGURATION, configuration, 0);
 }
 vsf_err_t vsfusbh_set_interface(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb, uint16_t interface, uint16_t alternate)
+		struct vsfusbh_urb_t *vsfurb, uint16_t interface, uint16_t alternate)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RECIP_INTERFACE,
@@ -990,7 +995,7 @@ static struct vsfsm_state_t *vsfusbh_init_evt_handler(struct vsfsm_t *sm,
 			}
 			else
 			{
-				usbh->rh_dev->speed = USB_RH_SPEED;
+				usbh->rh_dev->speed = USBH_RH_SPEED;
 				usbh->new_dev = usbh->rh_dev;
 				vsfsm_post_evt_pending(&usbh->sm, VSFSM_EVT_INIT);
 			}
