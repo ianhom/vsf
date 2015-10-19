@@ -100,7 +100,7 @@
 
 
 /* Interface descriptor */
-PACKED_HEAD struct PACKED_MID usb_interface_desc_t 
+PACKED_HEAD struct PACKED_MID usb_interface_desc_t
 {
 	unsigned char	bLength;
 	unsigned char	bDescriptorType;
@@ -115,7 +115,7 @@ PACKED_HEAD struct PACKED_MID usb_interface_desc_t
 	struct usb_endpoint_descriptor_t *ep_desc;
 };
 
-PACKED_HEAD struct PACKED_MID usb_interface_t 
+PACKED_HEAD struct PACKED_MID usb_interface_t
 {
 	struct usb_interface_desc_t *interface_desc;
 	unsigned char act_altsetting;			/* active alternate setting */
@@ -126,7 +126,7 @@ PACKED_HEAD struct PACKED_MID usb_interface_t
 	void *private_data;
 };
 
-PACKED_HEAD struct PACKED_MID usb_config_t 
+PACKED_HEAD struct PACKED_MID usb_config_t
 {
 	unsigned char	bLength;
 	unsigned char	bDescriptorType;
@@ -142,7 +142,7 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 
 	struct usb_interface_t *interface;
 };
-	
+
 #define URB_OK				VSFERR_NONE
 #define URB_PENDING			VSFERR_NOT_READY
 #define URB_FAIL			VSFERR_FAIL
@@ -175,7 +175,7 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 #define PIPE_CONTROL			2
 #define PIPE_BULK			3
 
-#define usb_pipein(pipe)	((pipe) & USB_DIR_IN)
+#define usb_pipein(pipe)	(((pipe) & USB_DIR_IN) >> 7)
 #define usb_pipeout(pipe)	(!usb_pipein(pipe))
 
 #define usb_pipedevice(pipe)	(((pipe) >> 8) & 0x7f)
