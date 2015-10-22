@@ -53,6 +53,7 @@ static void td_free(struct td_t *td)
 {
 	memset(td, 0, sizeof(struct td_t));
 }
+
 static struct ed_t *ed_alloc(struct vsfohci_t *vsfohci)
 {
 	uint32_t i;
@@ -62,6 +63,7 @@ static struct ed_t *ed_alloc(struct vsfohci_t *vsfohci)
 		if (vsfohci->ed_pool[i].busy == 0)
 		{
 			ed = &vsfohci->ed_pool[i];
+			memset(ed, 0, sizeof(struct ed_t));
 			ed->busy = 1;
 			break;
 		}
@@ -70,7 +72,7 @@ static struct ed_t *ed_alloc(struct vsfohci_t *vsfohci)
 }
 static void ed_free(struct ed_t *ed)
 {
-	memset(ed, 0, sizeof(struct ed_t));
+	ed->busy = 0;
 }
 
 static void urb_free_priv(struct urb_priv_t *urb_priv)
@@ -117,11 +119,15 @@ static uint8_t ep_rev(uint8_t num_bits, uint8_t word)
 }
 
 
-static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
+static void ep_link(struct ohci_t *ohci, struct ed_t *edi)
 {
 	uint32_t inter, i;
 	uint32_t *ed_p;
+	volatile struct ed_t *ed;
 
+	ed = edi;
+
+	ed->state = ED_OPER;
 	switch (ed->type)
 	{
 	case PIPE_CONTROL:
@@ -138,7 +144,7 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 			ohci->hc_control |= OHCI_CTRL_CLE;
 			ohci->regs->control = ohci->hc_control;
 		}
-		ohci->ed_controltail = ed;
+		ohci->ed_controltail = edi;
 		break;
 	case PIPE_BULK:
 		ed->hwNextED = 0;
@@ -154,7 +160,7 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 			ohci->hc_control |= OHCI_CTRL_BLE;
 			ohci->regs->control = ohci->hc_control;
 		}
-		ohci->ed_bulktail = ed;
+		ohci->ed_bulktail = edi;
 		break;
 	case PIPE_INTERRUPT:
 	{
@@ -200,7 +206,7 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *ed)
 			}
 			ed->prev = NULL;
 		}
-		ohci->ed_isotail = ed;
+		ohci->ed_isotail = edi;
 		break;
 	}
 }
@@ -211,7 +217,6 @@ static void ep_unlink(struct ohci_t *ohci, struct ed_t *ed)
 	uint32_t *edp;
 
 	ed->hwINFO |= OHCI_ED_SKIP;
-	ed->busy = 0;
 	switch (ed->type)
 	{
 	case PIPE_CONTROL:
@@ -298,7 +303,7 @@ struct vsfusbh_device_t *vsfdev, uint32_t pipe,
 	{
 		if ((ohci_device->ed[i] != NULL) &&
 			(((ohci_device->ed[i]->hwINFO >> 7) & 0xf) == ep_num) &&
-			((ohci_device->in_flag >> i) == is_in))
+			(((ohci_device->in_flag >> i) & 0x1) == is_in))
 		{
 			ed = ohci_device->ed[i];
 			break;
@@ -349,6 +354,7 @@ struct vsfusbh_device_t *vsfdev, uint32_t pipe,
 		| (usb_pipecontrol(pipe) ? 0 : (usb_pipeout(pipe) ? 0x800 : 0x1000))
 		| usb_pipeslow(pipe) << 13
 		| usb_maxpacket(vsfdev, pipe, usb_pipeout(pipe)) << 16;
+
 	if ((ed->type == PIPE_INTERRUPT) && (ed->state == ED_UNLINK))
 	{
 		ed->int_period = interval;
@@ -705,16 +711,17 @@ static void dl_done_list(struct ohci_t *ohci)
 			}
 		}
 
-		if (ed->state != ED_NEW)
+		if ((ed->state == ED_OPER) &&
+			((ed->hwHeadP & 0xfffffff0) == ed->hwTailP) &&
+			((ed->type == PIPE_CONTROL) || (ed->type == PIPE_BULK)))
 		{
-			if (((ed->hwHeadP & 0xfffffff0) == ed->hwTailP) && (ed->state == ED_OPER))
-			{
-				ep_unlink(ohci, ed);
-			}
+			ep_unlink(ohci, ed);
 		}
+
 		td = td_next;
 	}
 }
+
 static void dl_del_list(struct ohci_t *ohci, uint16_t frame)
 {
 	struct ed_t *ed;
@@ -935,13 +942,13 @@ static uint32_t vsfohci_init_hc_start(struct vsfohci_t *vsfohci)
 
 	ohci->regs->hcca = (uint32_t)ohci->hcca;
 
-	ohci->regs->fminterval = 0x2edf | (((0x2edf - 210) * 6 / 7) << 16);
-	ohci->regs->periodicstart = (0x2edf * 9) / 10;
-	ohci->regs->lsthresh = 0x628;
-
 	ohci->hc_control = OHCI_CONTROL_INIT | OHCI_USB_OPER;
 	ohci->disabled = 0;
 	ohci->regs->control = ohci->hc_control;
+
+	ohci->regs->fminterval = 0x2edf | (((0x2edf - 210) * 6 / 7) << 16);
+	ohci->regs->periodicstart = (0x2edf * 9) / 10;
+	ohci->regs->lsthresh = 0x628;
 
 	temp = OHCI_INTR_MIE | OHCI_INTR_UE | OHCI_INTR_WDH | OHCI_INTR_SO;
 	ohci->regs->intrstatus = temp;
@@ -963,7 +970,7 @@ static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	err = vsfohci_init_get_resource(usbh, 
+	err = vsfohci_init_get_resource(usbh,
 			(uint32_t)core_interfaces.hcd.regbase(usbh->hcd_index));
 	if (err)
 		return err;
@@ -1030,16 +1037,17 @@ static vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
 		return VSFERR_NONE;
 	else if (ohci_device->ed_cnt != 0)
 	{
-		for (i = 1; i < MAX_EP_NUM_EACH_DEVICE; i++)
+		for (i = 0; i < MAX_EP_NUM_EACH_DEVICE; i++)
 		{
 			ed = ohci_device->ed[i];
-			if (ed->state != ED_NEW)
+			if ((ed != NULL) && (ed->state != ED_NEW))
 			{
 				if (ed->state == ED_OPER)
 				{
 					ep_unlink(vsfohci->ohci, ed);
 				}
 				ep_rm_ed(vsfohci, ed);
+				ed_free(ed);
 				ed->state = ED_DEL;
 			}
 		}
@@ -1067,15 +1075,11 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 		return VSFERR_FAIL;
 
 	if (ohci->disabled)
-	{
 		return VSFERR_FAIL;
-	}
 
 	ed = ep_add_ed(vsfohci, vsfurb->vsfdev, pipe, vsfurb->interval, 1);
-	if ((!ed) || (ed->state == ED_NEW) || (ed->state & ED_DEL))
-	{
+	if (ed == NULL)
 		return VSFERR_FAIL;
-	}
 
 	switch (usb_pipetype(pipe))
 	{
@@ -1104,10 +1108,7 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	}
 
 	if (size > TD_MAX_NUM_EACH_UARB)
-	{
-		ed->busy = 0;
 		return VSFERR_FAIL;
-	}
 
 	urb_priv = vsf_bufmgr_malloc(sizeof(struct urb_priv_t));
 	if (urb_priv == NULL)
@@ -1126,12 +1127,6 @@ static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 
 	urb_priv->ed = ed;
 	urb_priv->length = size;
-
-	if (ed->state == ED_NEW || (ed->state & ED_DEL))
-	{
-		urb_free_priv(urb_priv);
-		return VSFERR_FAIL;
-	}
 
 #if USBH_CFG_ENABLE_ISO
 	if (usb_pipetype(pipe) == PIPE_ISOCHRONOUS)
