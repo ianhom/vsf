@@ -290,6 +290,7 @@ static void vsfip_check_buff(struct vsfip_socket_t *socket)
 		if (!buf->ttl || !--buf->ttl)
 		{
 			vsfq_remove(&socket->inq, &buf->proto_node);
+			vsfip_buffer_release(buf);
 		}
 		node = node->next;
 		buf = container_of(node, struct vsfip_buffer_t, proto_node);
@@ -410,7 +411,8 @@ static uint16_t vsfip_checksum(uint8_t *data, uint16_t len)
 	{
 		checksum += (uint16_t)(*data) << 8;
 	}
-	checksum = checksum + (checksum >> 16);
+	checksum = (checksum & 0xFFFF) + (checksum >> 16);
+	checksum = (checksum & 0xFFFF) + (checksum >> 16);
 	return (uint16_t)checksum;
 }
 
@@ -427,7 +429,8 @@ static uint16_t vsfip_proto_checksum(struct vsfip_socket_t *socket,
 	checksum += GET_BE_U16(&remote_addr->sin_addr.addr.s_addr_buf[2]);
 	checksum += socket->protocol;
 	checksum += buf->buf.size;
-	checksum = checksum + (checksum >> 16);
+	checksum = (checksum & 0xFFFF) + (checksum >> 16);
+	checksum = (checksum & 0xFFFF) + (checksum >> 16);
 	return checksum;
 }
 
