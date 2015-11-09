@@ -170,6 +170,9 @@ ROOTFUNC void EINT0_IRQHandler(void)
 			}
 		}
 	}
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 ROOTFUNC void EINT1_IRQHandler(void)
 {
@@ -191,6 +194,9 @@ ROOTFUNC void EINT1_IRQHandler(void)
 			}
 		}
 	}
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 ROOTFUNC void EINT2_IRQHandler(void)
 {
@@ -211,6 +217,9 @@ ROOTFUNC void EINT2_IRQHandler(void)
 			}
 		}
 	}
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 ROOTFUNC void EINT3_IRQHandler(void)
 {
@@ -232,6 +241,9 @@ ROOTFUNC void EINT3_IRQHandler(void)
 			}
 		}
 	}
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 #endif

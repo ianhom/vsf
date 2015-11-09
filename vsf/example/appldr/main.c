@@ -4,8 +4,14 @@
 struct vsfapp_t
 {
 	struct app_hwcfg_t hwcfg;
-	
-	uint8_t bufmgr_buffer[32 * 1024];
+
+	struct vsfsm_evtq_t pendsvq;
+	struct vsfsm_evtq_t mainq;
+
+	// private
+	struct vsfsm_evtq_element_t pendsvq_ele[16];
+	struct vsfsm_evtq_element_t mainq_ele[16];
+	uint8_t bufmgr_buffer[8 * 1024];
 } static app =
 {
 	{
@@ -24,17 +30,17 @@ struct vsfapp_t
 		},							// struct led_t led[24];
 		{
 			BCM_PORT_TYPE,
-			
+
 			BCM_PORT,
 			BCM_FREQ,
-			
+
 			BCM_RST_PORT,
 			BCM_RST_PIN,
 			BCM_WAKEUP_PORT,
 			BCM_WAKEUP_PIN,
 			BCM_MODE_PORT,
 			BCM_MODE_PIN,
-			
+
 			{
 				BCM_SPI_CS_PORT,
 				BCM_SPI_CS_PIN,
@@ -42,11 +48,19 @@ struct vsfapp_t
 				BCM_EINT_PIN,
 				BCM_EINT,
 			},
-			
+
 			BCM_PWRCTRL_PORT,
 			BCM_PWRCTRL_PIN,
 		},							// struct bcm_wifi_port;
 	},								// struct app_hwcfg_t hwcfg;
+	{
+		.size = dimof(app.pendsvq_ele),
+		.queue = app.pendsvq_ele,
+	},								// struct vsfsm_evtq_t pendsvq;
+	{
+		.size = dimof(app.mainq_ele),
+		.queue = app.mainq_ele,
+	},								// struct vsfsm_evtq_t mainq;
 };
 
 // tickclk interrupt, simply call vsftimer_callback_int
@@ -55,12 +69,26 @@ static void app_tickclk_callback_int(void *param)
 	vsftimer_callback_int();
 }
 
+static void app_on_pendsv(void *param)
+{
+	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
+
+	vsfsm_evtq_set(evtq_cur);
+	if (vsfsm_get_event_pending())
+		vsfsm_poll();
+	vsfsm_evtq_set(evtq_old);
+}
+
 int main(void)
 {
 	uint32_t app_main_ptr;
-	
-	vsf_leave_critical();
-	
+
+	vsf_enter_critical();
+	vsfsm_evtq_init(&app.pendsvq);
+	vsfsm_evtq_init(&app.mainq);
+
+	vsfsm_evtq_set(&app.pendsvq);
+
 	// system initialize
 	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 	core_interfaces.core.init(NULL);
@@ -68,12 +96,11 @@ int main(void)
 	core_interfaces.tickclk.start();
 	vsftimer_init();
 	core_interfaces.tickclk.set_callback(app_tickclk_callback_int, NULL);
-	
+
 	if (app.hwcfg.key.port != IFS_DUMMY_PORT)
 	{
-		core_interfaces.gpio.init(app.hwcfg.key.port);
-		core_interfaces.gpio.config_pin(app.hwcfg.key.port, app.hwcfg.key.port,
-										GPIO_INPU);
+		gpio_init(app.hwcfg.key.port);
+		gpio_config_pin(app.hwcfg.key.port, app.hwcfg.key.port, GPIO_INPU);
 	}
 	if ((IFS_DUMMY_PORT == app.hwcfg.key.port) ||
 		core_interfaces.gpio.get(app.hwcfg.key.port, 1 << app.hwcfg.key.pin))
@@ -95,13 +122,17 @@ int main(void)
 	{
 		// run bootloader
 	bootlaoder_init:
-		
+
 	}
-	
+
+	core_interfaces.core.pendsv(app_on_pendsv, &app.pendsvq);
+	vsf_leave_critical();
+	vsfsm_evtq_set(&app.mainq);
+
 	while (1)
 	{
 		vsfsm_poll();
-		
+
 		vsf_enter_critical();
 		if (!vsfsm_get_event_pending())
 		{

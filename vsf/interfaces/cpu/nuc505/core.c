@@ -14,6 +14,33 @@ static struct nuc505_info_t nuc505_info =
 	CORE_PLL_FREQ_HZ, CORE_APLL_FREQ_HZ, CPU_FREQ_HZ, HCLK_FREQ_HZ, PCLK_FREQ_HZ,
 };
 
+// Pendsv
+struct nuc505_pendsv_t
+{
+	void (*on_pendsv)(void *);
+	void *param;
+} static nuc505_pendsv;
+
+ROOTFUNC void PendSV_Handler(void)
+{
+	if (nuc505_pendsv.on_pendsv != NULL)
+	{
+		nuc505_pendsv.on_pendsv(nuc505_pendsv.param);
+	}
+}
+
+vsf_err_t nuc505_interface_pendsv(void (*on_pendsv)(void *), void *param)
+{
+	nuc505_pendsv.on_pendsv = on_pendsv;
+	nuc505_pendsv.param = param;
+
+	if (nuc505_pendsv.on_pendsv != NULL)
+	{
+		SCB->SHP[10] = 0xFF;
+	}
+	return VSFERR_NONE;
+}
+
 void HardFault_Handler(void)
 {
 	while (1);
@@ -256,6 +283,9 @@ ROOTFUNC void TMR3_IRQHandler(void)
 	}
 	//TIMER3->CMP = 32768;
 	TIMER3->INTSTS = TIMER_INTSTS_TIF_Msk;
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 vsf_err_t nuc505_tickclk_init(void)

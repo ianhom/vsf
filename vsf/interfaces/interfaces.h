@@ -36,6 +36,7 @@ struct interface_core_t
 	uint32_t (*get_stack)(void);
 	vsf_err_t (*set_stack)(uint32_t sp);
 	void (*sleep)(uint32_t mode);
+	vsf_err_t (*pendsv)(void (*on_pendsv)(void *), void *param);
 };
 
 #define CORE_INIT(m)					__CONNECT(m, _interface_init)
@@ -44,6 +45,7 @@ struct interface_core_t
 #define CORE_GET_STACK(m)				__CONNECT(m, _interface_get_stack)
 #define CORE_SET_STACK(m)				__CONNECT(m, _interface_set_stack)
 #define CORE_SLEEP(m)					__CONNECT(m, _interface_sleep)
+#define CORE_PENDSV(m)					__CONNECT(m, _interface_pendsv)
 
 vsf_err_t CORE_INIT(__TARGET_CHIP__)(void *p);
 vsf_err_t CORE_FINI(__TARGET_CHIP__)(void *p);
@@ -51,6 +53,7 @@ vsf_err_t CORE_RESET(__TARGET_CHIP__)(void *p);
 uint32_t CORE_GET_STACK(__TARGET_CHIP__)(void);
 vsf_err_t CORE_SET_STACK(__TARGET_CHIP__)(uint32_t sp);
 void CORE_SLEEP(__TARGET_CHIP__)(uint32_t mode);
+vsf_err_t CORE_PENDSV(__TARGET_CHIP__)(void (*on_pendsv)(void *), void *param);
 
 #if IFS_UNIQUEID_EN
 
@@ -385,6 +388,16 @@ vsf_err_t CORE_GPIO_SET(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask);
 vsf_err_t CORE_GPIO_CLEAR(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask);
 uint32_t CORE_GPIO_GET(__TARGET_CHIP__)(uint8_t index, uint32_t pin_mask);
 
+#define gpio_init						CORE_GPIO_INIT(__TARGET_CHIP__)
+#define gpio_fini						CORE_GPIO_FINI(__TARGET_CHIP__)
+#define gpio_config_pin					CORE_GPIO_CONFIG_PIN(__TARGET_CHIP__)
+#define gpio_config						CORE_GPIO_CONFIG(__TARGET_CHIP__)
+#define gpio_in							CORE_GPIO_IN(__TARGET_CHIP__)
+#define gpio_out						CORE_GPIO_OUT(__TARGET_CHIP__)
+#define gpio_set						CORE_GPIO_SET(__TARGET_CHIP__)
+#define gpio_clear						CORE_GPIO_CLEAR(__TARGET_CHIP__)
+#define gpio_get						CORE_GPIO_GET(__TARGET_CHIP__)
+
 #endif
 
 struct interface_tickclk_t
@@ -438,6 +451,20 @@ struct interface_pwm_t
 	vsf_err_t (*out)(uint8_t index, uint16_t count, uint16_t *rate);
 	vsf_err_t (*in)(uint8_t index, uint16_t count, uint16_t *rate);
 };
+
+#define CORE_PWM_INIT(m)			__CONNECT(m, _pwm_init)
+#define CORE_PWM_FINI(m)			__CONNECT(m, _pwm_fini)
+#define CORE_PWM_CONFIG_MODE(m)		__CONNECT(m, _pwm_config_mode)
+#define CORE_PWM_CONFIG_FREQ(m)		__CONNECT(m, _pwm_config_freq)
+#define CORE_PWM_OUT(m)				__CONNECT(m, _pwm_out)
+#define CORE_PWM_IN(m)				__CONNECT(m, _pwm_in)
+
+vsf_err_t CORE_PWM_INIT(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_PWM_FINI(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_PWM_CONFIG_MODE(__TARGET_CHIP__)(uint8_t index, uint8_t mode);
+vsf_err_t CORE_PWM_CONFIG_FREQ(__TARGET_CHIP__)(uint8_t index, uint16_t kHz);
+vsf_err_t CORE_PWM_OUT(__TARGET_CHIP__)(uint8_t index, uint16_t count, uint16_t *rate);
+vsf_err_t CORE_PWM_IN(__TARGET_CHIP__)(uint8_t index, uint16_t count, uint16_t *rate);
 
 #endif
 

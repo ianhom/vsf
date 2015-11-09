@@ -420,6 +420,8 @@ void spi_irq(SPI_T *spi, int i)
 ROOTFUNC void SPI0_IRQHandler(void)
 {
 	spi_irq(SPI0, 0);
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 #endif
 
@@ -427,6 +429,8 @@ ROOTFUNC void SPI0_IRQHandler(void)
 ROOTFUNC void SPI1_IRQHandler(void)
 {
 	spi_irq(SPI1, 1);
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 #endif
 

@@ -311,6 +311,9 @@ ROOTFUNC void SDH_IRQHandler(void)
 		}
 	}
 	SD->TOUT = 0;
+
+	// set PendSV
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 //#endif

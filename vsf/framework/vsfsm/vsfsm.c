@@ -20,42 +20,49 @@
 #include "compiler.h"
 #include "vsfsm.h"
 
-struct vsfsm_evtqueue_t
+static struct vsfsm_evtq_t *vsfsm_cur_evtq = NULL;
+void vsfsm_evtq_set(struct vsfsm_evtq_t *queue)
 {
-	struct vsfsm_t *sm;
-	vsfsm_evt_t evt;
-};
+	vsfsm_cur_evtq = queue;
+}
+struct vsfsm_evtq_t* vsfsm_evtq_get(void)
+{
+	return vsfsm_cur_evtq;
+}
 
-static struct vsfsm_evtqueue_t vsfsm_evtq[VSFSM_CFG_EVTQ_SIZE];
-static struct vsfsm_evtqueue_t *vsfsm_evtq_head = &vsfsm_evtq[0];
-static volatile struct vsfsm_evtqueue_t *vsfsm_evtq_tail = &vsfsm_evtq[0];
-static volatile uint32_t vsfsm_evt_count = 0;
+void vsfsm_evtq_init(struct vsfsm_evtq_t *queue)
+{
+	queue->head = queue->tail = queue->queue;
+	queue->evt_count = 0;
+}
 
 // vsfsm_get_event_pending should be called with interrupt disabled
 uint32_t vsfsm_get_event_pending(void)
 {
-	return vsfsm_evt_count;
+	return vsfsm_cur_evtq->evt_count;
 }
 
 static vsf_err_t vsfsm_evtq_post(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
+	struct vsfsm_evtq_t *evtq = sm->evtq;
+
 	vsf_enter_critical();
-	
-	if (vsfsm_evt_count >= VSFSM_CFG_EVTQ_SIZE)
+
+	if (evtq->evt_count >= evtq->size)
 	{
 		vsf_leave_critical();
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
-	
-	vsfsm_evtq_tail->sm = sm;
-	vsfsm_evtq_tail->evt = evt;
-	(vsfsm_evtq_tail == &vsfsm_evtq[VSFSM_CFG_EVTQ_SIZE - 1]) ?
-		vsfsm_evtq_tail = &vsfsm_evtq[0] : vsfsm_evtq_tail++;
+
+	evtq->tail->sm = sm;
+	evtq->tail->evt = evt;
+	(evtq->tail == &evtq->queue[evtq->size - 1]) ?
+			evtq->tail = &evtq->queue[0] : evtq->tail++;
 	sm->evt_count++;
-	vsfsm_evt_count++;
-	
+	evtq->evt_count++;
+
 	vsf_leave_critical();
-	
+
 	return VSFERR_NONE;
 }
 
@@ -86,7 +93,7 @@ static vsf_err_t vsfsm_dispatch_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 #else
 	sm->init_state.evt_handler(sm, evt);
 #endif
-	
+
 #if !VSFSM_CFG_SM_EN
 	return VSFERR_NONE;
 #else
@@ -95,7 +102,7 @@ static vsf_err_t vsfsm_dispatch_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	{
 		return VSFERR_NONE;
 	}
-	
+
 #if VSFSM_CFG_HSM_EN
 	// superstate
 	while (target_state == (struct vsfsm_state_t *)-1)
@@ -107,7 +114,7 @@ static vsf_err_t vsfsm_dispatch_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 	}
 #endif
-	
+
 	if ((NULL == target_state)
 #if !VSFSM_CFG_HSM_EN
 		|| ((struct vsfsm_state_t *)-1 == target_state)
@@ -117,7 +124,7 @@ static vsf_err_t vsfsm_dispatch_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// handled, or even topstate can not handle this event
 		return VSFERR_NONE;
 	}
-	
+
 	// need to transmit
 #if VSFSM_CFG_HSM_EN
 	// 1. exit to processor_state
@@ -266,12 +273,16 @@ vsf_err_t vsfsm_remove_subsm(struct vsfsm_state_t *state, struct vsfsm_t *sm)
 
 vsf_err_t vsfsm_init(struct vsfsm_t *sm)
 {
+	sm->evtq = vsfsm_cur_evtq;
 	sm->evt_count = 0;
 #if VSFSM_CFG_SYNC_EN
 	sm->pending_next = NULL;
 #endif
 #if VSFSM_CFG_SM_EN || VSFSM_CFG_HSM_EN
 	sm->cur_state = &sm->init_state;
+#endif
+#if (VSFSM_CFG_SM_EN && VSFSM_CFG_SUBSM_EN) || VSFSM_CFG_HSM_EN
+	sm->init_state.subsm = NULL;
 #endif
 	// ignore any state transition on VSFSM_EVT_ENTER
 	sm->init_state.evt_handler(sm, VSFSM_EVT_ENTER);
@@ -285,16 +296,16 @@ vsf_err_t vsfsm_init(struct vsfsm_t *sm)
 
 vsf_err_t vsfsm_poll(void)
 {
-	struct vsfsm_evtqueue_t tmp;
-	
-	while (vsfsm_evt_count)
+	struct vsfsm_evtq_element_t tmp;
+
+	while (vsfsm_cur_evtq->evt_count)
 	{
-		tmp = *vsfsm_evtq_head;
-		(vsfsm_evtq_head == &vsfsm_evtq[VSFSM_CFG_EVTQ_SIZE - 1]) ?
-			vsfsm_evtq_head = &vsfsm_evtq[0] : vsfsm_evtq_head++;
+		tmp = *vsfsm_cur_evtq->head;
+		(vsfsm_cur_evtq->head == &vsfsm_cur_evtq->queue[vsfsm_cur_evtq->size - 1]) ?
+			vsfsm_cur_evtq->head = &vsfsm_cur_evtq->queue[0] : vsfsm_cur_evtq->head++;
 		vsf_enter_critical();
 		tmp.sm->evt_count--;
-		vsfsm_evt_count--;
+		vsfsm_cur_evtq->evt_count--;
 		vsf_leave_critical();
 		vsfsm_dispatch_evt(tmp.sm, tmp.evt);
 	}
@@ -315,14 +326,14 @@ vsf_err_t vsfsm_post_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	return
 #if VSFSM_CFG_ACTIVE_EN
-			(!sm->active) ? VSFERR_FAIL :
+			(!sm->active) ||
 #endif
-			((evt >= VSFSM_EVT_INSTANT) &&
-				(evt <= VSFSM_EVT_INSTANT_END)) ||
-			((evt >= VSFSM_EVT_LOCAL_INSTANT) &&
-				(evt <= VSFSM_EVT_LOCAL_INSTANT_END)) ||
-			(0 == sm->evt_count) ?
-				vsfsm_dispatch_evt(sm, evt) : vsfsm_evtq_post(sm, evt);
+			// send evt to different evtq, MUST call vsfsm_evtq_post
+			((sm->evtq != vsfsm_cur_evtq) &&
+				(evt & VSFSM_EVT_INSTANT_MSK)) ? VSFERR_FAIL :
+			(sm->evtq != vsfsm_cur_evtq) ||
+			(((evt & VSFSM_EVT_INSTANT_MSK) == 0) && sm->evt_count) ?
+				vsfsm_evtq_post(sm, evt) : vsfsm_dispatch_evt(sm, evt);
 }
 
 // pending event will be forced to be sent to event queue
@@ -332,50 +343,66 @@ vsf_err_t vsfsm_post_evt_pending(struct vsfsm_t *sm, vsfsm_evt_t evt)
 #if VSFSM_CFG_ACTIVE_EN
 			(!sm->active) ||
 #endif
-			((evt >= VSFSM_EVT_INSTANT) &&
-				(evt <= VSFSM_EVT_INSTANT_END)) ||
-			((evt >= VSFSM_EVT_LOCAL_INSTANT) &&
-				(evt <= VSFSM_EVT_LOCAL_INSTANT_END)) ?
+			(evt & VSFSM_EVT_INSTANT_MSK) ?
 				VSFERR_FAIL : vsfsm_evtq_post(sm, evt);
 }
 
-#if VSFSM_CFG_PT_EN
+#if VSFSM_CFG_LJMP_EN
 #include "interfaces.h"
 
-struct vsfsm_state_t * vsfsm_pt_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
+static struct vsfsm_state_t *
+vsfsm_ljmp_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
+	struct vsfsm_ljmp_t *ljmp = (struct vsfsm_ljmp_t *)sm->user_data;
+	jmp_buf ret;
+
+	if ((evt == VSFSM_EVT_ENTER) || (evt == VSFSM_EVT_EXIT))
+	{
+		return NULL;
+	}
+
+	ljmp->ret = &ret;
+	if (!setjmp(ret))
+	{
+		if (evt == VSFSM_EVT_INIT)
+		{
+			// implement set_stack as a func is risky, may break the stack
+			core_interfaces.core.set_stack((uint32_t)ljmp->stack);
+			ljmp->thread(ljmp);
+		}
+		else
+		{
+			longjmp(ljmp->pos, evt);
+		}
+	}
+	return NULL;
+}
+
+vsf_err_t vsfsm_ljmp_init(struct vsfsm_t *sm, struct vsfsm_ljmp_t *ljmp)
+{
+	sm->user_data = ljmp;
+	sm->init_state.evt_handler = vsfsm_ljmp_evt_handler;
+	ljmp->sm = sm;
+	return vsfsm_init(sm);
+}
+#endif
+
+#if VSFSM_CFG_PT_EN
+static struct vsfsm_state_t *
+vsfsm_pt_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	struct vsfsm_pt_t *pt = (struct vsfsm_pt_t *)sm->user_data;
-	
+
 	switch (evt)
 	{
 	case VSFSM_EVT_ENTER:
+	case VSFSM_EVT_EXIT:
 		break;
 	case VSFSM_EVT_INIT:
 		pt->state = 0;
 		// fall through
 	default:
-		{
-		#if VSFSM_CFG_PT_STACK_EN
-			uint32_t stack;
-			bool pt_stack_enable = false;
-			// pt->stack maybe modified in thread, eg: thread can setup the stack
-			if (pt->stack != NULL)
-			{
-				pt_stack_enable = true;
-				stack = interfaces->core.get_stack();
-				interfaces->core.set_stack((uint32_t)pt->stack);
-			}
-		#endif
-			
-			pt->thread(pt, evt);
-			
-		#if VSFSM_CFG_PT_STACK_EN
-			if (pt_stack_enable)
-			{
-				interfaces->core.set_stack(stack);
-			}
-		#endif
-		}
+		pt->thread(pt, evt);
 	}
 	return NULL;
 }
@@ -384,9 +411,6 @@ vsf_err_t vsfsm_pt_init(struct vsfsm_t *sm, struct vsfsm_pt_t *pt)
 {
 	sm->user_data = pt;
 	sm->init_state.evt_handler = vsfsm_pt_evt_handler;
-#if (VSFSM_CFG_SM_EN && VSFSM_CFG_SUBSM_EN) || VSFSM_CFG_HSM_EN
-	sm->init_state.subsm = NULL;
-#endif
 	pt->sm = sm;
 	return vsfsm_init(sm);
 }
@@ -407,7 +431,7 @@ vsf_err_t vsfsm_sync_init(struct vsfsm_sync_t *sync, uint32_t cur_value,
 static void vsfsm_sync_append_sm(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	struct vsfsm_t *sm_pending;
-	
+
 	sm->pending_next = NULL;
 	if (NULL == sync->sm_pending)
 	{
@@ -427,7 +451,7 @@ static void vsfsm_sync_append_sm(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	struct vsfsm_t *sm_pending;
-	
+
 	if (sync->sm_pending == sm)
 	{
 		sync->sm_pending = sm->pending_next;
@@ -451,7 +475,7 @@ vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 {
 	struct vsfsm_t *sm;
-	
+
 	if (sync->sm_pending)
 	{
 		sm = sync->sm_pending;

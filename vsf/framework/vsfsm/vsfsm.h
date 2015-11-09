@@ -35,22 +35,20 @@ enum
 	VSFSM_EVT_TIMER = VSFSM_EVT_SYSTEM + 3,
 	VSFSM_EVT_DELAY_DONE = VSFSM_EVT_SYSTEM + 4,
 	VSFSM_EVT_USER = 0x10,
+
 	// instant message CANNOT be but in the event queue and
 	// can not be sent in interrupt
-	VSFSM_EVT_INSTANT = 0x2000,
-	VSFSM_EVT_USER_INSTANT = VSFSM_EVT_INSTANT,
-	VSFSM_EVT_INSTANT_END = VSFSM_EVT_INSTANT + 0x2000 - 1,
+	VSFSM_EVT_INSTANT_MSK = 0x2000,
 	// local event can not transmit or be passed to superstate
-	VSFSM_EVT_LOCAL = VSFSM_EVT_INSTANT_END + 1,
-	VSFSM_EVT_USER_LOCAL = VSFSM_EVT_LOCAL,
-	// local instant message CANNOT be but in the event queue and
-	// can not be sent in interrupt
-	VSFSM_EVT_LOCAL_INSTANT = VSFSM_EVT_LOCAL + 0x2000,
+	VSFSM_EVT_LOCAL_MSK = 0x4000,
+	VSFSM_EVT_LOCAL_INSTANT_MSK = VSFSM_EVT_INSTANT_MSK | VSFSM_EVT_LOCAL_MSK,
+
+	VSFSM_EVT_USER_INSTANT = VSFSM_EVT_INSTANT_MSK,
+	VSFSM_EVT_USER_LOCAL = VSFSM_EVT_LOCAL_MSK,
 	// VSFSM_EVT_ENTER and VSFSM_EVT_EXIT are local instant events
-	VSFSM_EVT_ENTER = VSFSM_EVT_LOCAL_INSTANT + 0,
-	VSFSM_EVT_EXIT = VSFSM_EVT_LOCAL_INSTANT + 1,
-	VSFSM_EVT_USER_LOCAL_INSTANT = VSFSM_EVT_LOCAL_INSTANT + 2,
-	VSFSM_EVT_LOCAL_INSTANT_END = VSFSM_EVT_LOCAL_INSTANT + 0x2000 - 1,
+	VSFSM_EVT_ENTER = VSFSM_EVT_LOCAL_INSTANT_MSK + 0,
+	VSFSM_EVT_EXIT = VSFSM_EVT_LOCAL_INSTANT_MSK + 1,
+	VSFSM_EVT_USER_LOCAL_INSTANT = VSFSM_EVT_LOCAL_INSTANT_MSK + 2,
 };
 
 typedef int vsfsm_evt_t;
@@ -62,18 +60,19 @@ struct vsfsm_state_t
 	// return a vsfsm_state_t pointer means transition to the state
 	// return -1 means the event is not handled, should redirect to superstate
 	struct vsfsm_state_t * (*evt_handler)(struct vsfsm_t *sm, vsfsm_evt_t evt);
-	
+
 #if (VSFSM_CFG_SM_EN && VSFSM_CFG_SUBSM_EN) || VSFSM_CFG_HSM_EN
 	// sub state machine list
 	struct vsfsm_t *subsm;
 #endif
-	
+
 #if VSFSM_CFG_HSM_EN
 	// for top state, super is NULL; other super points to the superstate
 	struct vsfsm_state_t *super;
 #endif
 };
 
+struct vsfsm_evtq_t;
 struct vsfsm_t
 {
 	// initial state
@@ -84,11 +83,11 @@ struct vsfsm_t
 	// for protothread, user_data should point to vsfsm_pt_t structure
 	// 		which will be initialized in vsfsm_pt_init
 	void *user_data;
-	
+
 	// private
 #if VSFSM_CFG_SM_EN || VSFSM_CFG_HSM_EN
 	struct vsfsm_state_t *cur_state;
-# endif
+#endif
 #if VSFSM_CFG_SYNC_EN
 	// pending_next is used for vsfsm_sync_t
 	struct vsfsm_t *pending_next;
@@ -100,8 +99,53 @@ struct vsfsm_t
 	// next is used to link vsfsm_t in the same level
 	struct vsfsm_t *next;
 #endif
+	struct vsfsm_evtq_t *evtq;
 	uint32_t evt_count;
 };
+
+struct vsfsm_evtq_element_t
+{
+	struct vsfsm_t *sm;
+	vsfsm_evt_t evt;
+};
+struct vsfsm_evtq_t
+{
+	uint32_t size;
+	struct vsfsm_evtq_element_t *queue;
+	// private
+	volatile struct vsfsm_evtq_element_t *head;
+	volatile struct vsfsm_evtq_element_t *tail;
+	volatile uint32_t evt_count;
+};
+void vsfsm_evtq_init(struct vsfsm_evtq_t *queue);
+void vsfsm_evtq_set(struct vsfsm_evtq_t *queue);
+struct vsfsm_evtq_t* vsfsm_evtq_get(void);
+
+#if VSFSM_CFG_LJMP_EN
+#include <setjmp.h>
+struct vsfsm_ljmp_t;
+typedef void (*vsfsm_ljmp_thread_t)(struct vsfsm_ljmp_t *ljmp);
+struct vsfsm_ljmp_t
+{
+	vsfsm_ljmp_thread_t thread;
+	void *user_data;
+
+	void *stack;
+	struct vsfsm_t *sm;
+
+	jmp_buf pos;
+	jmp_buf *ret;
+};
+vsf_err_t vsfsm_ljmp_init(struct vsfsm_t *sm, struct vsfsm_ljmp_t *ljmp);
+
+#define vsfsm_ljmp_ret(ljmp)		longjmp(*(ljmp)->ret, 0)
+#define vsfsm_ljmp_wfe(ljmp, e)		\
+	do {\
+		vsfsm_evt_t __evt = setjmp((ljmp)->pos);\
+		if (!__evt || (__evt != (e)))\
+			vsfsm_ljmp_ret(ljmp);\
+	} while (0)
+#endif // VSFSM_CFG_LJMP_EN
 
 #if VSFSM_CFG_PT_EN
 struct vsfsm_pt_t;
@@ -110,21 +154,15 @@ struct vsfsm_pt_t
 {
 	vsfsm_pt_thread_t thread;
 	void *user_data;
-	
-#if VSFSM_CFG_PT_STACK_EN
-	// stack for the current pt, can be NULL to indicate using the main stack
-	// note that the size of the stack MUST be large enough for the interrupts
-	void *stack;
-#endif
-	
+
 	// protected
 	int state;
 	struct vsfsm_t *sm;
 };
 
 vsf_err_t vsfsm_pt_init(struct vsfsm_t *sm, struct vsfsm_pt_t *pt);
-#define vsfsm_pt_begin(pt)				switch ((pt)->state) { case 0:
-#define vsfsm_pt_entry(pt)				(pt)->state = __LINE__; case __LINE__:
+#define vsfsm_pt_begin(pt)			switch ((pt)->state) { case 0:
+#define vsfsm_pt_entry(pt)			(pt)->state = __LINE__; case __LINE__:
 // wait for event
 #define vsfsm_pt_wfe(pt, e)			\
 	do {\
@@ -146,8 +184,8 @@ vsf_err_t vsfsm_pt_init(struct vsfsm_t *sm, struct vsfsm_pt_t *pt);
 			}\
 		}\
 	} while (0)
-#define vsfsm_pt_end(pt)				}
-#endif
+#define vsfsm_pt_end(pt)			}
+#endif // VSFSM_CFG_PT_EN
 
 // vsfsm_get_event_pending should be called with interrupt disabled
 uint32_t vsfsm_get_event_pending(void);
@@ -176,7 +214,7 @@ struct vsfsm_sync_t
 {
 	uint32_t cur_value;
 	vsfsm_evt_t evt;
-	
+
 	// private
 	uint32_t max_value;
 	struct vsfsm_t *sm_pending;

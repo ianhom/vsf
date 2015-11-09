@@ -34,6 +34,7 @@ const struct interfaces_info_t core_interfaces =
 		CORE_GET_STACK(__TARGET_CHIP__),
 		CORE_SET_STACK(__TARGET_CHIP__),
 		CORE_SLEEP(__TARGET_CHIP__),
+		CORE_PENDSV(__TARGET_CHIP__),
 	}
 #if IFS_UNIQUEID_EN
 	// unique ID
@@ -252,7 +253,12 @@ const struct interfaces_info_t core_interfaces =
 #if IFS_PWM_EN
 	,{
 		// pwm
-		NULL, NULL, NULL, NULL, NULL
+		CORE_PWM_INIT(__TARGET_CHIP__),
+		CORE_PWM_FINI(__TARGET_CHIP__),
+		CORE_PWM_CONFIG_MODE(__TARGET_CHIP__),
+		CORE_PWM_CONFIG_FREQ(__TARGET_CHIP__),
+		CORE_PWM_OUT(__TARGET_CHIP__),
+		CORE_PWM_IN(__TARGET_CHIP__)
 	}
 #endif
 #if IFS_MICROWIRE_EN
