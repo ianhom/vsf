@@ -63,6 +63,11 @@ static vsf_err_t vsfsm_evtq_post(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 	vsf_leave_critical();
 
+	if (evtq->activate != NULL)
+	{
+		evtq->activate(evtq);
+	}
+
 	return VSFERR_NONE;
 }
 
@@ -294,6 +299,25 @@ vsf_err_t vsfsm_init(struct vsfsm_t *sm)
 	return vsfsm_post_evt(sm, VSFSM_EVT_INIT);
 }
 
+vsf_err_t vsfsm_fini(struct vsfsm_t *sm)
+{
+	struct vsfsm_evtq_element_t *tmp;
+
+#if VSFSM_CFG_ACTIVE_EN
+	vsfsm_set_active(sm, false);
+#endif
+
+	for (tmp = (struct vsfsm_evtq_element_t *)sm->evtq->head;
+			tmp != sm->evtq->tail; tmp++)
+	{
+		if (tmp->sm == sm)
+		{
+			tmp->sm = NULL;
+		}
+	}
+	return VSFERR_NONE;
+}
+
 vsf_err_t vsfsm_poll(void)
 {
 	struct vsfsm_evtq_element_t tmp;
@@ -304,10 +328,17 @@ vsf_err_t vsfsm_poll(void)
 		(vsfsm_cur_evtq->head == &vsfsm_cur_evtq->queue[vsfsm_cur_evtq->size - 1]) ?
 			vsfsm_cur_evtq->head = &vsfsm_cur_evtq->queue[0] : vsfsm_cur_evtq->head++;
 		vsf_enter_critical();
-		tmp.sm->evt_count--;
+		if (tmp.sm != NULL)
+		{
+			tmp.sm->evt_count--;
+		}
 		vsfsm_cur_evtq->evt_count--;
 		vsf_leave_critical();
-		vsfsm_dispatch_evt(tmp.sm, tmp.evt);
+		// sm will be NULL after vsfsm_fini
+		if (tmp.sm != NULL)
+		{
+			vsfsm_dispatch_evt(tmp.sm, tmp.evt);
+		}
 	}
 	return VSFERR_NONE;
 }

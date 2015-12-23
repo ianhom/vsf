@@ -925,8 +925,6 @@ void USB_Istr(void)
 ROOTFUNC void USBD_IRQHandler(void)
 {
 	USB_Istr();
-	// set PendSV
-	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 #endif

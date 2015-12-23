@@ -1,6 +1,8 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
+static void pendsv_activate(struct vsfsm_evtq_t *q);
+
 struct vsfapp_t
 {
 	struct app_hwcfg_t hwcfg;
@@ -56,10 +58,12 @@ struct vsfapp_t
 	{
 		.size = dimof(app.pendsvq_ele),
 		.queue = app.pendsvq_ele,
+		.activate = pendsv_activate,
 	},								// struct vsfsm_evtq_t pendsvq;
 	{
 		.size = dimof(app.mainq_ele),
 		.queue = app.mainq_ele,
+		.activate = NULL,
 	},								// struct vsfsm_evtq_t mainq;
 };
 
@@ -67,6 +71,11 @@ struct vsfapp_t
 static void app_tickclk_callback_int(void *param)
 {
 	vsftimer_callback_int();
+}
+
+static void pendsv_activate(struct vsfsm_evtq_t *q)
+{
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 static void app_on_pendsv(void *param)
@@ -96,7 +105,7 @@ int main(void)
 	core_interfaces.tickclk.start();
 	vsftimer_init();
 	core_interfaces.tickclk.set_callback(app_tickclk_callback_int, NULL);
-
+goto bootlaoder_init;
 	if (app.hwcfg.key.port != IFS_DUMMY_PORT)
 	{
 		gpio_init(app.hwcfg.key.port);
@@ -122,7 +131,7 @@ int main(void)
 	{
 		// run bootloader
 	bootlaoder_init:
-
+app_main(&app.hwcfg);
 	}
 
 	core_interfaces.core.pendsv(app_on_pendsv, &app.pendsvq);

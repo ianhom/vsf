@@ -112,6 +112,7 @@ struct vsfsm_evtq_t
 {
 	uint32_t size;
 	struct vsfsm_evtq_element_t *queue;
+	void (*activate)(struct vsfsm_evtq_t *q);
 	// private
 	volatile struct vsfsm_evtq_element_t *head;
 	volatile struct vsfsm_evtq_element_t *tail;
@@ -197,8 +198,10 @@ vsf_err_t vsfsm_add_subsm(struct vsfsm_state_t *state, struct vsfsm_t *sm);
 vsf_err_t vsfsm_remove_subsm(struct vsfsm_state_t *state, struct vsfsm_t *sm);
 #endif
 
-// vsfsm_init will set the sm to be active(means ready to accept events)
+// vsfsm_init will set the sm to be active(ready to accept events)
 vsf_err_t vsfsm_init(struct vsfsm_t *sm);
+// vsfsm_fini will set the sm to be inactive and remove events in the queue
+vsf_err_t vsfsm_fini(struct vsfsm_t *sm);
 vsf_err_t vsfsm_poll(void);
 #if VSFSM_CFG_ACTIVE_EN
 // sm is avtive after init, if sm will not accept further events

@@ -283,9 +283,6 @@ ROOTFUNC void TMR3_IRQHandler(void)
 	}
 	//TIMER3->CMP = 32768;
 	TIMER3->INTSTS = TIMER_INTSTS_TIF_Msk;
-
-	// set PendSV
-	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
 
 vsf_err_t nuc505_tickclk_init(void)
