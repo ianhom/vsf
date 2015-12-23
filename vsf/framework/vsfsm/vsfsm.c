@@ -299,6 +299,7 @@ vsf_err_t vsfsm_init(struct vsfsm_t *sm)
 	return vsfsm_post_evt(sm, VSFSM_EVT_INIT);
 }
 
+// MUST make sure no event will be sent to the sm in the queue when vsfsm_fini
 vsf_err_t vsfsm_fini(struct vsfsm_t *sm)
 {
 	struct vsfsm_evtq_element_t *tmp;
@@ -307,12 +308,16 @@ vsf_err_t vsfsm_fini(struct vsfsm_t *sm)
 	vsfsm_set_active(sm, false);
 #endif
 
-	for (tmp = (struct vsfsm_evtq_element_t *)sm->evtq->head;
-			tmp != sm->evtq->tail; tmp++)
+	tmp = (struct vsfsm_evtq_element_t *)sm->evtq->head;
+	while (tmp != sm->evtq->tail)
 	{
 		if (tmp->sm == sm)
 		{
 			tmp->sm = NULL;
+		}
+		if (++tmp >= (sm->evtq->queue + sm->evtq->size))
+		{
+			tmp = sm->evtq->queue;
 		}
 	}
 	return VSFERR_NONE;
