@@ -396,7 +396,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				}
 				continue;
 			}
-			else if (!((shell->ch >= ' ') && (shell->ch <= '~')) ||
+			else if (//!((shell->ch >= ' ') && (shell->ch <= '~')) ||
 				(shell->tbuffer.position >= shell->tbuffer.buffer.size - 1))
 			{
 				continue;
