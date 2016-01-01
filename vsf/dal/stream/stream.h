@@ -26,6 +26,7 @@ struct vsf_stream_t;
 struct vsf_stream_op_t
 {
 	void (*init)(struct vsf_stream_t *stream);
+	void (*fini)(struct vsf_stream_t *stream);
 	uint32_t (*write)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 	uint32_t (*read)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 	uint32_t (*get_data_length)(struct vsf_stream_t *stream);
@@ -67,6 +68,8 @@ uint32_t stream_get_data_size(struct vsf_stream_t *stream);
 uint32_t stream_get_free_size(struct vsf_stream_t *stream);
 void stream_connect_rx(struct vsf_stream_t *stream);
 void stream_connect_tx(struct vsf_stream_t *stream);
+void stream_disconnect_rx(struct vsf_stream_t *stream);
+void stream_disconnect_tx(struct vsf_stream_t *stream);
 
 // fifo stream
 extern const struct vsf_stream_op_t fifo_stream_op;

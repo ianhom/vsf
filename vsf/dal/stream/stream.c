@@ -36,7 +36,18 @@ vsf_err_t stream_init(struct vsf_stream_t *stream)
 
 vsf_err_t stream_fini(struct vsf_stream_t *stream)
 {
-	REFERENCE_PARAMETER(stream);
+	if (stream->tx_ready)
+	{
+		stream_disconnect_tx(stream);
+	}
+	if (stream->rx_ready)
+	{
+		stream_disconnect_rx(stream);
+	}
+	if (stream->op->fini != NULL)
+	{
+		stream->op->fini(stream);
+	}
 	return VSFERR_NONE;
 }
 
@@ -102,6 +113,16 @@ void stream_connect_tx(struct vsf_stream_t *stream)
 	stream->tx_ready = true;
 }
 
+void stream_disconnect_rx(struct vsf_stream_t *stream)
+{
+	stream->rx_ready = false;
+}
+
+void stream_disconnect_tx(struct vsf_stream_t *stream)
+{
+	stream->tx_ready = false;
+}
+
 // fifo stream
 static void fifo_stream_init(struct vsf_stream_t *stream)
 {
@@ -134,6 +155,7 @@ fifo_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 const struct vsf_stream_op_t fifo_stream_op =
 {
-	fifo_stream_init, fifo_stream_write, fifo_stream_read,
+	fifo_stream_init, fifo_stream_init,
+	fifo_stream_write, fifo_stream_read,
 	fifo_stream_get_data_length, fifo_stream_get_avail_length
 };
