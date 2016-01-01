@@ -95,12 +95,15 @@ void nuc505_interface_sleep(uint32_t mode)
 
 vsf_err_t nuc505_interface_init(void *p)
 {
-	uint32_t temp32;
+	uint32_t temp32, reg32;
 
 	if (p != NULL)
 	{
 		nuc505_info = *(struct nuc505_info_t *)p;
 	}
+
+	//set spim with highspeed 4bit operation
+	SPIM->CTL0 = 0xEBF00003;
 
 	if (nuc505_info.osc_freq_hz != (12 * 1000 * 1000))
 		return VSFERR_INVALID_PARAMETER;
@@ -174,17 +177,20 @@ vsf_err_t nuc505_interface_init(void *p)
 	switch (nuc505_info.hclksrc)
 	{
 	case NUC505_HCLKSRC_PLLFOUT:
-		temp32 = nuc505_info.pll_freq_hz / nuc505_info.hclk_freq_hz;
-		if ((temp32 < 1) || (temp32 > 16))
-			return VSFERR_INVALID_PARAMETER;
-		CLK->CLKDIV0 = ((CLK->CLKDIV0 | CLK_CLKDIV0_HCLKSEL_Msk) & ~CLK_CLKDIV0_HCLKDIV_Msk) | (temp32 - 1);
+		temp32 = nuc505_info.pll_freq_hz;
+		reg32 = CLK_CLKDIV0_HCLKSEL_Msk;
 		break;
 	case NUC505_HCLKSRC_HXT:
-		// do nothing
+		temp32 = nuc505_info.osc_freq_hz;
+		reg32 = 0;
 		break;
 	default:
 		return VSFERR_INVALID_PARAMETER;
 	}
+	temp32 /= nuc505_info.hclk_freq_hz;
+	if ((temp32 < 1) || (temp32 > 16))
+		return VSFERR_INVALID_PARAMETER;
+	CLK->CLKDIV0 = ((CLK->CLKDIV0 | reg32) & ~CLK_CLKDIV0_HCLKDIV_Msk) | (temp32 - 1);
 
 	SCB->VTOR = nuc505_info.vector_table;
 	SCB->AIRCR = 0x05FA0000 | nuc505_info.priority_group;

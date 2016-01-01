@@ -84,7 +84,7 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 	// PLL 480
 	//CLK->CLKDIV0 |= CLK_CLKDIV0_USBDSEL_Msk;
 	CLK->AHBCLK |= CLK_AHBCLK_USBDCKEN_Msk;
-	
+
 	USBD->PHYCTL |= USBD_PHYCTL_PHYEN_Msk;
 	while (USBD->EP[0].EPMPS != 0x20)
 	{
@@ -95,8 +95,26 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 		USBD->EP[0].EPMPS= 0;
 	}
 
-	// Enable USB FULL SPEED
-	USBD->OPER = 0;
+	if (0)
+	{
+		// Enable USB FULL SPEED
+		USBD->OPER = 0;
+	}
+	else
+	{
+		// Enable USB HIGH SPEED
+		USBD->OPER = 2;
+		while (!USBD->OPER & 4);
+	}
+
+	// 8 nop for reg sync
+	__asm("nop");
+	__asm("nop");
+	__asm("nop");
+	__asm("nop");
+	__asm("nop");
+	__asm("nop");
+	__asm("nop");
 
 	// Enable USB interrupt
 	USBD->GINTEN |= USBD_GINTEN_USBIEN_Msk | USBD_GINTEN_CEPIEN_Msk;
