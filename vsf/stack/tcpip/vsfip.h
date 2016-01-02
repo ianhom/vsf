@@ -226,9 +226,14 @@ struct vsfip_socket_t
 
 	struct
 	{
-		void (*input)(void *param, struct vsfip_buffer_t *buf);
+		void (*on_input)(struct vsfip_socket_t *so, struct vsfip_buffer_t *buf);
+	} proto_callback;
+	struct
+	{
+		void (*on_input)(void *param, struct vsfip_buffer_t *buf);
+		void (*on_outputted)(void *param);
 		void *param;
-	} callback;
+	} user_callback;
 
 	struct vsfip_socket_t *next;
 };
@@ -254,6 +259,9 @@ vsf_err_t vsfip_fini(void);
 struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 									enum vsfip_sockproto_t protocol);
 vsf_err_t vsfip_close(struct vsfip_socket_t *socket);
+void vsfip_socker_cb(struct vsfip_socket_t *socket,
+				void *param, void (*on_input)(void *, struct vsfip_buffer_t *),
+				void (*on_outputted)(void *));
 
 // for UPD and TCP
 vsf_err_t vsfip_listen(struct vsfip_socket_t *socket, uint8_t backlog);
@@ -264,9 +272,13 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
+vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket, 
+		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t *buf, bool flush);
+vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket, 
+		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
 vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);
@@ -274,9 +286,13 @@ vsf_err_t vsfip_tcp_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_socket_t *socket);
 
 // for UDP
+vsf_err_t vsfip_udp_async_send(struct vsfip_socket_t *socket,
+		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_udp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t *buf);
+vsf_err_t vsfip_udp_async_recv(struct vsfip_socket_t *socket,
+		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
 vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);

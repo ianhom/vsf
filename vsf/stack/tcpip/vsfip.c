@@ -596,7 +596,10 @@ static vsf_err_t vsfip_ip_output(struct vsfip_socket_t *socket)
 }
 
 // socket layer
-static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf);
+static void vsfip_tcp_socket_input(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf);
+static void vsfip_udp_socket_input(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf);
 struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 									enum vsfip_sockproto_t protocol)
 {
@@ -607,25 +610,16 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 		memset(socket, 0, sizeof(struct vsfip_socket_t));
 		socket->family = family;
 		socket->protocol = protocol;
-		socket->can_rx = false;
-		socket->listener.child = NULL;
-		socket->listener.backlog = 0;
-		socket->listener.accepted_num = 0;
-		socket->listener.closing = false;
-		socket->accepted = false;
-		socket->father = NULL;
 		socket->tx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		vsfq_init(&socket->inq);
 		vsfq_init(&socket->outq);
-		socket->callback.input = NULL;
 		vsfsm_sem_init(&socket->input_sem, 0, VSFIP_EVT_SOCKET_RECV);
 
 		if (IPPROTO_TCP == protocol)
 		{
 			socket->can_rx = true;
-			socket->callback.input = vsfip_tcp_socket_input;
-			socket->callback.param = socket;
+			socket->proto_callback.on_input = vsfip_tcp_socket_input;
 
 			struct vsfip_tcppcb_t *pcb = vsfip_tcppcb_get();
 			if (NULL == pcb)
@@ -637,6 +631,10 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 			pcb->rclose = pcb->lclose = true;
 			pcb->state = VSFIP_TCPSTAT_CLOSED;
 			socket->pcb.protopcb = (struct vsfip_tcppcb_t *)pcb;
+		}
+		else if (IPPROTO_UDP == protocol)
+		{
+			socket->proto_callback.on_input = vsfip_udp_socket_input;
 		}
 	}
 
@@ -711,6 +709,15 @@ vsf_err_t vsfip_close(struct vsfip_socket_t *socket)
 		}
 	}
 	return vsfip_free_socket(socket);
+}
+
+void vsfip_socker_cb(struct vsfip_socket_t *socket,
+				void *param, void (*on_input)(void *, struct vsfip_buffer_t *),
+				void (*on_outputted)(void *))
+{
+	socket->user_callback.param = param;
+	socket->user_callback.on_input = on_input;
+	socket->user_callback.on_outputted = on_outputted;
 }
 
 vsf_err_t vsfip_bind(struct vsfip_socket_t *socket, uint16_t port)
@@ -827,9 +834,23 @@ static void vsfip_proto_input(struct vsfip_socket_t *list,
 		goto discard_buffer;
 	}
 
-	if (socket->callback.input != NULL)
+	if (socket->proto_callback.on_input != NULL)
 	{
-		socket->callback.input(socket->callback.param, buf);
+		socket->proto_callback.on_input(socket, buf);
+		return;
+	}
+discard_buffer:
+	vsfip_buffer_release(buf);
+	return;
+}
+
+// UDP
+static void vsfip_udp_socket_input(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf)
+{
+	if (socket->user_callback.on_input != NULL)
+	{
+		socket->user_callback.on_input(socket->user_callback.param, buf);
 	}
 	else
 	{
@@ -837,13 +858,8 @@ static void vsfip_proto_input(struct vsfip_socket_t *list,
 		vsfq_append(&socket->inq, &buf->proto_node);
 		vsfsm_sem_post(&socket->input_sem);
 	}
-	return;
-discard_buffer:
-	vsfip_buffer_release(buf);
-	return;
 }
 
-// UDP
 static void vsfip_udp_input(struct vsfip_buffer_t *buf)
 {
 	struct vsfip_udphead_t *udphead = (struct vsfip_udphead_t *)buf->buf.buffer;
@@ -880,9 +896,8 @@ static vsf_err_t vsfip_add_udphead(struct vsfip_socket_t *socket,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfip_udp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf)
+vsf_err_t vsfip_udp_async_send(struct vsfip_socket_t *socket,
+			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf)
 {
 	vsf_err_t err = VSFERR_NONE;
 
@@ -915,10 +930,22 @@ vsf_err_t vsfip_udp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	if (err) goto cleanup;
 
 	socket->pcb.ippcb.buf = buf;
-	return vsfip_ip_output(socket);
+	err = vsfip_ip_output(socket);
+	if (!err && (socket->user_callback.on_outputted != NULL))
+	{
+		socket->user_callback.on_outputted(socket->user_callback.param);
+	}
+	return err;
 cleanup:
 	vsfip_buffer_release(buf);
 	return err;
+}
+
+vsf_err_t vsfip_udp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+			struct vsfip_buffer_t *buf)
+{
+	return vsfip_udp_async_send(socket, sockaddr, buf);
 }
 
 // TODO: fix for IPv6
@@ -951,25 +978,29 @@ vsfip_udp_match(struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *addr)
 	return buf;
 }
 
-vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t **buf)
+vsf_err_t vsfip_udp_async_recv(struct vsfip_socket_t *socket,
+		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf)
 {
-	vsfsm_pt_begin(pt);
-
 	if ((NULL == socket) || (NULL == sockaddr) || (NULL == buf) ||
 		!socket->local_sockaddr.sin_port)
 	{
 		return VSFERR_INVALID_PARAMETER;
 	}
-
 	socket->remote_sockaddr = *sockaddr;
-
 	*buf = vsfip_udp_match(socket, sockaddr);
-	if (*buf != NULL)
-	{
-		return VSFERR_NONE;
-	}
+	return *buf ? VSFERR_NONE : VSFERR_NOT_READY;
+}
+
+vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+			struct vsfip_buffer_t **buf)
+{
+	vsf_err_t err;
+
+	vsfsm_pt_begin(pt);
+
+	err = vsfip_udp_async_recv(socket, sockaddr, buf);
+	if (err <= 0) return err;
 
 	// set pending with timeout
 	// TODO: implement pcb for UDP and put these resources in
@@ -1002,8 +1033,8 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			}
 		}
 
-		*buf = vsfip_udp_match(socket, sockaddr);
-		if (*buf != NULL)
+		err = vsfip_udp_async_recv(socket, sockaddr, buf);
+		if (!err)
 		{
 			vsftimer_dequeue(&socket->rx_timer);
 			return VSFERR_NONE;
@@ -1162,7 +1193,6 @@ static vsf_err_t vsfip_tcp_sendflags(struct vsfip_socket_t *socket,
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfip_buffer_t *buffer;
-	vsf_err_t err = VSFERR_NONE;
 
 	// even if buffer not available, also need timeout to resend
 	if (flags & (VSFIP_TCPFLAG_SYN | VSFIP_TCPFLAG_FIN))
@@ -1294,9 +1324,26 @@ check_rx_to:
 	}
 }
 
-static void vsfip_tcp_socket_input(void *param, struct vsfip_buffer_t *buf)
+static void vsfip_tcp_data_input(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf)
 {
-	struct vsfip_socket_t *socket = (struct vsfip_socket_t *)param;
+	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+
+	pcb->rseq += buf->app.size;
+	pcb->ack_tick = VSFIP_TCP_ATO;
+	if (socket->user_callback.on_input != NULL)
+	{
+		socket->user_callback.on_input(socket->user_callback.param, buf);
+	}
+	else
+	{
+		vsfq_append(&socket->inq, &buf->proto_node);
+	}
+}
+
+static void vsfip_tcp_socket_input(struct vsfip_socket_t *socket,
+									struct vsfip_buffer_t *buf)
+{
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfip_tcphead_t head = *(struct vsfip_tcphead_t *)buf->buf.buffer;
 	bool release_buffer = true;
@@ -1426,9 +1473,7 @@ re_process:
 				if (pcb->rseq == head.seq)
 				{
 					release_buffer = false;
-					pcb->rseq += buf->app.size;
-					pcb->ack_tick = VSFIP_TCP_ATO;
-					vsfq_append(&socket->inq, &buf->proto_node);
+					vsfip_tcp_data_input(socket, buf);
 				}
 				else
 				{
@@ -1453,9 +1498,7 @@ re_process:
 			if (pcb->rseq == head.seq)
 			{
 				release_buffer = false;
-				pcb->rseq += buf->app.size;
-				pcb->ack_tick = VSFIP_TCP_ATO;
-				vsfq_append(&socket->inq, &buf->proto_node);
+				vsfip_tcp_data_input(socket, buf);
 				vsfip_tcp_postevt(&pcb->rx_sm, VSFIP_EVT_TCP_RXOK);
 				if (pcb->state != pre_state)
 				{
@@ -1485,6 +1528,11 @@ re_process:
 				if (pcb->acked_lseq >= (buf->proto_node.addr + buf->app.size))
 				{
 					vsfq_dequeue(&socket->outq);
+					if (socket->user_callback.on_outputted != NULL)
+					{
+						socket->user_callback.on_outputted(
+												socket->user_callback.param);
+					}
 					vsfip_buffer_release(buf);
 					node = socket->outq.head;
 					buf = container_of(node, struct vsfip_buffer_t, proto_node);
@@ -1663,7 +1711,7 @@ vsfip_tcp_accept_try(struct vsfip_socket_t *socket)
 }
 
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket)
+			struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 
@@ -1711,15 +1759,13 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_BUG;
 }
 
-vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf, bool flush)
+vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket, 
+			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	vsf_err_t err = VSFERR_NONE;
 	uint32_t size, window;
 
-	vsfsm_pt_begin(pt);
 	if (pcb->tx_sm != NULL)
 	{
 		err = VSFERR_BUG;
@@ -1731,33 +1777,15 @@ vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		goto cleanup;
 	}
 
-	buf->netif = socket->netif;
-	buf->retry = VSFIP_TCP_RETRY;
-	while (1)
+	size = vsfip_bufferlist_len(&socket->outq);
+	window = min(VSFIP_CFG_TCP_TX_WINDOW, pcb->rwnd);
+	if ((size + buf->app.size) <= window)
 	{
-		size = vsfip_bufferlist_len(&socket->outq);
-		window = min(VSFIP_CFG_TCP_TX_WINDOW, pcb->rwnd);
-		if ((size + buf->app.size) <= window)
-		{
-			break;
-		}
-
-		pcb->tx_sm = pt->sm;
-		evt = VSFSM_EVT_NONE;
-		vsfsm_pt_entry(pt);
-		if ((evt != VSFIP_EVT_TCP_TXOK) &&
-			(evt != VSFIP_EVT_SOCKET_TIMEOUT))
-		{
-			return VSFERR_NOT_READY;
-		}
-
-		if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
-		{
-			err = VSFERR_FAIL;
-			goto cleanup;
-		}
+		return VSFERR_NOT_READY;
 	}
 
+	buf->netif = socket->netif;
+	buf->retry = VSFIP_TCP_RETRY;
 	buf->ttl = socket->tx_timeout_ms;
 	vsfq_append(&socket->outq, &buf->proto_node);
 	vsfip_buffer_reference(buf);
@@ -1765,6 +1793,41 @@ vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		err = VSFERR_FAIL;
 		goto cleanup;
+	}
+	return VSFERR_NONE;
+cleanup:
+	vsfip_buffer_release(buf);
+	return err;
+}
+
+vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+			struct vsfip_buffer_t *buf, bool flush)
+{
+	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+	vsf_err_t err = VSFERR_NONE;
+
+	vsfsm_pt_begin(pt);
+	while (1)
+	{
+		err = vsfip_tcp_async_send(socket, sockaddr, buf);
+		if (err < 0) goto cleanup; else if (!err) break; else
+		{
+			pcb->tx_sm = pt->sm;
+			evt = VSFSM_EVT_NONE;
+			vsfsm_pt_entry(pt);
+			if ((evt != VSFIP_EVT_TCP_TXOK) &&
+				(evt != VSFIP_EVT_SOCKET_TIMEOUT))
+			{
+				return VSFERR_NOT_READY;
+			}
+
+			if (VSFIP_EVT_SOCKET_TIMEOUT == evt)
+			{
+				err = VSFERR_FAIL;
+				goto cleanup;
+			}
+		}
 	}
 
 	if (flush)
@@ -1795,14 +1858,12 @@ cleanup:
 	return err;
 }
 
-vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t **buf)
+vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket, 
+			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfq_node_t *node;
 
-	vsfsm_pt_begin(pt);
 	if (pcb->rx_sm != NULL)
 	{
 		return VSFERR_BUG;
@@ -1814,7 +1875,17 @@ vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	node = vsfq_dequeue(&socket->inq);
 	*buf = container_of(node, struct vsfip_buffer_t, proto_node);
-	if (NULL == *buf)
+	return (NULL == *buf) ? VSFERR_NOT_READY : VSFERR_NONE;
+}
+
+vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
+			struct vsfip_buffer_t **buf)
+{
+	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+
+	vsfsm_pt_begin(pt);
+	if (vsfip_tcp_async_recv(socket, sockaddr, buf))
 	{
 		pcb->rx_timeout_ms = socket->rx_timeout_ms;
 
@@ -1829,9 +1900,8 @@ vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			return VSFERR_NOT_READY;
 		}
 
-		node = vsfq_dequeue(&socket->inq);
-		*buf = container_of(node, struct vsfip_buffer_t, proto_node);
-		return (NULL == *buf) ? VSFERR_FAIL : VSFERR_NONE;
+		return vsfip_tcp_async_recv(socket, sockaddr, buf) ?
+						VSFERR_FAIL : VSFERR_NONE;
 	}
 
 	vsfsm_pt_end(pt);
