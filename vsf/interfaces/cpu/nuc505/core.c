@@ -322,7 +322,7 @@ vsf_err_t nuc505_tickclk_fini(void)
 	return VSFERR_NONE;
 }
 
-static uint32_t get_pc(void)
+uint32_t cortexm_get_pc(void)
 {
 	uint32_t pc;
 	asm("MOV	%0,	pc" : "=r" (pc));
@@ -333,7 +333,7 @@ static uint32_t get_pc(void)
 int32_t nuc505_is_running_on_ram(void)
 {
 	uint32_t vecmap_addr = SYS->RVMPADDR, vecmap_len = SYS->RVMPLEN >> 14;
-	uint32_t pc = get_pc();
+	uint32_t pc = cortexm_get_pc();
 
 	if (((pc >= 0x20000000) && (pc < 0x20020000)) ||
 		((pc >= 0x1ff00000) && (pc < 0x1ff20000)) ||

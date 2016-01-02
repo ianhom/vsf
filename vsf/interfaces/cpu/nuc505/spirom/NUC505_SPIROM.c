@@ -23,16 +23,11 @@
 
 static uint8_t mfgid;
 
-static uint32_t get_pc(void)
-{
-	asm("MOV	R0,	pc	\n"
-		"BX		lr		\n");
-}
-
+uint32_t cortexm_get_pc(void);
 vsf_err_t nuc505_spirom_init(void)
 {
 	uint32_t vecmap_addr = SYS->RVMPADDR, vecmap_len = SYS->RVMPLEN >> 14;
-	uint32_t pc = get_pc();
+	uint32_t pc = cortexm_get_pc();
 
 	if (((pc >= 0x20000000) && (pc < 0x20020000)) ||
 		((pc >= 0x1ff00000) && (pc < 0x1ff20000)) ||
