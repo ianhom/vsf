@@ -25,7 +25,6 @@
 #include "framework/vsftimer/vsftimer.h"
 
 #include "../../vsfip.h"
-#include "../../vsfip_buffer.h"
 
 #include "vsfip_dhcp_common.h"
 #include "vsfip_dhcpc.h"
@@ -194,8 +193,7 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			goto cleanup;
 		}
-		dhcp->so->callback.param = dhcp;
-		dhcp->so->callback.input = vsfip_dhcpc_input;
+		vsfip_socket_cb(dhcp->so, dhcp, vsfip_dhcpc_input, NULL);
 		if (vsfip_bind(dhcp->so, VSFIP_DHCP_CLIENT_PORT))
 		{
 			goto cleanup;

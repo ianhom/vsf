@@ -19,7 +19,6 @@
 #ifndef __VSFIP_NETIF_H_INCLUDED__
 #define __VSFIP_NETIF_H_INCLUDED__
 
-#include "../vsfip_buffer.h"
 #include "../vsfip.h"
 
 enum vsfip_netif_proto_t
@@ -36,6 +35,7 @@ struct vsfip_arp_entry_t
 	uint32_t time;
 };
 
+struct vsfip_buffer_t;
 struct vsfip_netif_t;
 struct vsfip_netdrv_op_t
 {

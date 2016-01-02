@@ -46,6 +46,44 @@ struct vsfip_addr_t
 
 #include "netif/vsfip_netif.h"
 
+struct vsfip_buffer_t
+{
+	// inherent from vsfq_node_t
+	struct vsfq_node_t proto_node;
+	struct vsfq_node_t netif_node;
+
+	struct vsf_buffer_t buf;
+	struct vsf_buffer_t app;
+
+	union
+	{
+		uint8_t *ipver;
+		struct vsfip_ip4head_t *ip4head;
+//		struct vsfip_ip6head_t *ip6head;
+	} iphead;
+
+	uint16_t ref;
+	uint16_t ttl;
+	uint16_t retry;
+
+	uint8_t *buffer;
+//	uint32_t size;
+
+	struct vsfip_netif_t *netif;
+};
+struct vsfip_buffer_t* vsfip_buffer_get(uint32_t size);
+struct vsfip_buffer_t* vsfip_appbuffer_get(uint32_t header, uint32_t app);
+void vsfip_buffer_reference(struct vsfip_buffer_t *buf);
+void vsfip_buffer_release(struct vsfip_buffer_t *buf);
+
+#define VSFIP_BUF_GET(s)		vsfip_buffer_get(s)
+#define VSFIP_NETIFBUF_GET(s)	VSFIP_BUF_GET((s) + VSFIP_CFG_NETIF_HEADLEN)
+#define VSFIP_IPBUF_GET(s)		VSFIP_NETIFBUF_GET((s) + VSFIP_IP_HEADLEN)
+
+#define VSFIP_PROTO_HEADLEN		(VSFIP_CFG_NETIF_HEADLEN + VSFIP_IP_HEADLEN)
+#define VSFIP_UDPBUF_GET(s)		vsfip_appbuffer_get(VSFIP_PROTO_HEADLEN + VSFIP_UDP_HEADLEN, (s))
+#define VSFIP_TCPBUF_GET(s)		vsfip_appbuffer_get(VSFIP_PROTO_HEADLEN + VSFIP_TCP_HEADLEN, (s))
+
 enum vsfip_sockfamilt_t
 {
 	AF_NONE		= 0,
@@ -251,7 +289,16 @@ vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif);
 
-vsf_err_t vsfip_init(void);
+struct vsfip_mem_op_t
+{
+	struct vsfip_buffer_t* (*get_buffer)(uint32_t size);
+	void (*release_buffer)(struct vsfip_buffer_t*);
+	struct vsfip_socket_t* (*get_socket)(void);
+	void (*release_socket)(struct vsfip_socket_t*);
+	struct vsfip_tcppcb_t* (*get_tcppcb)(void);
+	void (*release_tcppcb)(struct vsfip_tcppcb_t*);
+};
+vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op);
 vsf_err_t vsfip_fini(void);
 
 // different from stant socket call,
@@ -259,7 +306,7 @@ vsf_err_t vsfip_fini(void);
 struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 									enum vsfip_sockproto_t protocol);
 vsf_err_t vsfip_close(struct vsfip_socket_t *socket);
-void vsfip_socker_cb(struct vsfip_socket_t *socket,
+void vsfip_socket_cb(struct vsfip_socket_t *socket,
 				void *param, void (*on_input)(void *, struct vsfip_buffer_t *),
 				void (*on_outputted)(void *));
 

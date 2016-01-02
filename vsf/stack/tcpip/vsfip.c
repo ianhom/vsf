@@ -25,7 +25,6 @@
 #include "framework/vsftimer/vsftimer.h"
 
 #include "vsfip.h"
-#include "vsfip_buffer.h"
 
 #define VSFIP_TCP_RETRY			3
 #define VSFIP_TCP_ATO			10
@@ -71,57 +70,93 @@ struct vsfip_t
 	uint32_t tsn;
 
 	bool quit;
+	struct vsfip_mem_op_t *mem_op;
 } static vsfip;
 void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf) = NULL;
 void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf) = NULL;
 
-// vsfip_sockets and vsfip_tcppcb memory pool
-static struct vsfip_socket_t vsfip_sockets[VSFIP_SOCKET_NUM];
-static struct vsfip_tcppcb_t vsfip_tcppcb[VSFIP_TCPPCB_NUM];
-
 // socket buffer
 struct vsfip_socket_t* vsfip_socket_get(void)
 {
-	int i;
-	for (i = 0; i < VSFIP_SOCKET_NUM; i++)
+	struct vsfip_socket_t *socket = vsfip.mem_op->get_socket();
+	if (socket != NULL)
 	{
-		if (AF_NONE == vsfip_sockets[i].family)
-		{
-			vsfip_sockets[i].family = AF_INET;
-			return &vsfip_sockets[i];
-		}
+		socket->family = AF_INET;
 	}
-	return NULL;
+	return socket;
 }
 
 void vsfip_socket_release(struct vsfip_socket_t *socket)
 {
 	if (socket != NULL)
 	{
-		socket->family = AF_NONE;
+		vsfip.mem_op->release_socket(socket);
 	}
 }
 
 // tcppcb buffer
 struct vsfip_tcppcb_t* vsfip_tcppcb_get(void)
 {
-	int i;
-	for (i = 0; i < VSFIP_TCPPCB_NUM; i++)
+	struct vsfip_tcppcb_t *tcppcb = vsfip.mem_op->get_tcppcb();
+	if (tcppcb != NULL)
 	{
-		if (VSFIP_TCPSTAT_INVALID == vsfip_tcppcb[i].state)
-		{
-			vsfip_tcppcb[i].state = VSFIP_TCPSTAT_CLOSED;
-			return &vsfip_tcppcb[i];
-		}
+		tcppcb->state = VSFIP_TCPSTAT_CLOSED;
 	}
-	return NULL;
+	return tcppcb;
 }
 
 void vsfip_tcppcb_release(struct vsfip_tcppcb_t *pcb)
 {
 	if (pcb != NULL)
 	{
-		pcb->state = VSFIP_TCPSTAT_INVALID;
+		vsfip.mem_op->release_tcppcb(pcb);
+	}
+}
+
+// buffer
+struct vsfip_buffer_t* vsfip_buffer_get(uint32_t size)
+{
+	struct vsfip_buffer_t *buffer = vsfip.mem_op->get_buffer(size);
+	if (buffer != NULL)
+	{
+		buffer->ref = 1;
+		buffer->buf.buffer = buffer->app.buffer = buffer->buffer;
+		buffer->buf.size = buffer->app.size = size;
+		buffer->proto_node.next = buffer->netif_node.next = NULL;
+		buffer->netif = NULL;
+	}
+	return buffer;
+}
+
+struct vsfip_buffer_t* vsfip_appbuffer_get(uint32_t header, uint32_t app)
+{
+	struct vsfip_buffer_t *buf = vsfip_buffer_get(header + app);
+
+	if (buf != NULL)
+	{
+		buf->app.buffer += header;
+		buf->app.size -= header;
+	}
+	return buf;
+}
+
+void vsfip_buffer_reference(struct vsfip_buffer_t *buf)
+{
+	if (buf != NULL)
+	{
+		buf->ref++;
+	}
+}
+
+void vsfip_buffer_release(struct vsfip_buffer_t *buf)
+{
+	if ((buf != NULL) && buf->ref)
+	{
+		buf->ref--;
+		if (!buf->ref)
+		{
+			vsfip.mem_op->release_buffer(buf);
+		}
 	}
 }
 
@@ -348,29 +383,13 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-vsf_err_t vsfip_init(void)
+vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op)
 {
-	int i;
-
-	for (i = 0; i < VSFIP_SOCKET_NUM; i++)
-	{
-		vsfip_sockets[i].family = AF_NONE;
-	}
-	for (i = 0; i < VSFIP_TCPPCB_NUM; i++)
-	{
-		vsfip_tcppcb[i].state = VSFIP_TCPSTAT_INVALID;
-	}
-
-	vsfip_buffer_init();
-	vsfip.quit = false;
+	memset(&vsfip, 0, sizeof(vsfip));
 	vsfip.udp_port = VSFIP_CFG_UDP_PORT;
 	vsfip.tcp_port = VSFIP_CFG_TCP_PORT;
-	vsfip.ip_id = 0;
-	vsfip.tsn = 0x00000000;
-	vsfip.tcpconns = NULL;
-	vsfip.udpconns = NULL;
+	vsfip.mem_op = mem_op;
 
-	memset(&vsfip.tick_sm, 0, sizeof(vsfip.tick_sm));
 	vsfip.tick_sm.init_state.evt_handler = vsfip_tick;
 	vsfip.tick_sm.user_data = (void*)&vsfip;
 	return vsfsm_init(&vsfip.tick_sm);
@@ -711,7 +730,7 @@ vsf_err_t vsfip_close(struct vsfip_socket_t *socket)
 	return vsfip_free_socket(socket);
 }
 
-void vsfip_socker_cb(struct vsfip_socket_t *socket,
+void vsfip_socket_cb(struct vsfip_socket_t *socket,
 				void *param, void (*on_input)(void *, struct vsfip_buffer_t *),
 				void (*on_outputted)(void *))
 {

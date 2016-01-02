@@ -262,7 +262,7 @@ struct vsf_t
 		
 		struct
 		{
-			vsf_err_t (*init)(void);
+			vsf_err_t (*init)(struct vsfip_mem_op_t *mem_op);
 			vsf_err_t (*fini)(void);
 			
 			vsf_err_t (*netif_add)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,

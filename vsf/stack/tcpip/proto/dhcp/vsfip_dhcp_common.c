@@ -20,7 +20,6 @@
 #include "compiler.h"
 
 #include "../../vsfip.h"
-#include "../../vsfip_buffer.h"
 
 #include "vsfip_dhcp_common.h"
 

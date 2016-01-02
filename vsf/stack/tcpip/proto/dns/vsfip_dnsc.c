@@ -7,7 +7,6 @@
 #include "framework/vsftimer/vsftimer.h"
 
 #include "../../vsfip.h"
-#include "../../vsfip_buffer.h"
 
 #include "vsfip_dnsc.h"
 
