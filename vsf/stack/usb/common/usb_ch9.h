@@ -695,14 +695,14 @@ PACKED_HEAD struct PACKED_MID usb_security_descriptor_t {
 /* USB_DT_KEY:  used with {GET,SET}_SECURITY_DATA; only public keys
  * may be retrieved.
  */
-PACKED_HEAD struct PACKED_MID usb_key_descriptor_t {
-	__u8  bLength;
-	__u8  bDescriptorType;
+//PACKED_HEAD struct PACKED_MID usb_key_descriptor_t {
+//	__u8  bLength;
+//	__u8  bDescriptorType;
 
-	__u8  tTKID[3];
-	__u8  bReserved;
-	__u8  bKeyData[0];
-}; PACKED_TAIL
+//	__u8  tTKID[3];
+//	__u8  bReserved;
+//	__u8  bKeyData[0];
+//}; PACKED_TAIL
 
 /*-------------------------------------------------------------------------*/
 

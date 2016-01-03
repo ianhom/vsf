@@ -22,34 +22,22 @@
 
 #include "dal/stream/stream.h"
 
-struct usart_info_t
-{
-	uint32_t baudrate;
-	uint8_t datalength;
-	uint8_t mode;
-};
-
 struct usart_stream_info_t
 {
-	uint8_t usart_index;
-	uint32_t int_priority;
+	// usart info
+	uint8_t index;
+	uint8_t mode;
+	uint16_t int_priority;
+	uint32_t baudrate;
+	
+	struct vsf_fifo_t tx_fifo;
+	struct vsf_fifo_t rx_fifo;
+	
 	struct vsf_stream_t stream_tx;
 	struct vsf_stream_t stream_rx;
-	struct usart_info_t usart_info;
-
-	// private
-	bool txing;
 };
 
 vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream);
 vsf_err_t usart_stream_fini(struct usart_stream_info_t *usart_stream);
-vsf_err_t usart_stream_config(struct usart_stream_info_t *usart_stream);
-uint32_t usart_stream_read(struct usart_stream_info_t *usart_stream,
-							struct vsf_buffer_t *buffer);
-uint32_t usart_stream_write(struct usart_stream_info_t *usart_stream,
-							struct vsf_buffer_t *buffer);
-
-void usart_stream_ontx_int(void *p);
-void usart_stream_onrx_int(void *p, uint16_t data);
 
 #endif	// __USART_STREAM_H_INCLUDED__

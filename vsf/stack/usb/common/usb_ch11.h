@@ -233,7 +233,7 @@ PACKED_HEAD struct PACKED_MID usb_hub_descriptor_t {
 	__u8  bHubContrCurrent;
 
 	/* 2.0 and 3.0 hubs differ here */
-	union {
+	union PACKED_MID {
 		PACKED_HEAD struct PACKED_MID {
 			/* add 1 bit for hub status change; round to bytes */
 			__u8  DeviceRemovable[(USB_MAXCHILDREN + 1 + 7) / 8];
