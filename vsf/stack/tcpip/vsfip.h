@@ -319,12 +319,12 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
-vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket, 
+vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t *buf, bool flush);
-vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket, 
+vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket,
 		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
 vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,

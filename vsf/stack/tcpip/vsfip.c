@@ -1778,7 +1778,7 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_BUG;
 }
 
-vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket, 
+vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
@@ -1877,7 +1877,7 @@ cleanup:
 	return err;
 }
 
-vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket, 
+vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket,
 			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;

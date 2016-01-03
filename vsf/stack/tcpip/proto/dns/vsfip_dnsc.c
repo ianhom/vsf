@@ -1,3 +1,21 @@
+/***************************************************************************
+ *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 #include "app_type.h"
 #include "compiler.h"
 
@@ -100,7 +118,7 @@ static uint16_t vsfip_dns_parse_name(uint8_t *orgin, uint16_t size)
 	return query + 1 - orgin;
 }
 
-struct vsfip_buffer_t *vsfip_build_dnsquery(uint8_t *domain, uint16_t id)
+struct vsfip_buffer_t *vsfip_dns_build_query(char *domain, uint16_t id)
 {
 	struct vsfip_buffer_t *buf;
 	struct vsfip_dns_head_t *head;
@@ -128,7 +146,7 @@ struct vsfip_buffer_t *vsfip_build_dnsquery(uint8_t *domain, uint16_t id)
 	count = 0;
 	name++;
 
-	while (*domain != 0)
+	while ((*domain != '\0') && (*domain != '/'))
 	{
 		if (*domain == '.')
 		{
@@ -162,7 +180,7 @@ struct vsfip_buffer_t *vsfip_build_dnsquery(uint8_t *domain, uint16_t id)
 	return buf;
 }
 
-vsf_err_t vsfip_decode_dnsans(uint8_t *ans , uint16_t size, uint16_t id,
+vsf_err_t vsfip_dns_decode_ans(uint8_t *ans , uint16_t size, uint16_t id,
 								struct vsfip_ipaddr_t *domainip)
 {
 	struct vsfip_dns_head_t *head = (struct vsfip_dns_head_t *)ans;
@@ -270,7 +288,7 @@ vsf_err_t vsfip_dns_init(void)
 }
 
 vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							uint8_t *domain, struct vsfip_ipaddr_t *domainip)
+							char *domain, struct vsfip_ipaddr_t *domainip)
 {
 	vsf_err_t err;
 	uint8_t i;
@@ -293,7 +311,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	if (err < 0) goto close;
 
 	vsfip_dns.id = VSFIP_DNS_ID;
-	vsfip_dns.outbuf = vsfip_build_dnsquery(domain, vsfip_dns.id);
+	vsfip_dns.outbuf = vsfip_dns_build_query(domain, vsfip_dns.id);
 	vsfip_dns.socket_pt.sm = pt->sm;
 	vsfip_dns.so->rx_timeout_ms = 1000;
 
@@ -317,7 +335,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			if (err > 0) return err; else if (err < 0) continue;
 
 			// recv success
-			err = vsfip_decode_dnsans(vsfip_dns.inbuf->app.buffer,
+			err = vsfip_dns_decode_ans(vsfip_dns.inbuf->app.buffer,
 							vsfip_dns.inbuf->app.size, vsfip_dns.id, domainip);
 			vsfip_buffer_release(vsfip_dns.inbuf);
 			if (!err) break;
