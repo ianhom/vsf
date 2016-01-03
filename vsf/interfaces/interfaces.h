@@ -198,7 +198,7 @@ struct interface_usart_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t baudrate, uint32_t mode);
-	vsf_err_t (*config_callback)(uint8_t index, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
+	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 	uint16_t (*tx_bytes)(uint8_t index, uint8_t *data, uint16_t size);
 	uint16_t (*tx_get_free_size)(uint8_t index);
 	uint16_t (*rx_bytes)(uint8_t index, uint8_t *data, uint16_t size);
@@ -217,7 +217,7 @@ struct interface_usart_t
 vsf_err_t CORE_USART_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t baudrate, uint32_t mode);
-vsf_err_t CORE_USART_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
+vsf_err_t CORE_USART_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 uint16_t CORE_USART_TX_BYTES(__TARGET_CHIP__)(uint8_t index, uint8_t *data, uint16_t size);
 uint16_t CORE_USART_TX_GET_FREE_SIZE(__TARGET_CHIP__)(uint8_t index);
 uint16_t CORE_USART_RX_BYTES(__TARGET_CHIP__)(uint8_t index, uint8_t *data, uint16_t size);

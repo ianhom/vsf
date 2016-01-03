@@ -136,18 +136,18 @@ vsf_err_t cmem7_usart_config(uint8_t index, uint32_t baudrate, uint32_t mode)
 	uart->CTRL_b.RX_HALF_FULL = USART_FIFO_HALF_FULL;
 
 	uart->TIMEOUT = 16;
-	
+
 	uart->INT_RAW = 0;
 	uart->INT_MASK |= 0x000007FF;
 	uart->INT_MASK_b.RHF = 0;
 	uart->INT_MASK_b.TONE = 0;
-	
+
 	uart->RUN_b.EN = 1;
 	return VSFERR_NONE;
 }
 
-vsf_err_t cmem7_usart_config_callback(uint8_t index, void *p,
-		void (*ontx)(void *), void (*onrx)(void *, uint16_t))
+vsf_err_t cmem7_usart_config_callback(uint8_t index, uint32_t int_priority,
+		void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t))
 {
 	uint32_t usart_idx = index & 0x0F;
 
@@ -171,7 +171,7 @@ uint16_t cmem7_usart_tx_bytes(uint8_t index, uint8_t *data, uint16_t size)
 	}
 	UART2->INT_RAW_b.TE = 0;
 	UART2->INT_MASK_b.TE = 0;
-	
+
 	return i;
 }
 

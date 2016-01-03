@@ -247,8 +247,8 @@ vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate,
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_usart_config_callback(uint8_t index, void *p,
-						void (*ontx)(void *), void (*onrx)(void *, uint16_t))
+vsf_err_t nuc505_usart_config_callback(uint8_t index, uint32_t int_priority,
+				void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t))
 {
 	uint32_t usart_idx = index & 0x0F;
 
