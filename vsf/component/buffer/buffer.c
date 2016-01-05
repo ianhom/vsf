@@ -739,3 +739,30 @@ void vsf_bufmgr_free(void *ptr)
 #endif
 }
 
+// pool
+void vsfpool_init(struct vsfpool_t *pool)
+{
+	memset(pool->flags, 0, (pool->num + 31) >> 3);
+}
+
+void* vsfpool_alloc(struct vsfpool_t *pool)
+{
+	int index = mskarr_ffz(pool->flags, (pool->num + 31) >> 5);
+
+	if (index >= pool->num)
+	{
+		return NULL;
+	}
+	mskarr_set(pool->flags, index);
+	return (uint8_t *)pool->buffer + index * pool->size;
+}
+
+void vsfpool_free(struct vsfpool_t *pool, void *buffer)
+{
+	int index = ((uint8_t *)buffer - (uint8_t *)pool->buffer) / pool->size;
+
+	if (index < pool->num)
+	{
+		mskarr_clr(pool->flags, index);
+	}
+}
