@@ -34,7 +34,15 @@ struct vsftimer_t
 	int trigger_cnt;
 };
 
-vsf_err_t vsftimer_init(void);
+// IMPORTANT:
+// 	for free, MUST make sure the pointer is allocated
+struct vsftimer_mem_op_t
+{
+	struct vsftimer_t* (*alloc)(void);
+	void (*free)(struct vsftimer_t *);
+};
+
+vsf_err_t vsftimer_init(struct vsftimer_mem_op_t *mem_op);
 // call vsftimer_callback_int in hw timer interrupt
 void vsftimer_callback_int(void);
 

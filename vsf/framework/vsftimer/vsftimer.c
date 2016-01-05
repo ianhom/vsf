@@ -23,8 +23,6 @@
 #include "interfaces.h"
 #include "framework/vsfsm/vsfsm.h"
 
-#include "tool/bittool/bittool.h"
-
 static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt);
 
@@ -32,6 +30,8 @@ struct vsftimer_info_t
 {
 	struct vsfsm_t sm;
 	struct vsfq_t timerlist;
+
+	struct vsftimer_mem_op_t *mem_op;
 } static vsftimer =
 {
 	{
@@ -48,26 +48,17 @@ void vsftimer_callback_int(void)
 	vsfsm_post_evt_pending(&vsftimer.sm, VSFSM_EVT_TIMER);
 }
 
-static struct vsftimer_t vsftimer_pool[VSFTIMER_CFG_POOL_SIZE];
-static uint32_t vsftimer_poll_mskarr[(VSFTIMER_CFG_POOL_SIZE + 31) / 32];
-vsf_err_t vsftimer_init(void)
+vsf_err_t vsftimer_init(struct vsftimer_mem_op_t *mem_op)
 {
-	memset(vsftimer_pool, 0, sizeof(vsftimer_pool));
-	memset(vsftimer_poll_mskarr, 0, sizeof(vsftimer_poll_mskarr));
-	
+	vsftimer.mem_op = mem_op;
+
 	vsfq_init(&vsftimer.timerlist);
 	return vsfsm_init(&vsftimer.sm);
 }
 
 static struct vsftimer_t *vsftimer_allocate(void)
 {
-	int index = mskarr_ffz(vsftimer_poll_mskarr, dimof(vsftimer_poll_mskarr));
-	if (index > VSFTIMER_CFG_POOL_SIZE)
-	{
-		return NULL;
-	}
-	mskarr_set(vsftimer_poll_mskarr, index);
-	return &vsftimer_pool[index];
+	return vsftimer.mem_op->alloc();
 }
 
 void vsftimer_enqueue(struct vsftimer_t *timer)
@@ -87,7 +78,7 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	uint32_t cur_tick = core_interfaces.tickclk.get_count();
 	struct vsftimer_t *timer;
-	
+
 	switch (evt)
 	{
 	case VSFSM_EVT_TIMER:
@@ -108,7 +99,7 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					vsftimer_free(timer);
 				}
-				
+
 				if ((timer->sm != NULL) && (timer->evt != VSFSM_EVT_INVALID))
 				{
 					vsfsm_post_evt(timer->sm, timer->evt);
@@ -133,7 +124,7 @@ struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 	{
 		return NULL;
 	}
-	
+
 	timer->sm = sm;
 	timer->evt = evt;
 	timer->interval = interval;
@@ -145,10 +136,5 @@ struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 void vsftimer_free(struct vsftimer_t *timer)
 {
 	vsftimer_dequeue(timer);
-	if ((timer >= &vsftimer_pool[0]) &&
-		(timer <= &vsftimer_pool[dimof(vsftimer_pool) - 1]))
-	{
-		// timer in pool
-		mskarr_clr(vsftimer_poll_mskarr, timer - vsftimer_pool);
-	}
+	vsftimer.mem_op->free(timer);
 }
