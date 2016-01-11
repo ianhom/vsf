@@ -36,7 +36,8 @@ struct interface_core_t
 	uint32_t (*get_stack)(void);
 	vsf_err_t (*set_stack)(uint32_t sp);
 	void (*sleep)(uint32_t mode);
-	vsf_err_t (*pendsv)(void (*on_pendsv)(void *), void *param);
+	vsf_err_t (*pendsv_config)(void (*on_pendsv)(void *), void *param);
+	vsf_err_t (*pendsv_trigger)(void);
 };
 
 #define CORE_INIT(m)					__CONNECT(m, _interface_init)
@@ -45,7 +46,8 @@ struct interface_core_t
 #define CORE_GET_STACK(m)				__CONNECT(m, _interface_get_stack)
 #define CORE_SET_STACK(m)				__CONNECT(m, _interface_set_stack)
 #define CORE_SLEEP(m)					__CONNECT(m, _interface_sleep)
-#define CORE_PENDSV(m)					__CONNECT(m, _interface_pendsv)
+#define CORE_PENDSV_CONFIG(m)			__CONNECT(m, _interface_pendsv_config)
+#define CORE_PENDSV_TRIGGER(m)			__CONNECT(m, _interface_pendsv_trigger)
 
 vsf_err_t CORE_INIT(__TARGET_CHIP__)(void *p);
 vsf_err_t CORE_FINI(__TARGET_CHIP__)(void *p);
@@ -53,7 +55,8 @@ vsf_err_t CORE_RESET(__TARGET_CHIP__)(void *p);
 uint32_t CORE_GET_STACK(__TARGET_CHIP__)(void);
 vsf_err_t CORE_SET_STACK(__TARGET_CHIP__)(uint32_t sp);
 void CORE_SLEEP(__TARGET_CHIP__)(uint32_t mode);
-vsf_err_t CORE_PENDSV(__TARGET_CHIP__)(void (*on_pendsv)(void *), void *param);
+vsf_err_t CORE_PENDSV_CONFIG(__TARGET_CHIP__)(void (*on_pendsv)(void *), void *param);
+vsf_err_t CORE_PENDSV_TRIGGER(__TARGET_CHIP__)(void);
 
 #define vsfhal_core_init				CORE_INIT(__TARGET_CHIP__)
 #define vsfhal_core_fini				CORE_FINI(__TARGET_CHIP__)
@@ -61,7 +64,8 @@ vsf_err_t CORE_PENDSV(__TARGET_CHIP__)(void (*on_pendsv)(void *), void *param);
 #define vsfhal_core_get_stack			CORE_GET_STACK(__TARGET_CHIP__)
 #define vsfhal_core_set_stack			CORE_SET_STACK(__TARGET_CHIP__)
 #define vsfhal_core_sleep				CORE_SLEEP(__TARGET_CHIP__)
-#define vsfhal_core_pendsv				CORE_PENDSV(__TARGET_CHIP__)
+#define vsfhal_core_pendsv_config		CORE_PENDSV_CONFIG(__TARGET_CHIP__)
+#define vsfhal_core_pendsv_trigger		CORE_PENDSV_TRIGGER(__TARGET_CHIP__)
 
 #if IFS_UNIQUEID_EN
 
@@ -448,7 +452,7 @@ uint32_t CORE_TICKCLK_GET_COUNT(__TARGET_CHIP__)(void);
 vsf_err_t CORE_TICKCLK_SET_CALLBACK(__TARGET_CHIP__)(void (*callback)(void *param), void *param);
 
 #define vsfhal_tickclk_init				CORE_TICKCLK_INIT(__TARGET_CHIP__)
-#define vsfhal_tickclk_fine				CORE_TICKCLK_FINI(__TARGET_CHIP__)
+#define vsfhal_tickclk_fini				CORE_TICKCLK_FINI(__TARGET_CHIP__)
 #define vsfhal_tickclk_start			CORE_TICKCLK_START(__TARGET_CHIP__)
 #define vsfhal_tickclk_stop				CORE_TICKCLK_STOP(__TARGET_CHIP__)
 #define vsfhal_tickclk_get_count		CORE_TICKCLK_GET_COUNT(__TARGET_CHIP__)

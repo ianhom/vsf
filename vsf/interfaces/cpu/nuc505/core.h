@@ -38,7 +38,8 @@ vsf_err_t nuc505_interface_reset(void *p);
 uint32_t nuc505_interface_get_stack(void);
 vsf_err_t nuc505_interface_set_stack(uint32_t sp);
 void nuc505_interface_sleep(uint32_t mode);
-vsf_err_t nuc505_interface_pendsv(void (*on_pendsv)(void *), void *param);
+vsf_err_t nuc505_interface_pendsv_config(void (*on_pendsv)(void *), void *param);
+vsf_err_t nuc505_interface_pendsv_trigger(void);
 vsf_err_t nuc505_interface_get_info(struct nuc505_info_t **info);
 
 vsf_err_t nuc505_tickclk_init(void);

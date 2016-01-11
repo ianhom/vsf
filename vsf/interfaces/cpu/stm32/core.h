@@ -60,6 +60,8 @@ uint32_t stm32_interface_get_stack(void);
 vsf_err_t stm32_interface_set_stack(uint32_t sp);
 void stm32_interface_sleep(uint32_t mode);
 vsf_err_t stm32_interface_get_info(struct stm32_info_t **info);
+vsf_err_t stm32_interface_pendsv_config(void (*on_pendsv)(void *), void *param);
+vsf_err_t stm32_interface_pendsv_trigger(void);
 
 uint32_t stm32_uid_get(uint8_t *buffer, uint32_t size);
 

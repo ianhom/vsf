@@ -41,6 +41,12 @@ vsf_err_t nuc505_interface_pendsv(void (*on_pendsv)(void *), void *param)
 	return VSFERR_NONE;
 }
 
+vsf_err_t nuc505_interface_pendsv_trigger(void)
+{
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+	return VSFERR_NONE;
+}
+
 void HardFault_Handler(void)
 {
 	while (1);

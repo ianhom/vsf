@@ -45,6 +45,39 @@ static struct stm32_info_t stm32_info =
 };
 uint32_t stm32_dma_dummy;
 
+// Pendsv
+struct stm32_pendsv_t
+{
+	void (*on_pendsv)(void *);
+	void *param;
+} static stm32_pendsv;
+
+ROOTFUNC void PendSV_Handler(void)
+{
+	if (stm32_pendsv.on_pendsv != NULL)
+	{
+		stm32_pendsv.on_pendsv(stm32_pendsv.param);
+	}
+}
+
+vsf_err_t stm32_interface_pendsv_config(void (*on_pendsv)(void *), void *param)
+{
+	stm32_pendsv.on_pendsv = on_pendsv;
+	stm32_pendsv.param = param;
+
+	if (stm32_pendsv.on_pendsv != NULL)
+	{
+		SCB->SHP[10] = 0xFF;
+	}
+	return VSFERR_NONE;
+}
+
+vsf_err_t stm32_interface_pendsv_trigger(void)
+{
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+	return VSFERR_NONE;
+}
+
 vsf_err_t stm32_interface_get_info(struct stm32_info_t **info)
 {
 	*info = &stm32_info;

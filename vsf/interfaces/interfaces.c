@@ -34,7 +34,8 @@ const struct interfaces_info_t core_interfaces =
 		CORE_GET_STACK(__TARGET_CHIP__),
 		CORE_SET_STACK(__TARGET_CHIP__),
 		CORE_SLEEP(__TARGET_CHIP__),
-		CORE_PENDSV(__TARGET_CHIP__),
+		CORE_PENDSV_CONFIG(__TARGET_CHIP__),
+		CORE_PENDSV_TRIGGER(__TARGET_CHIP__),
 	}
 #if IFS_UNIQUEID_EN
 	// unique ID
