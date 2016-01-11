@@ -170,10 +170,10 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 
 /* NOTE:  these are not the standard USB_ENDPOINT_XFER_* values!! */
 /* (yet ... they're the values used by usbfs) */
-#define PIPE_ISOCHRONOUS		0
-#define PIPE_INTERRUPT			1
-#define PIPE_CONTROL			2
-#define PIPE_BULK			3
+#define PIPE_ISOCHRONOUS		0ul
+#define PIPE_INTERRUPT			1ul
+#define PIPE_CONTROL			2ul
+#define PIPE_BULK			3ul
 
 #define usb_pipein(pipe)	(((pipe) & USB_DIR_IN) >> 7)
 #define usb_pipeout(pipe)	(!usb_pipein(pipe))
