@@ -33,7 +33,7 @@ static const uint8_t USB_DeviceDescriptor[] =
 	0x40,	// max packet size
 	0x83,
 	0x04,	// vendor
-	0x39,
+	0x3A,
 	0xA0,	// product
 	0x00,
 	0x02,	// bcdDevice
@@ -49,9 +49,9 @@ static const uint8_t USB_ConfigDescriptor[] =
 	0x09,	// bLength: Configuation Descriptor size
 	USB_DT_CONFIG,
 			// bDescriptorType: Configuration
-	77,		// wTotalLength:no of returned bytes*
+	75,		// wTotalLength:no of returned bytes*
 	0x00,
-	0x03,	// bNumInterfaces: 1 interface
+	0x02,	// bNumInterfaces: 1 interface
 	0x01,	// bConfigurationValue: Configuration value
 	0x00,	// iConfiguration: Index of string descriptor describing the configuration
 	0x80,	// bmAttributes: bus powered
@@ -272,7 +272,7 @@ struct vsfapp_t
 	.usbd.ifaces[0].protocol_param			= &app.usbd.cdc.param,
 	.usbd.ifaces[1].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
 	.usbd.ifaces[1].protocol_param			= &app.usbd.cdc.param,
-	.usbd.config[0].num_of_ifaces			= dimof(app.usbd.config),
+	.usbd.config[0].num_of_ifaces			= dimof(app.usbd.ifaces),
 	.usbd.config[0].iface					= app.usbd.ifaces,
 	.usbd.device.num_of_configuration		= dimof(app.usbd.config),
 	.usbd.device.config						= app.usbd.config,
@@ -392,17 +392,7 @@ int main(void)
 	vsfsm_evtq_set(&app.mainq);
 	while (1)
 	{
-		vsfsm_poll();
-
-		vsf_enter_critical();
-		if (!vsfsm_get_event_pending())
-		{
-			// sleep, will also enable interrupt
-			core_interfaces.core.sleep(SLEEP_WFI);
-		}
-		else
-		{
-			vsf_leave_critical();
-		}
+		// no thread runs in mainq, just sleep in main loop
+		vsfhal_core_sleep(SLEEP_WFI);
 	}
 }

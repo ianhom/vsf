@@ -1178,6 +1178,9 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 	switch (evt)
 	{
+	case VSFSM_EVT_ENTER:
+	case VSFSM_EVT_EXIT:
+		break;
 	case VSFSM_EVT_FINI:
 		device->drv->fini();
 		device->drv->disconnect();
