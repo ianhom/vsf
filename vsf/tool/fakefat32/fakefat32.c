@@ -79,8 +79,8 @@ static uint8_t fat32_mbr[512] =
 };
 
 
-#include "dal/mal/mal.h"
-#include "dal/mal/mal_driver.h"
+#include "component/mal/mal.h"
+#include "component/mal/mal_driver.h"
 
 // helper functions
 static char find_first_alphabet(const char *str)

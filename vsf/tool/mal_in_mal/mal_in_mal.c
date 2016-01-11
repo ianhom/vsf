@@ -23,8 +23,8 @@
 
 #include "interfaces.h"
 
-#include "dal/mal/mal.h"
-#include "dal/mal/mal_driver.h"
+#include "component/mal/mal.h"
+#include "component/mal/mal_driver.h"
 
 #include "mal_in_mal.h"
 

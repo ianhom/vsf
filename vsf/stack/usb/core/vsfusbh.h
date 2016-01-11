@@ -6,8 +6,8 @@
 #include "stack/usb/common/usb_ch11.h"
 #include "hcd.h"
 
-#include "tool/list/list.h"
-#include "tool/buffer/buffer.h"
+#include "component/list/list.h"
+#include "component/buffer/buffer.h"
 #include "tool/bittool/bittool.h"
 #include "framework/vsfsm/vsfsm.h"
 #include "framework/vsftimer/vsftimer.h"

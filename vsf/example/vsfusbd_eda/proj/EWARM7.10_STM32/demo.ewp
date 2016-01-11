@@ -1911,16 +1911,31 @@
   <group>
     <name>vsf</name>
     <group>
+      <name>component</name>
+      <group>
+        <name>buffer</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\buffer\buffer.c</name>
+        </file>
+      </group>
+      <group>
+        <name>list</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
+        </file>
+      </group>
+      <group>
+        <name>stream</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\stream\stream.c</name>
+        </file>
+      </group>
+    </group>
+    <group>
       <name>dal</name>
       <excluded>
         <configuration>Release</configuration>
       </excluded>
-      <group>
-        <name>stream</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\dal\stream\stream.c</name>
-        </file>
-      </group>
     </group>
     <group>
       <name>framework</name>
@@ -2108,12 +2123,6 @@
         </file>
       </group>
       <group>
-        <name>buffer</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\buffer\buffer.c</name>
-        </file>
-      </group>
-      <group>
         <name>fakefat32</name>
         <excluded>
           <configuration>Debug</configuration>
@@ -2121,12 +2130,6 @@
         </excluded>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\fakefat32\fakefat32.c</name>
-        </file>
-      </group>
-      <group>
-        <name>list</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\list\list.c</name>
         </file>
       </group>
       <group>

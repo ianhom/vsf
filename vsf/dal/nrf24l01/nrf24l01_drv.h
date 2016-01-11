@@ -21,9 +21,9 @@
 #define __NRF24L01_DRV_H_INCLUDED__
 
 #include "dal_cfg.h"
-#include "../dal.h"
+#include "dal/dal.h"
 
-#include "../../tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
 enum nrf24l01_drv_dir_t
 {

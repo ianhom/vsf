@@ -21,7 +21,7 @@
 #define __VSFILE_H_INCLUDED__
 
 #include "framework/vsfsm/vsfsm.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
 enum vsfile_attr_t
 {

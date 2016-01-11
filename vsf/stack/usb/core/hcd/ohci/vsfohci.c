@@ -20,8 +20,8 @@
 #include "app_type.h"
 
 #include "interfaces.h"
-#include "tool/list/list.h"
-#include "tool/buffer/buffer.h"
+#include "component/list/list.h"
+#include "component/buffer/buffer.h"
 
 #include "stack/usb/core/vsfusbh.h"
 #include "vsfohci_priv.h"

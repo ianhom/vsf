@@ -32,8 +32,8 @@
 #include "framework/vsftimer/vsftimer.h"
 #include "framework/vsfshell/vsfshell.h"
 
-#include "tool/buffer/buffer.h"
-#include "dal/stream/stream.h"
+#include "component/buffer/buffer.h"
+#include "component/stream/stream.h"
 
 // stack
 #include "stack/usb/core/vsfusbd.h"

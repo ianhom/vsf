@@ -18,9 +18,9 @@
  ***************************************************************************/
 
 #include "app_type.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
-#include "dal/mal/mal.h"
+#include "component/mal/mal.h"
 #include "vsfui_fb.h"
 
 // frame_buffer driver for vsfui

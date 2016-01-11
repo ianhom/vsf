@@ -20,7 +20,7 @@
 #ifndef __VSFSHELL_H_INCLUDED__
 #define __VSFSHELL_H_INCLUDED__
 
-#include "dal/stream/stream.h"
+#include "component/stream/stream.h"
 #include "framework/vsfsm/vsfsm.h"
 
 #define VSFSHELL_HANDLER(name, thread, context)\

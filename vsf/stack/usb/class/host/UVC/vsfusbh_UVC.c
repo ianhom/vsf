@@ -20,7 +20,7 @@
 #include "app_type.h"
 
 #include "interfaces.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
 #include "stack/usb/core/vsfusbh.h"
 #include "stack/usb/class/host/UVC/vsfusbh_UVC.h"

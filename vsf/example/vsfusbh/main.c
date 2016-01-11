@@ -6,7 +6,7 @@
 #include "framework/vsftimer/vsftimer.h"
 #include "framework/vsfshell/vsfshell.h"
 
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 #include "dal/usart_stream/usart_stream.h"
 
 #include "stack/usb/vsfusb.h"

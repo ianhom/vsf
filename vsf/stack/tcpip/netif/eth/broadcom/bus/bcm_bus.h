@@ -6,7 +6,7 @@
 #include "framework/vsftimer/vsftimer.h"
 
 #include "../../../vsfip_netif.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
 #ifndef __BCM_BUS_H_INCLUDED__
 #define __BCM_BUS_H_INCLUDED__

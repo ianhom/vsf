@@ -1,7 +1,7 @@
 #include "compiler.h"
 #include "app_type.h"
 
-#include "dal/mal/mal.h"
+#include "component/mal/mal.h"
 #include "SCSI.h"
 
 static enum SCSI_errcode_t SCSI_errcode = SCSI_ERRCODE_OK;

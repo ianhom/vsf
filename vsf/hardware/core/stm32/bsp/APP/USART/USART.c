@@ -18,7 +18,7 @@
 #if INTERFACE_USART_EN
 
 #include "app_interfaces.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 #include "dal/usart_stream/usart_stream.h"
 
 #include "USART.h"

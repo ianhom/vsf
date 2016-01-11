@@ -1,7 +1,7 @@
 #ifndef __VSFMEM_H_INCLUDED__
 #define __VSFMEM_H_INCLUDED__
 
-#include "dal/mal/mal.h"
+#include "component/mal/mal.h"
 #include "dal/cfi/cfi_drv.h"
 #include "dal/nand/nand_drv.h"
 #include "dal/df25xx/df25xx_drv.h"

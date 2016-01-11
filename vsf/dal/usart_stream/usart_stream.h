@@ -20,7 +20,7 @@
 #ifndef __USART_STREAM_H_INCLUDED__
 #define __USART_STREAM_H_INCLUDED__
 
-#include "dal/stream/stream.h"
+#include "component/stream/stream.h"
 
 struct usart_stream_info_t
 {

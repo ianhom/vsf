@@ -1,7 +1,7 @@
 #ifndef __SCSI_H_INCLUDED__
 #define __SCSI_H_INCLUDED__
 
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 
 #define SCSI_CMD_FORMAT_UNIT						0x04
 #define SCSI_CMD_INQUIRY							0x12

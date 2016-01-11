@@ -21,7 +21,7 @@
 #define __VSFUSBD_H_INCLUDED__
 
 #include "interfaces.h"
-#include "tool/buffer/buffer.h"
+#include "component/buffer/buffer.h"
 #include "vsfusbd_cfg.h"
 #include "../common/usb_common.h"
 

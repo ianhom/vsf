@@ -1,7 +1,7 @@
 #ifndef __VSFIP_HTTPC_H_INCLUDED__
 #define __VSFIP_HTTPC_H_INCLUDED__
 
-#include "dal/stream/stream.h"
+#include "component/stream/stream.h"
 
 #define HTTPC_DEBUG
 

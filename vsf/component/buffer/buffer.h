@@ -21,7 +21,7 @@
 #define __BUFFER_H_INCLUDED__
 
 #include "app_type.h"
-#include "tool/list/list.h"
+#include "component/list/list.h"
 
 // queue
 struct vsfq_node_t

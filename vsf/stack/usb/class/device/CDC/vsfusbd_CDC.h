@@ -1,8 +1,8 @@
 #ifndef __VSFUSBD_CDC_H_INCLUDED__
 #define __VSFUSBD_CDC_H_INCLUDED__
 
-#include "tool/buffer/buffer.h"
-#include "dal/stream/stream.h"
+#include "component/buffer/buffer.h"
+#include "component/stream/stream.h"
 
 enum usb_CDC_req_t
 {

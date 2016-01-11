@@ -11,7 +11,7 @@
 #include "framework/vsftimer/vsftimer.h"
 #include "framework/vsfshell/vsfshell.h"
 
-#include "dal/stream/stream.h"
+#include "component/stream/stream.h"
 
 #include "stack/usb/core/vsfusbd.h"
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
