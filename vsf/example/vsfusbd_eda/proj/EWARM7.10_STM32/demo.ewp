@@ -2084,6 +2084,24 @@
     <group>
       <name>stack</name>
       <group>
+        <name>tcpip</name>
+        <group>
+          <name>netif</name>
+          <group>
+            <name>eth</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\vsfip_eth.c</name>
+            </file>
+          </group>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\vsfip_netif.c</name>
+          </file>
+        </group>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\vsfip.c</name>
+        </file>
+      </group>
+      <group>
         <name>usb</name>
         <group>
           <name>class</name>
