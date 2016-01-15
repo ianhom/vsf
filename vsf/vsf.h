@@ -267,6 +267,11 @@ struct vsf_t
 
 	struct vsf_framework_t
 	{
+		void (*evtq_init)(struct vsfsm_evtq_t *queue);
+		void (*evtq_set)(struct vsfsm_evtq_t *queue);
+		struct vsfsm_evtq_t* (*evtq_get)(void);
+		vsf_err_t (*poll)(void);
+		uint32_t (*get_event_pending)(void);
 		vsf_err_t (*sm_init)(struct vsfsm_t *sm);
 		vsf_err_t (*sm_fini)(struct vsfsm_t *sm);
 		vsf_err_t (*pt_init)(struct vsfsm_t *sm, struct vsfsm_pt_t *pt);
@@ -288,18 +293,21 @@ struct vsf_t
 
 		struct
 		{
+			vsf_err_t (*init)(struct vsftimer_mem_op_t *mem_op);
 			struct vsftimer_t * (*create)(struct vsfsm_t *sm, uint32_t interval,
 										int16_t trigger_cnt, vsfsm_evt_t evt);
 			void (*free)(struct vsftimer_t *timer);
 			void (*enqueue)(struct vsftimer_t *timer);
 			void (*dequeue)(struct vsftimer_t *timer);
+			void (*callback)(void);
 		} timer;
 
 #ifdef VSFCFG_MODULE
 		struct
 		{
-            void (*reg)(struct vsf_module_t *module);
-            void (*unreg)(struct vsf_module_t *module);
+			struct vsf_module_t* (*get)(char *name);
+			void (*reg)(struct vsf_module_t *module);
+			void (*unreg)(struct vsf_module_t *module);
 			void* (*load)(char *name);
 			void (*unload)(char *name);
 		} module;
@@ -344,6 +352,13 @@ struct vsf_t
 				void* (*malloc_aligned)(uint32_t size, uint32_t align);
 				void (*free)(void *ptr);
 			} bufmgr;
+
+			struct
+			{
+				void (*init)(struct vsfpool_t *pool);
+				void* (*alloc)(struct vsfpool_t *pool);
+				void (*free)(struct vsfpool_t *pool, void *buffer);
+			} pool;
 		} buffer;
 
 		struct
@@ -465,8 +480,25 @@ struct vsf_t
 #define GPIO_OUTPP						core_interfaces.gpio.constants.OUTPP
 #define GPIO_OUTOD						core_interfaces.gpio.constants.OUTOD
 #define vsfhal_gpio_init				core_interfaces.gpio.init
+
+#define vsfhal_core_init				core_interfaces.core.init
+#define vsfhal_core_sleep				core_interfaces.core.sleep
+#define vsfhal_core_pendsv_config		core_interfaces.core.pendsv_config
+#define vsfhal_core_pendsv_trigger		core_interfaces.core.pendsv_trigger
+
+#define vsfhal_tickclk_init				core_interfaces.tickclk.init
+#define vsfhal_tickclk_fini				core_interfaces.tickclk.fini
+#define vsfhal_tickclk_start			core_interfaces.tickclk.start
+#define vsfhal_tickclk_stop				core_interfaces.tickclk.stop
+#define vsfhal_tickclk_get_count		core_interfaces.tickclk.get_count
+#define vsfhal_tickclk_set_callback		core_interfaces.tickclk.set_callback
 // more interfaces related MACROs here
 
+#define vsfsm_evtq_init					vsf.framework.evtq_init
+#define vsfsm_evtq_set					vsf.framework.evtq_set
+#define vsfsm_evtq_get					vsf.framework.evtq_get
+#define vsfsm_poll						vsf.framework.poll
+#define vsfsm_get_event_pending			vsf.framework.get_event_pending
 #define vsfsm_init						vsf.framework.sm_init
 #define vsfsm_fini						vsf.framework.sm_fini
 #define vsfsm_pt_init					vsf.framework.pt_init
@@ -483,12 +515,15 @@ struct vsf_t
 #define vsfsm_sync_increase				vsf.framework.sync.increase
 #define vsfsm_sync_decrease				vsf.framework.sync.decrease
 
+#define vsftimer_init					vsf.framework.timer.init
 #define vsftimer_create					vsf.framework.timer.create
 #define vsftimer_free					vsf.framework.timer.free
 #define vsftimer_enqueue				vsf.framework.timer.enqueue
 #define vsftimer_dequeue				vsf.framework.timer.dequeue
+#define vsftimer_callback_int			vsf.framework.timer.callback
 
 #ifdef VSFCFG_MODULE
+#define vsf_module_get					vsf.framework.module.get
 #define vsf_module_register				vsf.framework.module.reg
 #define vsf_module_unregister			vsf.framework.module.unreg
 #define vsf_module_load					vsf.framework.module.load
@@ -536,6 +571,10 @@ struct vsf_t
 #define vsf_bufmgr_malloc				vsf.component.buffer.bufmgr.malloc
 #define vsf_bufmgr_malloc_aligned		vsf.component.buffer.bufmgr.malloc_aligned
 #define vsf_bufmgr_free					vsf.component.buffer.bufmgr.free
+
+#define vsfpool_init					vsf.component.buffer.pool.init
+#define vsfpool_alloc					vsf.component.buffer.pool.alloc
+#define vsfpool_free					vsf.component.buffer.pool.free
 
 #define BIT_REVERSE_U8					vsf.tool.bittool.bit_reverse_u8
 #define BIT_REVERSE_U16					vsf.tool.bittool.bit_reverse_u16
@@ -683,6 +722,7 @@ struct vsf_t
 extern const struct vsf_t vsf;
 
 #ifdef VSFCFG_MODULE
+struct vsf_module_t* vsf_module_get(char *name);
 void vsf_module_register(struct vsf_module_t *module);
 void vsf_module_unregister(struct vsf_module_t *module);
 void* vsf_module_load(char *name);

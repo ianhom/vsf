@@ -200,9 +200,36 @@ struct vsfapp_t
 	} usbd;
 
 	struct vsfshell_t shell;
+
+	struct vsftimer_mem_op_t vsftimer_memop;
+	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, 16);
+	struct vsfsm_evtq_t pendsvq;
+	struct vsfsm_evtq_element_t pendsvq_ele[16];
 };
 
 // app
+// vsftimer
+static void app_tickclk_callback_int(void *param)
+{
+	vsftimer_callback_int();
+}
+
+static struct vsftimer_t* vsftimer_memop_alloc(void)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	return VSFPOOL_ALLOC(&app->vsftimer_pool, struct vsftimer_t);
+}
+
+static void vsftimer_memop_free(struct vsftimer_t *timer)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	VSFPOOL_FREE(&app->vsftimer_pool, timer);
+}
+
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -211,6 +238,16 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
+		vsfhal_core_init(NULL);
+		vsfhal_tickclk_init();
+		vsfhal_tickclk_start();
+
+		VSFPOOL_INIT(&app->vsftimer_pool, struct vsftimer_t, 16);
+		app->vsftimer_memop.alloc = vsftimer_memop_alloc;
+		app->vsftimer_memop.free = vsftimer_memop_free;
+		vsftimer_init(&app->vsftimer_memop);
+		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
+
 		// Application
 		// app init
 		app->usbd.cdc.param.CDC_param.ep_out = 3;
@@ -219,12 +256,12 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		app->usbd.cdc.param.CDC_param.stream_rx = &app->usbd.cdc.stream_rx;
 
 		app->usbd.cdc.fifo_tx.buffer.buffer = app->usbd.cdc.txbuff;
-		app->usbd.cdc.fifo_tx.buffer.size = sizeof(app->usbd.cdc.txbuff);
 		app->usbd.cdc.fifo_rx.buffer.buffer = app->usbd.cdc.rxbuff;
+		app->usbd.cdc.fifo_tx.buffer.size = sizeof(app->usbd.cdc.txbuff);
 		app->usbd.cdc.fifo_rx.buffer.size = sizeof(app->usbd.cdc.rxbuff);
 		app->usbd.cdc.stream_tx.user_mem = &app->usbd.cdc.fifo_tx;
-		app->usbd.cdc.stream_tx.op = &fifo_stream_op;
 		app->usbd.cdc.stream_rx.user_mem = &app->usbd.cdc.fifo_rx;
+		app->usbd.cdc.stream_tx.op = &fifo_stream_op;
 		app->usbd.cdc.stream_rx.op = &fifo_stream_op;
 
 		app->usbd.ifaces[0].class_protocol =
@@ -305,10 +342,38 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-// dummy main, make compiler happy
-int main(void)
+static void app_on_pendsv(void *param)
 {
-	return 0;
+	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
+
+	vsfsm_evtq_set(evtq_cur);
+	while (vsfsm_get_event_pending())
+	{
+		vsfsm_poll();
+	}
+	vsfsm_evtq_set(evtq_old);
+}
+
+static void app_pendsv_activate(struct vsfsm_evtq_t *q)
+{
+	vsfhal_core_pendsv_trigger();
+}
+
+vsf_err_t main(struct vsfapp_t *app)
+{
+	app->pendsvq.size = dimof(app->pendsvq_ele);
+	app->pendsvq.queue = app->pendsvq_ele;
+	app->pendsvq.activate = app_pendsv_activate;
+	vsfsm_evtq_init(&app->pendsvq);
+	vsfsm_evtq_set(&app->pendsvq);
+	
+	app->sm.init_state.evt_handler = app_evt_handler;
+	app->sm.user_data = app;
+	vsfsm_init(&app->sm);
+
+	vsfhal_core_pendsv_config(app_on_pendsv, &app->pendsvq);
+	vsf_leave_critical();
+	return VSFERR_NONE;
 }
 
 ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
@@ -348,9 +413,7 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 	memset(app, 0, sizeof(*app));
 	app->hwcfg = hwcfg;
 
-	app->sm.init_state.evt_handler = app_evt_handler;
-	app->sm.user_data = app;
-	return vsfsm_init(&app->sm);
+	return main(app);
 
 fail_malloc_app:
 #ifdef VSFCFG_MODULE_SHELL

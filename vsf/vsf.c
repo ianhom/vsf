@@ -60,7 +60,7 @@ void vsf_module_unregister(struct vsf_module_t *module)
 	}
 }
 
-static struct vsf_module_t* vsf_module_get(char *name)
+struct vsf_module_t* vsf_module_get(char *name)
 {
 	struct vsf_module_t *module = modulelist;
 
@@ -165,6 +165,11 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.ver = VSF_API_VERSION,
 	.ifs = &core_interfaces,
 
+	.framework.evtq_init = vsfsm_evtq_init,
+	.framework.evtq_set = vsfsm_evtq_set,
+	.framework.evtq_get = vsfsm_evtq_get,
+	.framework.poll = vsfsm_poll,
+	.framework.get_event_pending = vsfsm_get_event_pending,
 	.framework.sm_init = vsfsm_init,
 	.framework.sm_fini = vsfsm_fini,
 	.framework.pt_init = vsfsm_pt_init,
@@ -176,11 +181,14 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.framework.sync.cancel = vsfsm_sync_cancel,
 	.framework.sync.increase = vsfsm_sync_increase,
 	.framework.sync.decrease = vsfsm_sync_decrease,
+	.framework.timer.init = vsftimer_init,
 	.framework.timer.create = vsftimer_create,
 	.framework.timer.free = vsftimer_free,
 	.framework.timer.enqueue = vsftimer_enqueue,
 	.framework.timer.dequeue = vsftimer_dequeue,
+	.framework.timer.callback = vsftimer_callback_int,
 #ifdef VSFCFG_MODULE
+	.framework.module.get = vsf_module_get,
 	.framework.module.reg = vsf_module_register,
 	.framework.module.unreg = vsf_module_unregister,
 	.framework.module.load = vsf_module_load,
@@ -211,6 +219,9 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.buffer.bufmgr.malloc = vsf_bufmgr_malloc,
 	.component.buffer.bufmgr.malloc_aligned = vsf_bufmgr_malloc_aligned,
 	.component.buffer.bufmgr.free = vsf_bufmgr_free,
+	.component.buffer.pool.init = vsfpool_init,
+	.component.buffer.pool.alloc = vsfpool_alloc,
+	.component.buffer.pool.free = vsfpool_free,
 	.component.stream.init = stream_init,
 	.component.stream.fini = stream_fini,
 	.component.stream.read = stream_read,
