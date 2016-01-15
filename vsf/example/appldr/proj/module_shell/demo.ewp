@@ -471,7 +471,7 @@
           <name>ADefines</name>
           <state>VSF_APP_BASE=0x08008000</state>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="shell"</state>
+          <state>MODULE_NAME="vsf.framework.shell"</state>
         </option>
         <option>
           <name>AList</name>

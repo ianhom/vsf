@@ -1,6 +1,9 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
+#define VSF_MODULE_SHELL_NAME			"vsf.framework.shell"
+#define VSF_MODULE_USBD_NAME			"vsf.stack.usb.device"
+
 #define USB_EVT_PULLUP_TO				(VSFSM_EVT_USER_LOCAL + 0)
 
 static const uint8_t USB_DeviceDescriptor[] =
@@ -302,7 +305,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-#ifdef VSFCFG_STANDALONE_MODULE
 // dummy main, make compiler happy
 int main(void)
 {
@@ -311,10 +313,6 @@ int main(void)
 
 ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 							struct app_hwcfg_t const *hwcfg)
-#else
-ROOTFUNC vsf_err_t app_main(struct vsf_module_t *module,
-							struct app_hwcfg_t const *hwcfg)
-#endif
 {
 	struct vsfapp_t *app;
 	vsf_err_t err = VSFERR_FAIL;
@@ -326,14 +324,18 @@ ROOTFUNC vsf_err_t app_main(struct vsf_module_t *module,
 		return VSFERR_NOT_SUPPORT;
 	}
 
-	if (NULL == vsf_module_load("usbd"))
+#ifdef VSFCFG_MODULE_USBD
+	if (NULL == vsf_module_load(VSF_MODULE_USBD_NAME))
 	{
 		goto fail_load_usbd;
 	}
-	if (NULL == vsf_module_load("shell"))
+#endif
+#ifdef VSFCFG_MODULE_SHELL
+	if (NULL == vsf_module_load(VSF_MODULE_SHELL_NAME))
 	{
 		goto fail_load_shell;
 	}
+#endif
 
 	app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
 	if (NULL == app)
@@ -351,18 +353,26 @@ ROOTFUNC vsf_err_t app_main(struct vsf_module_t *module,
 	return vsfsm_init(&app->sm);
 
 fail_malloc_app:
-	vsf_module_unload("shell");
+#ifdef VSFCFG_MODULE_SHELL
+	vsf_module_unload(VSF_MODULE_SHELL_NAME);
 fail_load_shell:
-	vsf_module_unload("usbd");
+#endif
+#ifdef VSFCFG_MODULE_USBD
+	vsf_module_unload(VSF_MODULE_USBD_NAME);
 fail_load_usbd:
+#endif
 	return err;
 }
 
 // for app module, module_exit is just a place holder
 ROOTFUNC vsf_err_t module_exit(struct vsf_module_t *module)
 {
-	vsf_module_unload("usbd");
-	vsf_module_unload("shell");
+#ifdef VSFCFG_MODULE_USBD
+	vsf_module_unload(VSF_MODULE_USBD_NAME);
+#endif
+#ifdef VSFCFG_MODULE_SHELL
+	vsf_module_unload(VSF_MODULE_SHELL_NAME);
+#endif
 	if (module->ifs != NULL)
 	{
 		vsf_bufmgr_free(module->ifs);

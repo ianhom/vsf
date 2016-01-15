@@ -1,7 +1,6 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
-#ifdef VSF_STANDALONE_MODULE
 // dummy main, make compiler happy
 int main(void)
 {
@@ -10,10 +9,6 @@ int main(void)
 
 ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 							struct app_hwcfg_t const *hwcfg)
-#else
-ROOTFUNC vsf_err_t shell_main(struct vsf_module_t *module,
-							struct app_hwcfg_t const *hwcfg)
-#endif
 {
 	struct vsf_shell_api_t *api = vsf.framework.shell;
 
