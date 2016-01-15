@@ -22,20 +22,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#include "compiler.h"
-#include "app_type.h"
-
-#include "framework/vsftimer/vsftimer.h"
-#include "vsfshell.h"
-
-// handlers
-static vsf_err_t
-vsfshell_echo_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
-static struct vsfshell_handler_t vsfshell_handlers[] =
-{
-	VSFSHELL_HANDLER("echo", vsfshell_echo_handler, NULL),
-	VSFSHELL_HANDLER_NONE
-};
+#include "vsf.h"
 
 enum vsfshell_EVT_t
 {
@@ -464,8 +451,6 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		shell->stream_tx->callback_tx.on_connect_rx =
 							vsfshell_streamtx_callback_on_rxconn;
 		
-		vsfshell_register_handlers(shell, vsfshell_handlers);
-		
 		// shell->output_pt is only called by shell->input_pt
 		shell->output_pt.thread = (vsfsm_pt_thread_t)vsfshell_output_thread;
 		shell->output_pt.sm = sm;
@@ -533,50 +518,4 @@ void vsfshell_register_handlers(struct vsfshell_t *shell,
 		
 		handlers++;
 	}
-}
-
-// handlers
-static vsf_err_t
-vsfshell_echo_handler(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
-{
-	struct vsfshell_handler_param_t *param =
-						(struct vsfshell_handler_param_t *)pt->user_data;
-	struct vsfsm_pt_t *output_pt = &param->output_pt;
-	
-	vsfsm_pt_begin(pt);
-	if (param->argc < 2)
-	{
-		vsfshell_printf(output_pt, "invalid format." VSFSHELL_LINEEND);
-		vsfshell_printf(output_pt, "format: echo STRING [INTERVAL]" VSFSHELL_LINEEND);
-		goto handler_thread_end;
-	}
-	if (3 == param->argc)
-	{
-		param->priv = vsftimer_create(pt->sm, strtoul(param->argv[2], NULL, 0),
-										-1, VSFSHELL_EVT_USER);
-		if (NULL == param->priv)
-		{
-			vsfshell_printf(output_pt, "not enough resources." VSFSHELL_LINEEND);
-			goto handler_thread_end;
-		}
-		vsfshell_handler_release_io(pt);
-	}
-	
-	do
-	{
-		if (3 == param->argc)
-		{
-			vsfsm_pt_wfe(pt, VSFSHELL_EVT_USER);
-		}
-		vsfshell_printf(output_pt, "%s" VSFSHELL_LINEEND, param->argv[1]);
-	} while (3 == param->argc);
-handler_thread_end:
-	if (param->priv != NULL)
-	{
-		vsf_bufmgr_free(param->priv);
-	}
-	vsfshell_handler_exit(pt);
-	vsfsm_pt_end(pt);
-	
-	return VSFERR_NONE;
 }

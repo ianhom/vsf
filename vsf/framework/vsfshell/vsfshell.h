@@ -20,9 +20,6 @@
 #ifndef __VSFSHELL_H_INCLUDED__
 #define __VSFSHELL_H_INCLUDED__
 
-#include "component/stream/stream.h"
-#include "framework/vsfsm/vsfsm.h"
-
 #define VSFSHELL_HANDLER(name, thread, context)\
 											{(name), (thread), (context), NULL}
 #define VSFSHELL_HANDLER_NONE				VSFSHELL_HANDLER(NULL, NULL, NULL)

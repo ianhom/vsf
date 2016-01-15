@@ -20,12 +20,8 @@
 #ifndef __VSFUSBD_H_INCLUDED__
 #define __VSFUSBD_H_INCLUDED__
 
-#include "interfaces.h"
-#include "component/buffer/buffer.h"
 #include "vsfusbd_cfg.h"
 #include "../common/usb_common.h"
-
-#include "framework/vsfsm/vsfsm.h"
 
 #define VSFUSBD_EVT_DATAIO_INEP(ep)		(VSFUSBD_EVT_DATAIO_IN + (ep))
 #define VSFUSBD_EVT_DATAIO_OUTEP(ep)	(VSFUSBD_EVT_DATAIO_OUT + (ep))

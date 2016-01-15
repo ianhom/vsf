@@ -17,14 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "app_cfg.h"
-#include "interfaces.h"
-
-#include "component/buffer/buffer.h"
-
-#include "vsfusbd_cfg.h"
-#include "../common/usb_common.h"
-#include "vsfusbd.h"
+#include "vsf.h"
 
 // events for vsfusbd
 #define VSFUSBD_INTEVT_BASE				VSFSM_EVT_USER_LOCAL

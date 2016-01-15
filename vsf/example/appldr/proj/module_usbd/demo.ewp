@@ -70,16 +70,16 @@
         <option>
           <name>GRuntimeLibSelect</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelectSlave</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>RTDescription</name>
-          <state>Use the full configuration of the C/C++ runtime library. Full locale interface, C locale, file descriptor support, multibytes in printf and scanf, and hex floats in strtod.</state>
+          <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
         </option>
         <option>
           <name>OGProductVersion</name>
@@ -133,7 +133,7 @@
         </option>
         <option>
           <name>RTConfigPath2</name>
-          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Full.h</state>
+          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Normal.h</state>
         </option>
         <option>
           <name>GFPUCoreSlave</name>
@@ -172,10 +172,7 @@
         </option>
         <option>
           <name>CCDefines</name>
-          <state>STM32F10X_XL</state>
-          <state>__TARGET_CHIP__=stm32</state>
-          <state>FLASH_LOAD_OFFSET=0x0000</state>
-          <state>CORE_DEBUG=STM32_DBG_SWD</state>
+          <state>VSF_STANDALONE_MODULE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -310,7 +307,7 @@
           <state>$PROJ_DIR$\..\..\..\..\..\vsf</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\compiler\IAR</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces</state>
-          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\stm32</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\cortex-m</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -353,7 +350,7 @@
         </option>
         <option>
           <name>CCPosIndRopi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndRwpi</name>
@@ -472,7 +469,9 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state></state>
+          <state>VSF_APP_BASE=0x00000000</state>
+          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_NAME="usbd"</state>
         </option>
         <option>
           <name>AList</name>
@@ -721,7 +720,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$\STM32.icf</state>
+          <state>$PROJ_DIR$\demo.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
@@ -943,7 +942,7 @@
         </option>
         <option>
           <name>IarchiveOutput</name>
-          <state>###Unitialized###</state>
+          <state>F:\MyProject\versaloon\vsf_github\vsf\example\appldr\proj\led_demo\Debug\Exe\demo.a</state>
         </option>
       </data>
     </settings>
@@ -981,7 +980,7 @@
         <option>
           <name>Variant</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -1016,7 +1015,7 @@
         </option>
         <option>
           <name>OGCoreOrChip</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>GRuntimeLibSelect</name>
@@ -1038,7 +1037,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.40.1.8463</state>
+          <state>7.10.3.6927</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -1089,12 +1088,12 @@
         <option>
           <name>GFPUCoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
           <version>21</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -1124,11 +1123,6 @@
         <option>
           <name>CCDefines</name>
           <state>NDEBUG</state>
-          <state>STM32F10X_XL</state>
-          <state>VSF_SYS</state>
-          <state>__TARGET_CHIP__=stm32</state>
-          <state>FLASH_LOAD_OFFSET=0x8000</state>
-          <state>CORE_DEBUG=STM32_DBG_NONE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1263,7 +1257,7 @@
           <state>$PROJ_DIR$\..\..\..\..\..\vsf</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\compiler\IAR</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces</state>
-          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\stm32</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\interfaces\cpu\cortex-m</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -1306,11 +1300,11 @@
         </option>
         <option>
           <name>CCPosIndRopi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndRwpi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndNoDynInit</name>
@@ -1551,11 +1545,11 @@
         </option>
         <option>
           <name>OCOutputOverride</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>flash.bin</state>
+          <state>demo.bin</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -1674,7 +1668,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$\STM32.icf</state>
+          <state>$PROJ_DIR$\demo.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
@@ -1896,7 +1890,7 @@
         </option>
         <option>
           <name>IarchiveOutput</name>
-          <state>###Unitialized###</state>
+          <state>F:\MyProject\versaloon\vsf_github\vsf\example\appldr\proj\led_demo\Release\Exe\demo.a</state>
         </option>
       </data>
     </settings>
@@ -1913,163 +1907,19 @@
   <group>
     <name>vsf</name>
     <group>
-      <name>component</name>
-      <group>
-        <name>buffer</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\component\buffer\buffer.c</name>
-        </file>
-      </group>
-      <group>
-        <name>list</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
-        </file>
-      </group>
-      <group>
-        <name>stream</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\component\stream\stream.c</name>
-        </file>
-      </group>
-    </group>
-    <group>
-      <name>framework</name>
-      <group>
-        <name>vsfsm</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\framework\vsfsm\vsfsm.c</name>
-        </file>
-      </group>
-      <group>
-        <name>vsftimer</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\framework\vsftimer\vsftimer.c</name>
-        </file>
-      </group>
-    </group>
-    <group>
       <name>interfaces</name>
       <group>
         <name>cpu</name>
         <group>
-          <name>stm32</name>
-          <group>
-            <name>adc</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\adc\STM32_ADC.c</name>
-            </file>
-          </group>
-          <group>
-            <name>ebi</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\ebi\STM32_EBI.c</name>
-            </file>
-          </group>
-          <group>
-            <name>eint</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\eint\STM32_EINT.c</name>
-            </file>
-          </group>
-          <group>
-            <name>flash</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\flash\STM32_FLASH.c</name>
-            </file>
-          </group>
-          <group>
-            <name>gpio</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\gpio\STM32_GPIO.c</name>
-            </file>
-          </group>
-          <group>
-            <name>sdio</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\sdio\STM32_SDIO.c</name>
-            </file>
-          </group>
-          <group>
-            <name>spi</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\spi\STM32_SPI.c</name>
-            </file>
-          </group>
+          <name>cortex-m</name>
           <group>
             <name>startup</name>
             <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_cl.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_hd.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_ld.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_ld_vl.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_md.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_md_vl.s</name>
-              <excluded>
-                <configuration>Debug</configuration>
-                <configuration>Release</configuration>
-              </excluded>
-            </file>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\startup\iar\startup_stm32f10x_xl.s</name>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\cortex-m\startup\iar\startup.s</name>
             </file>
           </group>
-          <group>
-            <name>timer</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\timer\STM32_TIM.c</name>
-            </file>
-          </group>
-          <group>
-            <name>usart</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\usart\STM32_USART.c</name>
-            </file>
-          </group>
-          <group>
-            <name>usbd</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\usbd\STM32_USBD.c</name>
-            </file>
-          </group>
-          <file>
-            <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\stm32\core.c</name>
-          </file>
         </group>
       </group>
-      <file>
-        <name>$PROJ_DIR$\..\..\..\..\interfaces\interfaces.c</name>
-      </file>
     </group>
     <group>
       <name>stack</name>
@@ -2104,36 +1954,6 @@
         </group>
       </group>
     </group>
-    <group>
-      <name>tool</name>
-      <group>
-        <name>bittool</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\bittool\bittool.c</name>
-        </file>
-      </group>
-    </group>
-    <file>
-      <name>$PROJ_DIR$\..\..\..\..\vsf.c</name>
-    </file>
-  </group>
-  <group>
-    <name>vsf_cfg</name>
-    <file>
-      <name>$PROJ_DIR$\vsf_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfip_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbh_cfg.h</name>
-    </file>
   </group>
   <file>
     <name>$PROJ_DIR$\app_cfg.h</name>
@@ -2142,13 +1962,16 @@
     <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\hw_cfg_STM32.h</name>
-  </file>
-  <file>
     <name>$PROJ_DIR$\interfaces_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\..\main.c</name>
+    <name>$PROJ_DIR$\..\..\module\usbd\usbd.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\vsf_cfg.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\vsf_undef.h</name>
   </file>
 </project>
 

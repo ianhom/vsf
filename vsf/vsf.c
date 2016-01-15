@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "vsf.h"
+#include "app_hw_cfg.h"
 
 static void vsfsm_enter_critical_internal(void)
 {
@@ -28,277 +29,298 @@ static void vsfsm_leave_critical_internal(void)
 	vsf_leave_critical();
 }
 
+#ifdef VSFCFG_MODULE
 static struct vsf_module_t *modulelist = NULL;
-static void vsf_module_callback(bool load, struct vsf_module_t *module)
-{
-	struct vsf_module_t *moduletmp = modulelist;
-	void (*callback)(struct vsf_module_t *, struct vsf_module_t *);
-	
-	while (moduletmp != NULL)
-	{
-		if (moduletmp != module)
-		{
-			callback = load ? moduletmp->callback.on_load :
-								moduletmp->callback.on_unload;
-			if (callback != NULL)
-			{
-				callback(moduletmp, module);
-			}
-		}
-		moduletmp = moduletmp->next;
-	}
-}
 
-static vsf_err_t vsf_module_register(struct vsf_module_t *module)
+void vsf_module_register(struct vsf_module_t *module)
 {
-	if ((NULL == module) || (NULL == module->name))
-	{
-		return VSFERR_NONE;
-	}
-	
+	module->code_buff = NULL;
 	module->next = modulelist;
 	modulelist = module;
-	vsf_module_callback(true, module);
-	return VSFERR_NONE;
 }
 
-vsf_err_t vsf_module_unregister(struct vsf_module_t *module)
+void vsf_module_unregister(struct vsf_module_t *module)
 {
 	if (module == modulelist)
 	{
-		vsf_module_callback(false, module);
 		modulelist = modulelist->next;
 	}
 	else
 	{
 		struct vsf_module_t *moduletmp = modulelist;
-		
+
 		while (moduletmp->next != NULL)
 		{
 			if (moduletmp->next == module)
 			{
-				vsf_module_callback(false, module);
 				moduletmp->next = module->next;
 			}
 			moduletmp = moduletmp->next;
 		}
 	}
-	return VSFERR_NONE;
 }
 
-struct vsf_module_t* vsf_module_get(char *name)
+static struct vsf_module_t* vsf_module_get(char *name)
 {
-	struct vsf_module_t *moduletmp = modulelist;
-	
-	while (moduletmp != NULL)
+	struct vsf_module_t *module = modulelist;
+
+	while ((module != NULL) && strcmp(module->flash->name, name))
+		module = module->next;
+	return module;
+}
+
+void vsf_module_unload(char *name)
+{
+	struct vsf_module_t *module = vsf_module_get(name);
+	void (*mod_exit)(struct vsf_module_t *);
+
+	if ((module != NULL) && (module->code_buff != NULL))
 	{
-		if (!strcmp(moduletmp->name, name))
+		if (module->flash->exit)
 		{
-			return moduletmp;
+			mod_exit = (void (*)(struct vsf_module_t *))
+							(module->code_buff + module->flash->exit);
+			mod_exit(module);
 		}
-		moduletmp = moduletmp->next;
+
+#ifdef VSFCFG_MODULE_ALLOC_RAM
+		if (module->flash->size > 0)
+		{
+			vsf_bufmgr_free(module->code_buff);
+		}
+#endif
+		module->code_buff = NULL;
 	}
+}
+
+void* vsf_module_load(char *name)
+{
+	struct vsf_module_t *module = vsf_module_get(name);
+	vsf_err_t (*mod_entry)(struct vsf_module_t *, struct app_hwcfg_t const *);
+
+	if ((module != NULL) && module->flash->entry)
+	{
+		if (module->code_buff != NULL)
+		{
+			goto succeed;
+		}
+#ifdef VSFCFG_MODULE_ALLOC_RAM
+		if (module->flash->size > 0)
+		{
+			module->code_buff = vsf_bufmgr_malloc(module->flash->size);
+			if (NULL == module->code_buff)
+			{
+				goto fail;
+			}
+			memcpy(module->code_buff, module->flash, module->flash->size);
+		}
+		else
+		{
+			module->code_buff = (uint8_t *)module->flash;
+		}
+#else
+		module->code_buff = (uint8_t *)module->flash;
+#endif
+		mod_entry =
+			(vsf_err_t (*)(struct vsf_module_t *, struct app_hwcfg_t const *))
+						(module->code_buff + module->flash->entry);
+
+		if (mod_entry(module, &app_hwcfg))
+		{
+#ifdef VSFCFG_MODULE_ALLOC_RAM
+			if (module->flash->size > 0)
+			{
+				vsf_bufmgr_free(module->code_buff);
+			}
+#endif
+			module->code_buff = NULL;
+			goto fail;
+		}
+succeed:
+		return module->ifs;
+	}
+fail:
 	return NULL;
 }
 
-// reserve 512 bytes for vector table
-ROOTFUNC const struct vsf_t vsf @ (SYS_MAIN_ADDR + 0x00000200) =
-{
-	VSF_API_VERSION,		// api_ver
-	&core_interfaces,
-	
-	{
-		vsfsm_init,
-		vsfsm_pt_init,
-		vsfsm_post_evt,
-		vsfsm_post_evt_pending,
-		vsfsm_enter_critical_internal,
-		vsfsm_leave_critical_internal,
-		
-		{
-			vsfsm_sync_init,
-			vsfsm_sync_cancel,
-			vsfsm_sync_increase,
-			vsfsm_sync_decrease,
-		},					// struct sync;
-		
-		{
-			vsftimer_create,
-			vsftimer_free,
-			vsftimer_enqueue,
-			vsftimer_dequeue,
-		},					// struct timer;
-		
-		{
-			vsf_module_register,
-			vsf_module_unregister,
-			vsf_module_get,
-		},					// struct module;
-		
-		{
-			vsfshell_init,
-			vsfshell_register_handlers,
-			vsfshell_free_handler_thread,
-		},					// struct shell;
-		
-		{
-			stream_init,
-			stream_fini,
-			stream_read,
-			stream_write,
-			stream_get_data_size,
-			stream_get_free_size,
-			stream_connect_rx,
-			stream_connect_tx,
-		},					// struct stream;
-	},						// struct vsf_framework_t framework;
-	
-	{
-		{
-			vsfq_init,
-			vsfq_append,
-			vsfq_remove,
-			vsfq_enqueue,
-			vsfq_dequeue,
-		},					// struct queue;
-		{
-			vsf_fifo_init,
-			vsf_fifo_push8,
-			vsf_fifo_pop8,
-			vsf_fifo_push,
-			vsf_fifo_pop,
-			vsf_fifo_get_data_length,
-			vsf_fifo_get_avail_length,
-		},					// struct fifo
-		{
-			vsf_bufmgr_malloc,
-			vsf_bufmgr_malloc_aligned,
-			vsf_bufmgr_free,
-		},					// struct bufmgr;
-	},						// struct buffer;
-	
-	{
-		{
-			BIT_REVERSE_U8,
-			BIT_REVERSE_U16,
-			BIT_REVERSE_U32,
-			BIT_REVERSE_U64,
-			GET_U16_MSBFIRST,
-			GET_U24_MSBFIRST,
-			GET_U32_MSBFIRST,
-			GET_U64_MSBFIRST,
-			GET_U16_LSBFIRST,
-			GET_U24_LSBFIRST,
-			GET_U32_LSBFIRST,
-			GET_U64_LSBFIRST,
-			SET_U16_MSBFIRST,
-			SET_U24_MSBFIRST,
-			SET_U32_MSBFIRST,
-			SET_U64_MSBFIRST,
-			SET_U16_LSBFIRST,
-			SET_U24_LSBFIRST,
-			SET_U32_LSBFIRST,
-			SET_U64_LSBFIRST,
-			SWAP_U16,
-			SWAP_U24,
-			SWAP_U32,
-			SWAP_U64,
-
-			{
-				mskarr_set,
-				mskarr_clr,
-				mskarr_ffz,
-			},				// struct mskarr
-		},					// struct bittool;
-	},						// struct tool;
-	
-	{
-		{
-			{
-				vsfusbd_device_init,
-				vsfusbd_device_fini,
-				vsfusbd_ep_send_nb,
-				vsfusbd_ep_receive_nb,
-				
-				vsfusbd_set_IN_handler,
-				vsfusbd_set_OUT_handler,
-				
-				{
-					{
-						(struct vsfusbd_class_protocol_t *)&vsfusbd_HID_class,
-					},		// struct hid;
-					{
-						(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
-						(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
-					},		// struct cdc;
-				},			// struct classes;
-			},				// struct device;
-			
-			{
-				vsfusbh_init,
-				vsfusbh_fini,
-				vsfusbh_register_driver,
-				vsfusbh_submit_urb,
-				
-#if IFS_HCD_EN
-				{
-					{
-						(struct vsfusbh_hcddrv_t *)&ohci_drv,
-					},		// struct ohci;
-				},			// struct hcd;
+#if defined(VSFCFG_FUNC_SHELL) && defined(VSFCFG_MODULE_SHELL)
+static struct vsf_shell_api_t vsf_shell_api;
 #endif
-				
-				{
-					{
-						(struct vsfusbh_class_drv_t *)&vsfusbh_hub_drv,
-					},		// struct hub;
-				},			// struct classes;
-			},				// struct host;
-		},					// struct usb;
-		
-		{
-			vsfip_init,
-			vsfip_fini,
-			vsfip_netif_add,
-			vsfip_netif_remove,
-			
-			vsfip_socket,
-			vsfip_close,
-			
-			vsfip_listen,
-			vsfip_bind,
-			
-			vsfip_tcp_connect,
-			vsfip_tcp_accept,
-			vsfip_tcp_send,
-			vsfip_tcp_recv,
-			vsfip_tcp_close,
-			
-			vsfip_udp_send,
-			vsfip_udp_recv,
-			
-			{
-				vsfip_buffer_get,
-				vsfip_buffer_reference,
-				vsfip_buffer_release,
-			},				// struct buffer;
-			
-			{
-				{
-					vsfip_dhcpc_start,
-				},			// struct dhcp;
-			},				// struct protocol;
-			
-			{
-				{
-					(struct bcm_bus_op_t *)&bcm_bus_spi_op,
-				},			// struct bus;
-				&bcm_wifi_netdrv_op,
-				
-				bcm_wifi_scan,
-				bcm_wifi_join,
-				bcm_wifi_leave,
-			},				// struct broadcom_wifi;
-		},					// struct tcpip;
-	},						// struct stack;
+#if defined(VSFCFG_FUNC_USBD) && defined(VSFCFG_MODULE_USBD)
+static struct vsf_usbd_api_t vsf_usbd_api;
+#endif
+#if defined(VSFCFG_FUNC_USBH) && defined(VSFCFG_MODULE_USBH)
+static struct vsf_usbh_api_t vsf_usbh_api;
+#endif
+#if defined(VSFCFG_FUNC_TCPIP) && defined(VSFCFG_MODULE_TCPIP)
+static struct vsf_tcpip_api_t vsf_tcpip_api;
+#endif
+#if defined(VSFCFG_FUNC_BCMWIFI) && defined(VSFCFG_MODULE_BCMWIFI)
+static struct vsf_bcm_api_t vsf_bcmwifi_api;
+#endif
+#endif		// VSFCFG_MODULE
+// reserve 512 bytes for vector table
+ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
+{
+	.ver = VSF_API_VERSION,
+	.ifs = &core_interfaces,
+
+	.framework.sm_init = vsfsm_init,
+	.framework.sm_fini = vsfsm_fini,
+	.framework.pt_init = vsfsm_pt_init,
+	.framework.post_evt = vsfsm_post_evt,
+	.framework.post_evt_pending = vsfsm_post_evt_pending,
+	.framework.enter_critical = vsfsm_enter_critical_internal,
+	.framework.leave_critical = vsfsm_leave_critical_internal,
+	.framework.sync.init = vsfsm_sync_init,
+	.framework.sync.cancel = vsfsm_sync_cancel,
+	.framework.sync.increase = vsfsm_sync_increase,
+	.framework.sync.decrease = vsfsm_sync_decrease,
+	.framework.timer.create = vsftimer_create,
+	.framework.timer.free = vsftimer_free,
+	.framework.timer.enqueue = vsftimer_enqueue,
+	.framework.timer.dequeue = vsftimer_dequeue,
+#ifdef VSFCFG_MODULE
+	.framework.module.reg = vsf_module_register,
+	.framework.module.unreg = vsf_module_unregister,
+	.framework.module.load = vsf_module_load,
+	.framework.module.unload = vsf_module_unload,
+#endif
+#ifdef VSFCFG_FUNC_SHELL
+#ifdef VSFCFG_MODULE_SHELL
+	.framework.shell = &vsf_shell_api,
+#else
+	.framework.shell.init = vsfshell_init,
+	.framework.shell.register_handlers = vsfshell_register_handlers,
+	.framework.shell.free_handler_thread = vsfshell_free_handler_thread,
+#endif
+#endif
+
+	.component.buffer.queue.init = vsfq_init,
+	.component.buffer.queue.append = vsfq_append,
+	.component.buffer.queue.remove = vsfq_remove,
+	.component.buffer.queue.enqueue = vsfq_enqueue,
+	.component.buffer.queue.dequeue = vsfq_dequeue,
+	.component.buffer.fifo.init = vsf_fifo_init,
+	.component.buffer.fifo.push8 = vsf_fifo_push8,
+	.component.buffer.fifo.pop8 = vsf_fifo_pop8,
+	.component.buffer.fifo.push = vsf_fifo_push,
+	.component.buffer.fifo.pop = vsf_fifo_pop,
+	.component.buffer.fifo.get_data_length = vsf_fifo_get_data_length,
+	.component.buffer.fifo.get_avail_length = vsf_fifo_get_avail_length,
+	.component.buffer.bufmgr.malloc = vsf_bufmgr_malloc,
+	.component.buffer.bufmgr.malloc_aligned = vsf_bufmgr_malloc_aligned,
+	.component.buffer.bufmgr.free = vsf_bufmgr_free,
+	.component.stream.init = stream_init,
+	.component.stream.fini = stream_fini,
+	.component.stream.read = stream_read,
+	.component.stream.write = stream_write,
+	.component.stream.get_data_size = stream_get_data_size,
+	.component.stream.get_free_size = stream_get_free_size,
+	.component.stream.connect_rx = stream_connect_rx,
+	.component.stream.connect_tx = stream_connect_tx,
+	.component.stream.disconnect_rx = stream_disconnect_rx,
+	.component.stream.disconnect_tx = stream_disconnect_tx,
+	.component.stream.fifo_stream_op = &fifo_stream_op,
+
+	.tool.bittool.bit_reverse_u8 = BIT_REVERSE_U8,
+	.tool.bittool.bit_reverse_u16 = BIT_REVERSE_U16,
+	.tool.bittool.bit_reverse_u32 = BIT_REVERSE_U32,
+	.tool.bittool.bit_reverse_u64 = BIT_REVERSE_U64,
+	.tool.bittool.get_u16_msb = GET_U16_MSBFIRST,
+	.tool.bittool.get_u24_msb = GET_U24_MSBFIRST,
+	.tool.bittool.get_u32_msb = GET_U32_MSBFIRST,
+	.tool.bittool.get_u64_msb = GET_U64_MSBFIRST,
+	.tool.bittool.get_u16_lsb = GET_U16_LSBFIRST,
+	.tool.bittool.get_u24_lsb = GET_U24_LSBFIRST,
+	.tool.bittool.get_u32_lsb = GET_U32_LSBFIRST,
+	.tool.bittool.get_u64_lsb = GET_U64_LSBFIRST,
+	.tool.bittool.set_u16_msb = SET_U16_MSBFIRST,
+	.tool.bittool.set_u24_msb = SET_U24_MSBFIRST,
+	.tool.bittool.set_u32_msb = SET_U32_MSBFIRST,
+	.tool.bittool.set_u64_msb = SET_U64_MSBFIRST,
+	.tool.bittool.set_u16_lsb = SET_U16_LSBFIRST,
+	.tool.bittool.set_u24_lsb = SET_U24_LSBFIRST,
+	.tool.bittool.set_u32_lsb = SET_U32_LSBFIRST,
+	.tool.bittool.set_u64_lsb = SET_U64_LSBFIRST,
+	.tool.bittool.swap_u16 = SWAP_U16,
+	.tool.bittool.swap_u24 = SWAP_U24,
+	.tool.bittool.swap_u32 = SWAP_U32,
+	.tool.bittool.swap_u64 = SWAP_U64,
+	.tool.bittool.mskarr.set = mskarr_set,
+	.tool.bittool.mskarr.clr = mskarr_clr,
+	.tool.bittool.mskarr.ffz = mskarr_ffz,
+
+#ifdef VSFCFG_FUNC_USBD
+#ifdef VSFCFG_MODULE_USBD
+	.stack.usd.device = &vsf_usbd_api,
+#else
+	.stack.usb.device.init = vsfusbd_device_init,
+	.stack.usb.device.fini = vsfusbd_device_fini,
+	.stack.usb.device.ep_send = vsfusbd_ep_send_nb,
+	.stack.usb.device.ep_recv = vsfusbd_ep_receive_nb,
+	.stack.usb.device.set_IN_handler = vsfusbd_set_IN_handler,
+	.stack.usb.device.set_OUT_handler = vsfusbd_set_OUT_handler,
+	.stack.usb.device.classes.hid.protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_HID_class,
+	.stack.usb.device.classes.cdc.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCControl_class,
+	.stack.usb.device.classes.cdc.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCData_class,
+	.stack.usb.device.classes.cdcacm.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
+	.stack.usb.device.classes.cdcacm.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
+#endif
+#endif
+
+#ifdef VSFCFG_FUNC_USBH
+#ifdef VSFCFG_MODULE_USBH
+	.stack.usb.host = &vsf_usbh_api,
+#else
+	.stack.usb.host.init = vsfusbh_init,
+	.stack.usb.host.fini = vsfusbh_fini,
+	.stack.usb.host.register_driver = vsfusbh_register_driver,
+#if IFS_HCD_EN
+	.stack.usb.host.hcd.ohci.driver = (struct vsfusbh_hcddrv_t *)&vsfusbh_ohci_drv,
+#endif
+	.stack.usb.host.classes.hub.driver = (struct vsfusbh_class_drv_t *)&vsfusbh_hub_drv,
+#endif
+#endif
+
+#ifdef VSFCFG_FUNC_TCPIP
+#ifdef VSFCFG_MODULE_TCPIP
+	.stack.net.tcpip = &vsf_tcpip_api,
+#else
+	.stack.net.tcpip.init = vsfip_init,
+	.stack.net.tcpip.fini = vsfip_fini,
+	.stack.net.tcpip.netif_add = vsfip_netif_add,
+	.stack.net.tcpip.netif_remove = vsfip_netif_remove,
+	.stack.net.tcpip.socket = vsfip_socket,
+	.stack.net.tcpip.close = vsfip_close,
+	.stack.net.tcpip.listen = vsfip_listen,
+	.stack.net.tcpip.bind = vsfip_bind,
+	.stack.net.tcpip.tcp_connect = vsfip_tcp_connect,
+	.stack.net.tcpip.tcp_accept = vsfip_tcp_accept,
+	.stack.net.tcpip.tcp_async_send = vsfip_tcp_async_send,
+	.stack.net.tcpip.tcp_send = vsfip_tcp_send,
+	.stack.net.tcpip.tcp_async_recv = vsfip_tcp_async_recv,
+	.stack.net.tcpip.tcp_recv = vsfip_tcp_recv,
+	.stack.net.tcpip.tcp_close = vsfip_tcp_close,
+	.stack.net.tcpip.udp_async_send = vsfip_udp_async_send,
+	.stack.net.tcpip.udp_send = vsfip_udp_send,
+	.stack.net.tcpip.udp_async_recv = vsfip_udp_async_recv,
+	.stack.net.tcpip.udp_recv = vsfip_udp_recv,
+
+	.stack.net.tcpip.protocol.dhcpc.start = vsfip_dhcpc_start,
+#endif
+#endif
+
+#ifdef VSFCFG_FUNC_BCMWIFI
+#ifdef VSFCFG_MODULE_BCMWIFI
+	.stack.net.bcmwifi = &vsf_bcmwifi_api,
+#else
+	.stack.net.bcmwifi.bus.spi_op = (struct bcm_bus_op_t *)&bcm_bus_spi_op,
+	.stack.net.bcmwifi.bus.sdio_op = (struct bcm_bus_op_t *)&bcm_bus_sdio_op,
+	.stack.net.bcmwifi.netdrv_op = (struct vsfip_netdrv_op_t *)&bcm_wifi_netdrv_op,
+	.stack.net.bcmwifi.scan = bcm_wifi_scan,
+	.stack.net.bcmwifi.join = bcm_wifi_join,
+	.stack.net.bcmwifi.leave = bcm_wifi_leave,
+#endif
+#endif
 };

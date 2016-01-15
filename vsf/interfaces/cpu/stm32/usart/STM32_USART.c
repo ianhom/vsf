@@ -572,8 +572,7 @@ vsf_err_t stm32_usart_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate, 
-	uint8_t datalength, uint32_t mode)
+vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate, uint32_t mode)
 {
 	USART_TypeDef *usart;
 	uint8_t usart_idx = index & 0x0F;
@@ -704,7 +703,7 @@ vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate,
 		return VSFERR_NOT_SUPPORT;
 	}
 	
-	switch (datalength)
+/*	switch (datalength)
 	{
 	case 8:
 		break;
@@ -714,7 +713,7 @@ vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate,
 	default:
 		return VSFERR_INVALID_PARAMETER;
 	}
-	// mode:
+*/	// mode:
 	// bit0 - bit1: parity
 	// bit5 - bit6: stopbits
 	// bit2 - bit3: mode

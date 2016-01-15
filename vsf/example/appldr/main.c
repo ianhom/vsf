@@ -1,156 +1,83 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
-static void pendsv_activate(struct vsfsm_evtq_t *q);
+const struct app_hwcfg_t app_hwcfg =
+{
+	.board =				APP_BOARD_NAME,
+
+	.key.port =				KEY_PORT,
+	.key.pin =				KEY_PIN,
+
+	.usbd.pullup.port =		USB_PULLUP_PORT,
+	.usbd.pullup.pin =		USB_PULLUP_PIN,
+
+#if VSFCFG_FUNC_BCMWIFI
+	.bcm.type =				BCM_PORT_TYPE,
+	.bcm.index =			BCM_PORT,
+	.bcm.freq_khz =			BCM_FREQ,
+	.bcm.rst.port =			BCM_RST_PORT,
+	.bcm.rst.pin =			BCM_RST_PIN,
+	.bcm.wakeup.port =		BCM_WAKEUP_PORT,
+	.bcm.wakeup.pin =		BCM_WAKEUP_PIN,
+	.bcm.mode.port =		BCM_MODE_PORT,
+	.bcm.mode.pin =			BCM_MODE_PIN,
+	.bcm.spi.cs.port =		BCM_SPI_CS_PORT,
+	.bcm.spi.cs.pin =		BCM_SPI_CS_PIN,
+	.bcm.spi.eint.port =	BCM_EINT_PORT,
+	.bcm.spi.eint.pin =		BCM_EINT_PIN,
+	.bcm.spi.eint_idx =		BCM_EINT,
+	.bcm.pwrctrl.port =		BCM_PWRCTRL_PORT,
+	.bcm.pwrctrl.pin =		BCM_PWRCTRL_PIN,
+#endif
+};
 
 struct vsfapp_t
 {
-	struct app_hwcfg_t hwcfg;
+	uint8_t bufmgr_buffer[APPCFG_BUFMGR_SIZE];
+} static app;
 
-	struct vsfsm_evtq_t pendsvq;
-	struct vsfsm_evtq_t mainq;
-
-	// private
-	struct vsfsm_evtq_element_t pendsvq_ele[16];
-	struct vsfsm_evtq_element_t mainq_ele[16];
-	uint8_t bufmgr_buffer[8 * 1024];
-} static app =
+void main(void)
 {
-	{
-		APP_BOARD_NAME,				// char *board;
-		{
-			KEY_PORT, KEY_PIN
-		},							// struct key;
-		{
-			{
-				USB_PULLUP_PORT,	// uint8_t port;
-				USB_PULLUP_PIN,		// uint8_t pin;
-			},						// struct usb_pullup;
-		},							// struct usbd;
-		{
-			LED24
-		},							// struct led_t led[24];
-		{
-			BCM_PORT_TYPE,
-
-			BCM_PORT,
-			BCM_FREQ,
-
-			BCM_RST_PORT,
-			BCM_RST_PIN,
-			BCM_WAKEUP_PORT,
-			BCM_WAKEUP_PIN,
-			BCM_MODE_PORT,
-			BCM_MODE_PIN,
-
-			{
-				BCM_SPI_CS_PORT,
-				BCM_SPI_CS_PIN,
-				BCM_EINT_PORT,
-				BCM_EINT_PIN,
-				BCM_EINT,
-			},
-
-			BCM_PWRCTRL_PORT,
-			BCM_PWRCTRL_PIN,
-		},							// struct bcm_wifi_port;
-	},								// struct app_hwcfg_t hwcfg;
-	{
-		.size = dimof(app.pendsvq_ele),
-		.queue = app.pendsvq_ele,
-		.activate = pendsv_activate,
-	},								// struct vsfsm_evtq_t pendsvq;
-	{
-		.size = dimof(app.mainq_ele),
-		.queue = app.mainq_ele,
-		.activate = NULL,
-	},								// struct vsfsm_evtq_t mainq;
-};
-
-// tickclk interrupt, simply call vsftimer_callback_int
-static void app_tickclk_callback_int(void *param)
-{
-	vsftimer_callback_int();
-}
-
-static void pendsv_activate(struct vsfsm_evtq_t *q)
-{
-	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
-}
-
-static void app_on_pendsv(void *param)
-{
-	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
-
-	vsfsm_evtq_set(evtq_cur);
-	if (vsfsm_get_event_pending())
-		vsfsm_poll();
-	vsfsm_evtq_set(evtq_old);
-}
-
-int main(void)
-{
-	uint32_t app_main_ptr;
+	struct vsf_module_t *module;
+	uint32_t module_base = APPCFG_MODULES_ADDR;
+	uint32_t *flash = (uint32_t *)module_base;
+	uint32_t *module_ptr;
 
 	vsf_enter_critical();
-	vsfsm_evtq_init(&app.pendsvq);
-	vsfsm_evtq_init(&app.mainq);
-
-	vsfsm_evtq_set(&app.pendsvq);
-
-	// system initialize
+	vsfhal_core_init(NULL);
 	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
-	core_interfaces.core.init(NULL);
-	core_interfaces.tickclk.init();
-	core_interfaces.tickclk.start();
-	vsftimer_init();
-	core_interfaces.tickclk.set_callback(app_tickclk_callback_int, NULL);
-goto bootlaoder_init;
-	if (app.hwcfg.key.port != IFS_DUMMY_PORT)
+
+	// initialize modules
+	while (*flash != 0xFFFFFFFF)
 	{
-		gpio_init(app.hwcfg.key.port);
-		gpio_config_pin(app.hwcfg.key.port, app.hwcfg.key.port, GPIO_INPU);
-	}
-	if ((IFS_DUMMY_PORT == app.hwcfg.key.port) ||
-		core_interfaces.gpio.get(app.hwcfg.key.port, 1 << app.hwcfg.key.pin))
-	{
-		// key release
-		// load and call application
-		app_main_ptr = *(uint32_t *)APP_MAIN_ADDR;
-		if (app_main_ptr < 128 * 1024)
+		module_ptr = (uint32_t *)(module_base + *flash);
+		if (*module_ptr != 0xFFFFFFFF)
 		{
-			app_main_ptr += APP_MAIN_ADDR;
-			((int (*)(struct app_hwcfg_t *hwcfg))app_main_ptr)(&app.hwcfg);
+			module = vsf_bufmgr_malloc(sizeof(struct vsf_module_t));
+			if (NULL == module)
+			{
+				break;
+			}
+
+			module->flash = (struct vsf_module_info_t *)module_ptr;
+			vsf_module_register(module);
 		}
-		else
-		{
-			goto bootlaoder_init;
-		}
-	}
-	else
-	{
-		// run bootloader
-	bootlaoder_init:
-app_main(&app.hwcfg);
+		flash++;
 	}
 
-	core_interfaces.core.pendsv(app_on_pendsv, &app.pendsvq);
-	vsf_leave_critical();
-	vsfsm_evtq_set(&app.mainq);
+	vsfhal_gpio_init(app_hwcfg.key.port);
+	vsfhal_gpio_config_pin(app_hwcfg.key.port, app_hwcfg.key.port, GPIO_INPU);
+
+	// run bootloader if key pressed OR app load fail
+	if (!vsfhal_gpio_get(app_hwcfg.key.port, 1 << app_hwcfg.key.pin) ||
+		vsf_module_load("app"))
+	{
+		vsf_module_load("bootloader");
+	}
 
 	while (1)
 	{
-		vsfsm_poll();
-
-		vsf_enter_critical();
-		if (!vsfsm_get_event_pending())
-		{
-			// sleep, will also enable interrupt
-			core_interfaces.core.sleep(SLEEP_WFI);
-		}
-		else
-		{
-			vsf_leave_critical();
-		}
+		// remove for debug
+//		vsfhal_core_sleep(SLEEP_WFI);
 	}
 }
