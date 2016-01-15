@@ -228,6 +228,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					transact->callback.callback = vsfusbd_HID_INREPORT_callback;
 					transact->callback.param = param;
 					vsfusbd_ep_send_nb(device, ep);
+					report->changed = false;
 					param->busy = true;
 					break;
 				}
