@@ -19,6 +19,25 @@
 #ifndef __VSFIP_DNSC_H_INCLUDED__
 #define __VSFIP_DNSC_H_INCLUDED__
 
+#ifdef VSFCFG_STANDALONE_MODULE
+struct vsfip_dns_local_t
+{
+	struct vsfsm_pt_t socket_pt;
+
+	struct vsfip_socket_t *so;
+	struct vsfip_sockaddr_t dnsaddr;
+
+	struct vsfip_buffer_t *inbuf;
+	struct vsfip_buffer_t *outbuf;
+
+	struct vsfsm_crit_t crit;
+
+	uint16_t id;
+	uint8_t try_cnt;
+	struct vsfip_ipaddr_t server[2];
+};
+#endif
+
 struct vsfip_hostent_t
 {
 	uint8_t*	h_name;			/* official name of host */

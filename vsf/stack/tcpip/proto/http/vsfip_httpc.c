@@ -1,15 +1,4 @@
-#include "app_type.h"
-#include "compiler.h"
-
-#include "interfaces.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "../../vsfip.h"
-
-#include "vsfip_httpc.h"
-#include "stack/tcpip/proto/dns/vsfip_dnsc.h"
+#include "vsf.h"
 
 #include <stdlib.h>
 
@@ -333,8 +322,7 @@ static void vsfip_httpc_outstream_onout_int(void *p)
 	vsfsm_post_evt_pending(sm, VSFSM_EVT_HTTPC_STREAM_OUT);
 }
 
-static vsf_err_t
-vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsf_stream_t *output = (struct vsf_stream_t *)pt->user_data;
 
@@ -346,7 +334,7 @@ vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
+vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
 				vsfsm_evt_t evt, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_stream_t *output = (struct vsf_stream_t *)pt->user_data;
@@ -364,13 +352,15 @@ static vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
 	return VSFERR_NONE;
 }
 
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfip_httpc_op_t vsfip_httpc_op_stream =
 {
 	vsfip_httpc_on_connect_stream, vsfip_httpc_on_recv_stream
 };
+#endif
 
 // op_buffer
-static vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
+vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
 				vsfsm_evt_t evt, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_buffer_t *output = (struct vsf_buffer_t *)pt->user_data;
@@ -388,7 +378,9 @@ static vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
 	return VSFERR_NONE;
 }
 
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfip_httpc_op_t vsfip_httpc_op_buffer =
 {
 	NULL, vsfip_httpc_on_recv_buffer
 };
+#endif

@@ -84,11 +84,13 @@ struct vsf_usbd_api_t
 	vsf_err_t (*set_OUT_handler)(struct vsfusbd_device_t *device,
 				uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));
 
+	struct vsfusbd_setup_filter_t *stdreq_filter;
+
 	struct
 	{
 		struct
 		{
-#if defined(VSFCFG_MODULE_USBD) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_USBD)
 			struct vsfusbd_class_protocol_t protocol;
 #else
 			struct vsfusbd_class_protocol_t *protocol;
@@ -96,7 +98,7 @@ struct vsf_usbd_api_t
 		} hid;
 		struct
 		{
-#if defined(VSFCFG_MODULE_USBD) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_USBD)
 			struct vsfusbd_class_protocol_t control_protocol;
 			struct vsfusbd_class_protocol_t data_protocol;
 #else
@@ -106,7 +108,7 @@ struct vsf_usbd_api_t
 		} cdc;
 		struct
 		{
-#if defined(VSFCFG_MODULE_USBD) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_USBD)
 			struct vsfusbd_class_protocol_t control_protocol;
 			struct vsfusbd_class_protocol_t data_protocol;
 #else
@@ -137,7 +139,7 @@ struct vsf_usbh_api_t
 	{
 		struct
 		{
-#if defined(VSFCFG_MODULE_USBH) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_USBH)
 			struct vsfusbh_hcddrv_t driver;
 #else
 			struct vsfusbh_hcddrv_t *driver;
@@ -150,7 +152,7 @@ struct vsf_usbh_api_t
 	{
 		struct
 		{
-#if defined(VSFCFG_MODULE_USBH) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_USBH)
 			struct vsfusbh_class_drv_t driver;
 #else
 			struct vsfusbh_class_drv_t *driver;
@@ -162,11 +164,14 @@ struct vsf_usbh_api_t
 
 #ifdef VSFCFG_FUNC_TCPIP
 #include "stack/tcpip/vsfip.h"
+#include "stack/tcpip/netif/eth/vsfip_eth.h"
 #include "stack/tcpip/proto/dhcp/vsfip_dhcpc.h"
 #include "stack/tcpip/proto/dns/vsfip_dnsc.h"
-//#include "stack/tcpip/proto/http/vsfip_httpd.h"
+#include "stack/tcpip/proto/http/vsfip_httpc.h"
 struct vsf_tcpip_api_t
 {
+	struct vsfip_t stack_buff;
+
 	vsf_err_t (*init)(struct vsfip_mem_op_t *mem_op);
 	vsf_err_t (*fini)(void);
 
@@ -174,6 +179,11 @@ struct vsf_tcpip_api_t
 							struct vsfip_netif_t *netif);
 	vsf_err_t (*netif_remove)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif);
+
+	struct vsfip_buffer_t* (*buffer_get)(uint32_t size);
+	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t header, uint32_t app);
+	void (*buffer_reference)(struct vsfip_buffer_t *buf);
+	void (*buffer_release)(struct vsfip_buffer_t *buf);
 
 	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t family,
 									enum vsfip_sockproto_t protocol);
@@ -214,9 +224,35 @@ struct vsf_tcpip_api_t
 	{
 		struct
 		{
+			vsf_err_t (*header)(struct vsfip_buffer_t *buf,
+				enum vsfip_netif_proto_t proto,
+				const struct vsfip_macaddr_t *dest_addr);
+			void (*input)(struct vsfip_buffer_t *buf);
+		} eth;
+	} netif;
+
+	struct
+	{
+		struct
+		{
+			struct vsfip_dhcpc_local_t local;
 			vsf_err_t (*start)(struct vsfip_netif_t *netif,
 								struct vsfip_dhcpc_t *dhcp);
 		} dhcpc;
+		struct
+		{
+			struct vsfip_dns_local_t local;
+			vsf_err_t (*init)(void);
+			vsf_err_t (*setserver)(uint8_t numdns,
+							struct vsfip_ipaddr_t *dnsserver);
+			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+							char *domain, struct vsfip_ipaddr_t  *domainip);
+		} dns;
+		struct
+		{
+			struct vsfip_httpc_op_t op_stream;
+			struct vsfip_httpc_op_t op_buffer;
+		} httpc;
 	} protocol;
 };
 #endif
@@ -224,9 +260,9 @@ struct vsf_tcpip_api_t
 #ifdef VSFCFG_FUNC_BCMWIFI
 #include "stack/tcpip/netif/eth/broadcom/bcm_wifi.h"
 #include "stack/tcpip/netif/eth/broadcom/bus/bcm_bus.h"
-struct vsf_bcm_api_t
+struct vsf_bcmwifi_api_t
 {
-#if defined(VSFCFG_MODULE_BCMWIFI) && defined(VSFCFG_MODULE_ALLOC_RAM)
+#if defined(VSFCFG_MODULE_BCMWIFI)
 	struct
 	{
 #if IFS_SPI_EN
@@ -456,9 +492,9 @@ struct vsf_t
 
 #ifdef VSFCFG_FUNC_BCMWIFI
 #ifdef VSFCFG_MODULE_BCMWIFI
-			struct vsf_bcm_api_t *bcmwifi;
+			struct vsf_bcmwifi_api_t *bcmwifi;
 #else
-			struct vsf_bcm_api_t bcmwifi;
+			struct vsf_bcmwifi_api_t bcmwifi;
 #endif
 #endif
 		} net;
@@ -480,6 +516,14 @@ struct vsf_t
 #define GPIO_OUTPP						core_interfaces.gpio.constants.OUTPP
 #define GPIO_OUTOD						core_interfaces.gpio.constants.OUTOD
 #define vsfhal_gpio_init				core_interfaces.gpio.init
+#define vsfhal_gpio_fini				core_interfaces.gpio.fini
+#define vsfhal_gpio_config_pin			core_interfaces.gpio.config_pin
+#define vsfhal_gpio_config				core_interfaces.gpio.config
+#define vsfhal_gpio_in					core_interfaces.gpio.in
+#define vsfhal_gpio_out					core_interfaces.gpio.out
+#define vsfhal_gpio_set					core_interfaces.gpio.set
+#define vsfhal_gpio_clear				core_interfaces.gpio.clear
+#define vsfhal_gpio_get					core_interfaces.gpio.get
 
 #define vsfhal_core_init				core_interfaces.core.init
 #define vsfhal_core_sleep				core_interfaces.core.sleep
@@ -492,6 +536,36 @@ struct vsf_t
 #define vsfhal_tickclk_stop				core_interfaces.tickclk.stop
 #define vsfhal_tickclk_get_count		core_interfaces.tickclk.get_count
 #define vsfhal_tickclk_set_callback		core_interfaces.tickclk.set_callback
+
+#define SPI_MASTER						core_interfaces.spi.constants.MASTER
+#define SPI_SLAVE						core_interfaces.spi.constants.SLAVE
+#define SPI_MODE0						core_interfaces.spi.constants.MODE0
+#define SPI_MODE1						core_interfaces.spi.constants.MODE1
+#define SPI_MODE2						core_interfaces.spi.constants.MODE2
+#define SPI_MODE3						core_interfaces.spi.constants.MODE3
+#define SPI_MSB_FIRST					core_interfaces.spi.constants.MSB_FIRST
+#define SPI_LSB_FIRST					core_interfaces.spi.constants.LSB_FIRST
+#define vsfhal_spi_init					core_interfaces.spi.init
+#define vsfhal_spi_fini					core_interfaces.spi.fini
+#define vsfhal_spi_get_ability			core_interfaces.spi.get_ability
+#define vsfhal_spi_enable				core_interfaces.spi.enable
+#define vsfhal_spi_disable				core_interfaces.spi.disable
+#define vsfhal_spi_config				core_interfaces.spi.config
+#define vsfhal_spi_config_callback		core_interfaces.spi.config_callback
+#define vsfhal_spi_select				core_interfaces.spi.select
+#define vsfhal_spi_deselect				core_interfaces.spi.deselect
+#define vsfhal_spi_start				core_interfaces.spi.start
+#define vsfhal_spi_stop					core_interfaces.spi.stop
+
+#define EINT_ONFALL						core_interfaces.eint.constants.ONFALL
+#define EINT_ONRISE						core_interfaces.eint.constants.ONRISE
+#define EINT_ONLOW						core_interfaces.eint.constants.ONLOW
+#define EINT_ONHIGH						core_interfaces.eint.constants.ONHIGH
+#define vsfhal_eint_init				core_interfaces.eint.init
+#define vsfhal_eint_fini				core_interfaces.eint.fini
+#define vsfhal_eint_config				core_interfaces.eint.config
+#define vsfhal_eint_enable				core_interfaces.eint.enable
+#define vsfhal_eint_disable				core_interfaces.eint.disable
 // more interfaces related MACROs here
 
 #define vsfsm_evtq_init					vsf.framework.evtq_init
@@ -613,19 +687,13 @@ struct vsf_t
 #define vsfusbd_ep_receive_nb			vsf.stack.usb.device->ep_recv
 #define vsfusbd_set_IN_handler			vsf.stack.usb.device->set_IN_handler
 #define vsfusbd_set_OUT_handler			vsf.stack.usb.device->set_OUT_handler
-#ifdef VSFCFG_MODULE_ALLOC_RAM
 #define vsfusbd_HID_class				vsf.stack.usb.device->classes.hid.protocol
 #define vsfusbd_CDCControl_class		vsf.stack.usb.device->classes.cdc.control_protocol
 #define vsfusbd_CDCData_class			vsf.stack.usb.device->classes.cdc.data_protocol
 #define vsfusbd_CDCACMControl_class		vsf.stack.usb.device->classes.cdcacm.control_protocol
 #define vsfusbd_CDCACMData_class		vsf.stack.usb.device->classes.cdcacm.data_protocol
-#else
-#define vsfusbd_HID_class				(*vsf.stack.usb.device->classes.hid.protocol)
-#define vsfusbd_CDCControl_class		(*vsf.stack.usb.device->classes.cdc.control_protocol)
-#define vsfusbd_CDCData_class			(*vsf.stack.usb.device->classes.cdc.data_protocol)
-#define vsfusbd_CDCACMControl_class		(*vsf.stack.usb.device->classes.cdcacm.control_protocol)
-#define vsfusbd_CDCACMData_class		(*vsf.stack.usb.device->classes.cdcacm.data_protocol)
-#endif
+
+#define vsfusbd_standard_req_filter		vsf.stack.usb.device->stdreq_filter
 #else
 #define vsfusbd_device_init				vsf.stack.usb.device.init
 #define vsfusbd_device_fini				vsf.stack.usb.device.fini
@@ -638,66 +706,98 @@ struct vsf_t
 #define vsfusbd_CDCData_class			(*vsf.stack.usb.device.classes.cdc.data_protocol)
 #define vsfusbd_CDCACMControl_class		(*vsf.stack.usb.device.classes.cdcacm.control_protocol)
 #define vsfusbd_CDCACMData_class		(*vsf.stack.usb.device.classes.cdcacm.data_protocol)
+
+#define vsfusbd_standard_req_filter		vsf.stack.usb.device.stdreq_filter
 #endif
 #endif
 
 #ifdef VSFCFG_FUNC_TCPIP
 #ifdef VSFCFG_MODULE_TCPIP
+#define vsfip							vsf.stack.net.tcpip->stack_buff
 #define vsfip_init						vsf.stack.net.tcpip->init
 #define vsfip_fini						vsf.stack.net.tcpip->fini
 #define vsfip_netif_add					vsf.stack.net.tcpip->netif_add
 #define vsfip_netif_remove				vsf.stack.net.tcpip->netif_remove
+#define vsfip_buffer_get				vsf.stack.net.tcpip->buffer_get
+#define vsfip_appbuffer_get				vsf.stack.net.tcpip->appbuffer_get
+#define vsfip_buffer_reference			vsf.stack.net.tcpip->buffer_reference
+#define vsfip_buffer_release			vsf.stack.net.tcpip->buffer_release
 #define vsfip_socket					vsf.stack.net.tcpip->socket
 #define vsfip_close						vsf.stack.net.tcpip->close
 #define vsfip_listen					vsf.stack.net.tcpip->listen
 #define vsfip_bind						vsf.stack.net.tcpip->bind
 #define vsfip_tcp_connect				vsf.stack.net.tcpip->tcp_connect
 #define vsfip_tcp_accept				vsf.stack.net.tcpip->tcp_accept
+#define vsfip_tcp_async_send			vsf.stack.net.tcpip->tcp_async_send
 #define vsfip_tcp_send					vsf.stack.net.tcpip->tcp_send
+#define vsfip_tcp_async_recv			vsf.stack.net.tcpip->tcp_async_recv
 #define vsfip_tcp_recv					vsf.stack.net.tcpip->tcp_recv
 #define vsfip_tcp_close					vsf.stack.net.tcpip->tcp_close
+#define vsfip_udp_async_send			vsf.stack.net.tcpip->udp_async_send
 #define vsfip_udp_send					vsf.stack.net.tcpip->udp_send
+#define vsfip_udp_async_recv			vsf.stack.net.tcpip->udp_async_recv
 #define vsfip_udp_recv					vsf.stack.net.tcpip->udp_recv
-#define vsfip_buffer_get				vsf.stack.net.tcpip->buffer_get
-#define vsfip_buffer_reference			vsf.stack.net.tcpip->buffer_reference
-#define vsfip_buffer_release			vsf.stack.net.tcpip->buffer_release
 
+#define vsfip_eth_header				vsf.stack.net.tcpip->netif.eth.header
+#define vsfip_eth_input					vsf.stack.net.tcpip->netif.eth.input
+
+#define vsfip_dhcpc						vsf.stack.net.tcpip->protocol.dhcpc.local
 #define vsfip_dhcpc_start				vsf.stack.net.tcpip->protocol.dhcpc.start
+
+#define vsfip_dns						vsf.stack.net.tcpip->protocol.dns.local
+#define vsfip_dns_init					vsf.stack.net.tcpip->protocol.dns.init
+#define vsfip_dns_setserver				vsf.stack.net.tcpip->protocol.dns.setserver
+#define vsfip_dns_gethostbyname			vsf.stack.net.tcpip->protocol.dns.gethostbyname
+
+#define vsfip_httpc_op_stream			vsf.stack.net.tcpip->protocol.httpc.op_stream
+#define vsfip_httpc_op_buffer			vsf.stack.net.tcpip->protocol.httpc.op_buffer
 #else
+#define vsfip							vsf.stack.net.tcpip.stack_buff
 #define vsfip_init						vsf.stack.net.tcpip.init
 #define vsfip_fini						vsf.stack.net.tcpip.fini
 #define vsfip_netif_add					vsf.stack.net.tcpip.netif_add
 #define vsfip_netif_remove				vsf.stack.net.tcpip.netif_remove
+#define vsfip_buffer_get				vsf.stack.net.tcpip.buffer_get
+#define vsfip_appbuffer_get				vsf.stack.net.tcpip.appbuffer_get
+#define vsfip_buffer_reference			vsf.stack.net.tcpip.buffer_reference
+#define vsfip_buffer_release			vsf.stack.net.tcpip.buffer_release
 #define vsfip_socket					vsf.stack.net.tcpip.socket
 #define vsfip_close						vsf.stack.net.tcpip.close
 #define vsfip_listen					vsf.stack.net.tcpip.listen
 #define vsfip_bind						vsf.stack.net.tcpip.bind
 #define vsfip_tcp_connect				vsf.stack.net.tcpip.tcp_connect
 #define vsfip_tcp_accept				vsf.stack.net.tcpip.tcp_accept
+#define vsfip_tcp_async_send			vsf.stack.net.tcpip.tcp_async_send
 #define vsfip_tcp_send					vsf.stack.net.tcpip.tcp_send
+#define vsfip_tcp_async_recv			vsf.stack.net.tcpip.tcp_async_recv
 #define vsfip_tcp_recv					vsf.stack.net.tcpip.tcp_recv
 #define vsfip_tcp_close					vsf.stack.net.tcpip.tcp_close
+#define vsfip_udp_async_send			vsf.stack.net.tcpip.udp_async_send
 #define vsfip_udp_send					vsf.stack.net.tcpip.udp_send
+#define vsfip_udp_async_recv			vsf.stack.net.tcpip.udp_async_recv
 #define vsfip_udp_recv					vsf.stack.net.tcpip.udp_recv
-#define vsfip_buffer_get				vsf.stack.net.tcpip.buffer_get
-#define vsfip_buffer_reference			vsf.stack.net.tcpip.buffer_reference
-#define vsfip_buffer_release			vsf.stack.net.tcpip.buffer_release
 
+#define vsfip_eth_header				vsf.stack.net.tcpip.netif.eth.header
+#define vsfip_eth_input					vsf.stack.net.tcpip.netif.eth.input
+
+#define vsfip_dhcpc						vsf.stack.net.tcpip.protocol.dhcpc.local
 #define vsfip_dhcpc_start				vsf.stack.net.tcpip.protocol.dhcpc.start
+
+#define vsfip_dns						vsf.stack.net.tcpip.protocol.dns.local
+#define vsfip_dns_init					vsf.stack.net.tcpip.protocol.dns.init
+#define vsfip_dns_setserver				vsf.stack.net.tcpip.protocol.dns.setserver
+#define vsfip_dns_gethostbyname			vsf.stack.net.tcpip.protocol.dns.gethostbyname
+
+#define vsfip_httpc_op_stream			vsf.stack.net.tcpip.protocol.httpc.op_stream
+#define vsfip_httpc_op_buffer			vsf.stack.net.tcpip.protocol.httpc.op_buffer
 #endif
 #endif
 
 #ifdef VSFCFG_FUNC_BCMWIFI
 #ifdef VSFCFG_MODULE_BCMWIFI
-#ifdef VSFCFG_MODULE_ALLOC_RAM
 #define bcm_bus_spi_op					vsf.stack.net.bcmwifi->bus.spi_op
 #define bcm_bus_sdio_op					vsf.stack.net.bcmwifi->bus.sdio_op
 #define bcm_wifi_netdrv_op				vsf.stack.net.bcmwifi->netdrv_op
-#else
-#define bcm_bus_spi_op					(*vsf.stack.net.bcmwifi->bus.spi_op)
-#define bcm_bus_sdio_op					(*vsf.stack.net.bcmwifi->bus.sdio_op)
-#define bcm_wifi_netdrv_op				(*vsf.stack.net.bcmwifi->netdrv_op)
-#endif
 #define bcm_wifi_scan					vsf.stack.net.bcmwifi->scan
 #define bcm_wifi_join					vsf.stack.net.bcmwifi->join
 #define bcm_wifi_leave					vsf.stack.net.bcmwifi->leave

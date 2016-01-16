@@ -191,8 +191,8 @@ vsfusbd_CDCData_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-static vsf_err_t vsfusbd_CDCData_class_init(uint8_t iface,
-											struct vsfusbd_device_t *device)
+vsf_err_t
+vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_iface_t *ifs = &config->iface[iface];
@@ -213,7 +213,7 @@ static vsf_err_t vsfusbd_CDCData_class_init(uint8_t iface,
 	return vsfsm_init(&ifs->sm);
 }
 
-static vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_prepare(
+vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -233,7 +233,7 @@ static vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_process(
+vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_process(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -250,7 +250,7 @@ static vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_process(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCControl_GetEncapsulatedResponse_prepare(
+vsf_err_t vsfusbd_CDCControl_GetEncapsulatedResponse_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -270,6 +270,13 @@ static vsf_err_t vsfusbd_CDCControl_GetEncapsulatedResponse_prepare(
 	return VSFERR_NONE;
 }
 
+void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
+{
+	stream_connect_tx(param->stream_rx);
+	stream_connect_rx(param->stream_tx);
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
 static const struct vsfusbd_setup_filter_t vsfusbd_CDCControl_class_setup[] =
 {
 /*	{
@@ -305,12 +312,6 @@ static const struct vsfusbd_setup_filter_t vsfusbd_CDCControl_class_setup[] =
 	VSFUSBD_SETUP_NULL
 };
 
-void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
-{
-	stream_connect_tx(param->stream_rx);
-	stream_connect_rx(param->stream_tx);
-}
-
 const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class =
 {
 	NULL, NULL,
@@ -325,3 +326,4 @@ const struct vsfusbd_class_protocol_t vsfusbd_CDCData_class =
 
 	vsfusbd_CDCData_class_init, NULL
 };
+#endif

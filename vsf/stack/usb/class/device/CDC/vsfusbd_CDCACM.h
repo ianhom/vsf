@@ -42,8 +42,10 @@ enum usb_CDCACM_req_t
 	USB_CDCACMREQ_SEND_BREAK				= 0x23,
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCACMControl_class;
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCACMData_class;
+#endif
 
 struct vsfusbd_CDCACM_param_t
 {

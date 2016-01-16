@@ -156,7 +156,7 @@ static struct vsf_usbh_api_t vsf_usbh_api;
 static struct vsf_tcpip_api_t vsf_tcpip_api;
 #endif
 #if defined(VSFCFG_FUNC_BCMWIFI) && defined(VSFCFG_MODULE_BCMWIFI)
-static struct vsf_bcm_api_t vsf_bcmwifi_api;
+static struct vsf_bcmwifi_api_t vsf_bcmwifi_api;
 #endif
 #endif		// VSFCFG_MODULE
 // reserve 512 bytes for vector table

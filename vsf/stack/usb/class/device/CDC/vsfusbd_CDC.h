@@ -32,8 +32,10 @@ enum usb_CDC_req_t
 	USB_CDCREQ_CLEAR_COMM_FEATURE			= 0x04,
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class;
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCData_class;
+#endif
 
 struct vsfusbd_CDC_param_t
 {

@@ -192,7 +192,7 @@ vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep)
 }
 
 // standard request handlers
-static vsf_err_t vsfusbd_stdreq_get_device_status_prepare(
+vsf_err_t vsfusbd_stdreq_get_device_status_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -211,7 +211,7 @@ static vsf_err_t vsfusbd_stdreq_get_device_status_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_get_interface_status_prepare(
+vsf_err_t vsfusbd_stdreq_get_interface_status_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -232,7 +232,7 @@ static vsf_err_t vsfusbd_stdreq_get_interface_status_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_get_endpoint_status_prepare(
+vsf_err_t vsfusbd_stdreq_get_endpoint_status_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -262,7 +262,7 @@ static vsf_err_t vsfusbd_stdreq_get_endpoint_status_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_clear_device_feature_prepare(
+vsf_err_t vsfusbd_stdreq_clear_device_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -278,14 +278,14 @@ static vsf_err_t vsfusbd_stdreq_clear_device_feature_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_clear_interface_feature_prepare(
+vsf_err_t vsfusbd_stdreq_clear_interface_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_clear_endpoint_feature_prepare(
+vsf_err_t vsfusbd_stdreq_clear_endpoint_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -313,7 +313,7 @@ static vsf_err_t vsfusbd_stdreq_clear_endpoint_feature_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_device_feature_prepare(
+vsf_err_t vsfusbd_stdreq_set_device_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -329,21 +329,21 @@ static vsf_err_t vsfusbd_stdreq_set_device_feature_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_interface_feature_prepare(
+vsf_err_t vsfusbd_stdreq_set_interface_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_endpoint_feature_prepare(
+vsf_err_t vsfusbd_stdreq_set_endpoint_feature_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
 	return VSFERR_FAIL;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_address_prepare(
+vsf_err_t vsfusbd_stdreq_set_address_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -357,7 +357,7 @@ static vsf_err_t vsfusbd_stdreq_set_address_prepare(
 
 	return VSFERR_NONE;
 }
-static vsf_err_t vsfusbd_stdreq_set_address_process(
+vsf_err_t vsfusbd_stdreq_set_address_process(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -366,7 +366,7 @@ static vsf_err_t vsfusbd_stdreq_set_address_process(
 	return device->drv->set_address(device->address);
 }
 
-static vsf_err_t vsfusbd_stdreq_get_device_descriptor_prepare(
+vsf_err_t vsfusbd_stdreq_get_device_descriptor_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -379,7 +379,7 @@ static vsf_err_t vsfusbd_stdreq_get_device_descriptor_prepare(
 											index, lanid, buffer);
 }
 
-static vsf_err_t vsfusbd_stdreq_get_interface_descriptor_prepare(
+vsf_err_t vsfusbd_stdreq_get_interface_descriptor_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -408,7 +408,7 @@ static vsf_err_t vsfusbd_stdreq_get_interface_descriptor_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_get_configuration_prepare(
+vsf_err_t vsfusbd_stdreq_get_configuration_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -442,7 +442,7 @@ static int16_t vsfusbd_get_config(struct vsfusbd_device_t *device,
 	return -1;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_configuration_prepare(
+vsf_err_t vsfusbd_stdreq_set_configuration_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -587,7 +587,7 @@ static vsf_err_t vsfusbd_auto_init(struct vsfusbd_device_t *device)
 }
 #endif
 
-static vsf_err_t vsfusbd_stdreq_set_configuration_process(
+vsf_err_t vsfusbd_stdreq_set_configuration_process(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -635,7 +635,7 @@ static vsf_err_t vsfusbd_stdreq_set_configuration_process(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_get_interface_prepare(
+vsf_err_t vsfusbd_stdreq_get_interface_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -656,7 +656,7 @@ static vsf_err_t vsfusbd_stdreq_get_interface_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_stdreq_set_interface_prepare(
+vsf_err_t vsfusbd_stdreq_set_interface_prepare(
 		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -678,6 +678,7 @@ static vsf_err_t vsfusbd_stdreq_set_interface_prepare(
 	return VSFERR_NONE;
 }
 
+#ifndef VSFCFG_STANDALONE_MODULE
 static const struct vsfusbd_setup_filter_t vsfusbd_standard_req_filter[] =
 {
 	// USB_REQ_GET_STATUS
@@ -788,6 +789,7 @@ static const struct vsfusbd_setup_filter_t vsfusbd_standard_req_filter[] =
 	},
 	VSFUSBD_SETUP_NULL
 };
+#endif
 
 static struct vsfusbd_setup_filter_t *vsfusbd_get_request_filter_do(
 		struct vsfusbd_device_t *device, struct vsfusbd_setup_filter_t *list)

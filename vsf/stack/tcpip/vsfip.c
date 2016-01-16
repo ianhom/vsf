@@ -16,15 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_type.h"
-#include "compiler.h"
-
-#include "interfaces.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "vsfip.h"
+#include "vsf.h"
 
 #define VSFIP_TCP_RETRY			3
 #define VSFIP_TCP_ATO			10
@@ -53,6 +45,7 @@ enum vsfip_EVT_t
 	VSFIP_EVT_SOCKET_RECV		= VSFSM_EVT_USER_LOCAL_INSTANT + 1,
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 struct vsfip_t
 {
 	struct vsfip_netif_t *netif_list;
@@ -72,8 +65,10 @@ struct vsfip_t
 	bool quit;
 	struct vsfip_mem_op_t *mem_op;
 } static vsfip;
+
 void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf) = NULL;
 void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf) = NULL;
+#endif
 
 // socket buffer
 struct vsfip_socket_t* vsfip_socket_get(void)
@@ -335,19 +330,17 @@ static void vsfip_check_buff(struct vsfip_socket_t *socket)
 static void vsfip_tcp_socket_tick(struct vsfip_socket_t *socket);
 struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
-	struct vsfip_t *vsfip = (struct vsfip_t *)sm->user_data;
-
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
-		vsfip->tick_timer.evt = VSFIP_EVT_TICK;
-		vsfip->tick_timer.sm = sm;
-		vsfip->tick_timer.interval = 1;
-		vsfip->tick_timer.trigger_cnt = -1;
-		vsftimer_enqueue(&vsfip->tick_timer);
+		vsfip.tick_timer.evt = VSFIP_EVT_TICK;
+		vsfip.tick_timer.sm = sm;
+		vsfip.tick_timer.interval = 1;
+		vsfip.tick_timer.trigger_cnt = -1;
+		vsftimer_enqueue(&vsfip.tick_timer);
 		break;
 	case VSFSM_EVT_FINI:
-		vsftimer_dequeue(&vsfip->tick_timer);
+		vsftimer_dequeue(&vsfip.tick_timer);
 		break;
 	case VSFIP_EVT_TICK:
 	{
@@ -357,13 +350,13 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// remove ip packet in reass if ttl reach 0
 
 		// remove packet in input buf if ttl reach 0
-		socket = vsfip->udpconns;
+		socket = vsfip.udpconns;
 		while (socket != NULL)
 		{
 			vsfip_check_buff(socket);
 			socket = socket->next;
 		}
-		socket = vsfip->tcpconns;
+		socket = vsfip.tcpconns;
 		while (socket != NULL)
 		{
 			child = socket->listener.child;
@@ -391,7 +384,6 @@ vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op)
 	vsfip.mem_op = mem_op;
 
 	vsfip.tick_sm.init_state.evt_handler = vsfip_tick;
-	vsfip.tick_sm.user_data = (void*)&vsfip;
 	return vsfsm_init(&vsfip.tick_sm);
 }
 

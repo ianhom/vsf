@@ -253,8 +253,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-static vsf_err_t vsfusbd_HID_class_init(uint8_t iface,
-										struct vsfusbd_device_t *device)
+vsf_err_t vsfusbd_HID_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_iface_t *ifs = &config->iface[iface];
@@ -269,7 +268,7 @@ static vsf_err_t vsfusbd_HID_class_init(uint8_t iface,
 	return vsfsm_init(&ifs->sm);
 }
 
-static vsf_err_t vsfusbd_HID_GetReport_prepare(
+vsf_err_t vsfusbd_HID_GetReport_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -292,7 +291,7 @@ static vsf_err_t vsfusbd_HID_GetReport_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_HID_GetIdle_prepare(
+vsf_err_t vsfusbd_HID_GetIdle_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -315,7 +314,7 @@ static vsf_err_t vsfusbd_HID_GetIdle_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_HID_GetProtocol_prepare(
+vsf_err_t vsfusbd_HID_GetProtocol_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -335,7 +334,7 @@ static vsf_err_t vsfusbd_HID_GetProtocol_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_HID_SetReport_prepare(
+vsf_err_t vsfusbd_HID_SetReport_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -357,7 +356,7 @@ static vsf_err_t vsfusbd_HID_SetReport_prepare(
 	buffer->buffer = report->buffer.buffer;
 	return VSFERR_NONE;
 }
-static vsf_err_t vsfusbd_HID_SetReport_process(
+vsf_err_t vsfusbd_HID_SetReport_process(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -381,7 +380,7 @@ static vsf_err_t vsfusbd_HID_SetReport_process(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_HID_SetIdle_prepare(
+vsf_err_t vsfusbd_HID_SetIdle_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -409,7 +408,7 @@ static vsf_err_t vsfusbd_HID_SetIdle_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_HID_SetProtocol_prepare(
+vsf_err_t vsfusbd_HID_SetProtocol_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -430,6 +429,25 @@ static vsf_err_t vsfusbd_HID_SetProtocol_prepare(
 	return VSFERR_NONE;
 }
 
+vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
+			uint8_t index, uint16_t lanid, struct vsf_buffer_t *buffer)
+{
+	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
+	uint8_t iface = request->wIndex;
+	struct vsfusbd_config_t *config = &device->config[device->configuration];
+	struct vsfusbd_HID_param_t *param =
+		(struct vsfusbd_HID_param_t *)config->iface[iface].protocol_param;
+
+	if ((NULL == param) || (NULL == param->desc))
+	{
+		return VSFERR_FAIL;
+	}
+
+	return vsfusbd_device_get_descriptor(device, param->desc, type, index,
+											lanid, buffer);
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
 static const struct vsfusbd_setup_filter_t vsfusbd_HID_class_setup[] =
 {
 	{
@@ -471,24 +489,6 @@ static const struct vsfusbd_setup_filter_t vsfusbd_HID_class_setup[] =
 	VSFUSBD_SETUP_NULL
 };
 
-vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
-			uint8_t index, uint16_t lanid, struct vsf_buffer_t *buffer)
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	struct vsfusbd_HID_param_t *param =
-		(struct vsfusbd_HID_param_t *)config->iface[iface].protocol_param;
-
-	if ((NULL == param) || (NULL == param->desc))
-	{
-		return VSFERR_FAIL;
-	}
-
-	return vsfusbd_device_get_descriptor(device, param->desc, type, index,
-											lanid, buffer);
-}
-
 const struct vsfusbd_class_protocol_t vsfusbd_HID_class =
 {
 	vsfusbd_HID_get_desc, NULL,
@@ -496,3 +496,4 @@ const struct vsfusbd_class_protocol_t vsfusbd_HID_class =
 
 	vsfusbd_HID_class_init, NULL
 };
+#endif

@@ -16,17 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_type.h"
-#include "compiler.h"
-
-#include "interfaces.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "../../vsfip.h"
-
-#include "vsfip_dnsc.h"
+#include "vsf.h"
 
 #define VSFIP_DNS_CLIENT_PORT			53
 #define VSFIP_DNS_TRY_CNT				3
@@ -67,6 +57,7 @@ PACKED_HEAD struct PACKED_MID vsfip_dns_response_t
 	uint16_t len;
 }; PACKED_TAIL
 
+#ifndef VSFCFG_STANDALONE_MODULE
 struct vsfip_dns_local_t
 {
 	struct vsfsm_pt_t socket_pt;
@@ -81,7 +72,9 @@ struct vsfip_dns_local_t
 
 	uint16_t id;
 	uint8_t try_cnt;
-};
+	struct vsfip_ipaddr_t server[2];
+} static vsfip_dns;
+#endif
 
 #define VSFIP_DNS_PKG_SIZE		512
 #define VSFIP_DNS_ID			121
@@ -267,20 +260,15 @@ vsf_err_t vsfip_dns_decode_ans(uint8_t *ans , uint16_t size, uint16_t id,
 	return VSFERR_FAIL;
 }
 
-#define VSFIP_DNS_SERVERCOUNT			2
-static struct vsfip_ipaddr_t vsfip_dns_server[VSFIP_DNS_SERVERCOUNT];
-
 vsf_err_t vsfip_dns_setserver(uint8_t numdns, struct vsfip_ipaddr_t *dnsserver)
 {
-	if (numdns < VSFIP_DNS_SERVERCOUNT)
-		vsfip_dns_server[numdns] = *dnsserver;
+	if (numdns < dimof(vsfip_dns.server))
+		vsfip_dns.server[numdns] = *dnsserver;
 	else
 		return VSFERR_NOT_AVAILABLE;
 
 	return VSFERR_NONE;
 }
-
-static struct vsfip_dns_local_t vsfip_dns;
 
 vsf_err_t vsfip_dns_init(void)
 {
@@ -318,10 +306,10 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	vsfip_dns.try_cnt = VSFIP_DNS_TRY_CNT;
 	do
 	{
-		for (i = 0 ; i < VSFIP_DNS_SERVERCOUNT ; i++)
+		for (i = 0 ; i < dimof(vsfip_dns.server) ; i++)
 		{
 			vsfip_dns.dnsaddr.sin_port = VSFIP_DNS_CLIENT_PORT;
-			vsfip_dns.dnsaddr.sin_addr = vsfip_dns_server[i];
+			vsfip_dns.dnsaddr.sin_addr = vsfip_dns.server[i];
 			vsfip_dns.socket_pt.state = 0;
 			vsfsm_pt_entry(pt);
 			vsfip_udp_send(NULL, 0, vsfip_dns.so, &vsfip_dns.dnsaddr,

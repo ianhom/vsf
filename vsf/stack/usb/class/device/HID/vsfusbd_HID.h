@@ -40,7 +40,9 @@ enum usb_HID_req_t
 #define USB_HID_PROTOCOL_BOOT				0
 #define USB_HID_PROTOCOL_REPORT				1
 
+#ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_HID_class;
+#endif
 
 enum usb_HID_report_type_t
 {

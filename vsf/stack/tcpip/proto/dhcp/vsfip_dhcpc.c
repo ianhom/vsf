@@ -16,20 +16,21 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_type.h"
-#include "compiler.h"
-
-#include "interfaces.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "../../vsfip.h"
+#include "vsf.h"
 
 #include "vsfip_dhcp_common.h"
-#include "vsfip_dhcpc.h"
 
+#ifndef VSFCFG_STANDALONE_MODULE
 #define VSFIP_DHCPC_XID			0xABCD1234
+struct vsfip_dhcpc_local_t
+{
+	uint32_t xid;
+} static vsfip_dhcpc =
+{
+	.xid = 0xABCD1234;
+};
+#endif
+
 #define VSFIP_DHCPC_RETRY_CNT	10
 
 enum vsfip_dhcp_EVT_t
@@ -38,8 +39,6 @@ enum vsfip_dhcp_EVT_t
 	VSFIP_DHCP_EVT_SEND_REQUEST	= VSFSM_EVT_USER_LOCAL_INSTANT + 1,
 	VSFIP_DHCP_EVT_TIMEROUT		= VSFSM_EVT_USER_LOCAL_INSTANT + 2,
 };
-
-static uint32_t vsfip_dhcpc_xid = VSFIP_DHCPC_XID;
 
 static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcp, uint8_t op)
 {
@@ -62,7 +61,7 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcp, uint8_t op)
 	head->xid = dhcp->xid;
 	// shift right 10-bit for div 1000
 	head->secs = SYS_TO_BE_U16(\
-					(interfaces->tickclk.get_count() - dhcp->starttick) >> 10);
+					(vsfhal_tickclk_get_count() - dhcp->starttick) >> 10);
 	memcpy(head->chaddr, netif->macaddr.addr.s_addr_buf, netif->macaddr.size);
 	head->magic = SYS_TO_BE_U32(VSFIP_DHCP_MAGIC);
 	dhcp->optlen = 0;
@@ -187,7 +186,7 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		dhcp->retry = 0;
 
 	retry:
-		dhcp->xid = vsfip_dhcpc_xid++;
+		dhcp->xid = vsfip_dhcpc.xid++;
 		dhcp->so = vsfip_socket(AF_INET, IPPROTO_UDP);
 		if (NULL == dhcp->so)
 		{
@@ -285,7 +284,7 @@ vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
 
 	netif->dhcpc = dhcpc;
 	dhcpc->netif = netif;
-	dhcpc->starttick = interfaces->tickclk.get_count();
+	dhcpc->starttick = vsfhal_tickclk_get_count();
 
 	dhcpc->sockaddr.sin_port = VSFIP_DHCP_SERVER_PORT;
 	dhcpc->sockaddr.sin_addr.size = 4;

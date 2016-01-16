@@ -172,7 +172,7 @@
         </option>
         <option>
           <name>CCDefines</name>
-          <state></state>
+          <state>VSF_STANDALONE_MODULE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -354,7 +354,7 @@
         </option>
         <option>
           <name>CCPosIndRwpi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndNoDynInit</name>
@@ -471,7 +471,7 @@
           <name>ADefines</name>
           <state>VSF_APP_BASE=0x00000000</state>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="app"</state>
+          <state>MODULE_NAME="vsf.stack.net.bcmwifi"</state>
         </option>
         <option>
           <name>AList</name>
@@ -1921,27 +1921,57 @@
         </group>
       </group>
     </group>
+    <group>
+      <name>stack</name>
+      <group>
+        <name>tcpip</name>
+        <group>
+          <name>netif</name>
+          <group>
+            <name>eth</name>
+            <group>
+              <name>broadcom</name>
+              <group>
+                <name>bus</name>
+                <group>
+                  <name>sdio</name>
+                  <file>
+                    <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bus\sdio\bcm_bus_sdio.c</name>
+                    <excluded>
+                      <configuration>Debug</configuration>
+                    </excluded>
+                  </file>
+                </group>
+                <group>
+                  <name>spi</name>
+                  <file>
+                    <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bus\spi\bcm_bus_spi.c</name>
+                  </file>
+                </group>
+                <file>
+                  <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bus\bcm_bus.c</name>
+                </file>
+              </group>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bcm_sdpcm.c</name>
+              </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\broadcom\bcm_wifi.c</name>
+              </file>
+            </group>
+          </group>
+        </group>
+      </group>
+    </group>
   </group>
-  <group>
-    <name>vsf_cfg</name>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\dal_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
-    </file>
-  </group>
-  <file>
-    <name>$PROJ_DIR$\..\..\module\app\app.c</name>
-  </file>
   <file>
     <name>$PROJ_DIR$\app_cfg.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\module\bcmwifi\bcmwifi.c</name>
   </file>
   <file>
     <name>$PROJ_DIR$\interfaces_cfg.h</name>

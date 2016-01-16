@@ -172,7 +172,7 @@
         </option>
         <option>
           <name>CCDefines</name>
-          <state></state>
+          <state>VSF_STANDALONE_MODULE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -354,7 +354,7 @@
         </option>
         <option>
           <name>CCPosIndRwpi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndNoDynInit</name>
@@ -471,7 +471,7 @@
           <name>ADefines</name>
           <state>VSF_APP_BASE=0x00000000</state>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="app"</state>
+          <state>MODULE_NAME="vsf.stack.net.tcpip"</state>
         </option>
         <option>
           <name>AList</name>
@@ -1921,22 +1921,52 @@
         </group>
       </group>
     </group>
+    <group>
+      <name>stack</name>
+      <group>
+        <name>tcpip</name>
+        <group>
+          <name>netif</name>
+          <group>
+            <name>eth</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\vsfip_eth.c</name>
+            </file>
+          </group>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\vsfip_netif.c</name>
+          </file>
+        </group>
+        <group>
+          <name>proto</name>
+          <group>
+            <name>dhcp</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcp_common.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>dns</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dns\vsfip_dnsc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>http</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\http\vsfip_httpc.c</name>
+            </file>
+          </group>
+        </group>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\vsfip.c</name>
+        </file>
+      </group>
+    </group>
   </group>
-  <group>
-    <name>vsf_cfg</name>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\dal_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
-    </file>
-  </group>
-  <file>
-    <name>$PROJ_DIR$\..\..\module\app\app.c</name>
-  </file>
   <file>
     <name>$PROJ_DIR$\app_cfg.h</name>
   </file>
@@ -1945,6 +1975,9 @@
   </file>
   <file>
     <name>$PROJ_DIR$\interfaces_cfg.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\module\tcpip\tcpip.c</name>
   </file>
   <file>
     <name>$PROJ_DIR$\vsf_cfg.h</name>

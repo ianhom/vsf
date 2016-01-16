@@ -16,32 +16,29 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "vsf.h"
 
-#include "vsfip_dhcp_common.h"
+// define the address of the api table
+#define VSFCFG_API_ADDR				0x00000200
 
-// buf MUST be large enough for all the data
-void vsfip_dhcp_append_opt(struct vsfip_buffer_t *buf, uint32_t *optlen,
-						uint8_t option, uint8_t len, uint8_t *data)
-{
-	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
-	
-	head->options[(*optlen)++] = option;
-	head->options[(*optlen)++] = len;
-	memcpy(&head->options[*optlen], data, len);
-	*optlen += len;
-}
+// include VSFCFG_STANDALONE_MODULE to compile the project as a module
+#define VSFCFG_STANDALONE_MODULE
 
-void vsfip_dhcp_end_opt(struct vsfip_buffer_t *buf, uint32_t *optlen)
-{
-	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
-	
-	head->options[(*optlen)++] = VSFIP_DHCPOPT_END;
-	while ((*optlen < VSFIP_DHCPOPT_MINLEN) || (*optlen & 3))
-	{
-		head->options[(*optlen)++] = 0;
-	}
-	// tweak options length
-	buf->app.size -= sizeof(head->options);
-	buf->app.size += *optlen;
-}
+// include VSFCFG_MODULE to enable module support
+#define VSFCFG_MODULE
+
+// define VSFCFG_FUNC_XXXX to include corresponding func
+// define VSFCFG_MODULE_XXXX to declare corresponding func to be a module
+#define VSFCFG_FUNC_USBD
+#define VSFCFG_MODULE_USBD
+
+//#define VSFCFG_FUNC_USBH
+//#define VSFCFG_MODULE_USBH
+
+#define VSFCFG_FUNC_SHELL
+#define VSFCFG_MODULE_SHELL
+
+#define VSFCFG_FUNC_TCPIP
+#define VSFCFG_MODULE_TCPIP
+
+#define VSFCFG_FUNC_BCMWIFI
+#define VSFCFG_MODULE_BCMWIFI

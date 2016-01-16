@@ -16,15 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_type.h"
-#include "compiler.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "../../vsfip.h"
-#include "../vsfip_netif.h"
-#include "vsfip_eth.h"
+#include "vsf.h"
 
 PACKED_HEAD struct PACKED_MID vsfip_ethhead_t
 {

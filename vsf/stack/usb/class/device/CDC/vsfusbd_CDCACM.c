@@ -19,8 +19,8 @@
 
 #include "vsf.h"
 
-static vsf_err_t vsfusbd_CDCACMData_class_init(uint8_t iface,
-											struct vsfusbd_device_t *device)
+vsf_err_t
+vsfusbd_CDCACMData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_CDCACM_param_t *param =
@@ -40,7 +40,7 @@ static vsf_err_t vsfusbd_CDCACMData_class_init(uint8_t iface,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCACMControl_GetLineCoding_prepare(
+vsf_err_t vsfusbd_CDCACMControl_GetLineCoding_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -66,7 +66,7 @@ static vsf_err_t vsfusbd_CDCACMControl_GetLineCoding_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_prepare(
+vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -85,7 +85,7 @@ static vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_prepare(
 	buffer->size = 7;
 	return VSFERR_NONE;
 }
-static vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_process(
+vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_process(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -109,7 +109,7 @@ static vsf_err_t vsfusbd_CDCACMControl_SetLineCoding_process(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCACMControl_SetControlLineState_prepare(
+vsf_err_t vsfusbd_CDCACMControl_SetControlLineState_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -134,7 +134,7 @@ static vsf_err_t vsfusbd_CDCACMControl_SetControlLineState_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_CDCACMControl_SendBreak_prepare(
+vsf_err_t vsfusbd_CDCACMControl_SendBreak_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -153,13 +153,14 @@ static vsf_err_t vsfusbd_CDCACMControl_SendBreak_prepare(
 	return VSFERR_NONE;
 }
 
-static struct vsfusbd_setup_filter_t *vsfusbd_CDCACMControl_get_request_filter(
-												struct vsfusbd_device_t *device)
+struct vsfusbd_setup_filter_t *
+vsfusbd_CDCACMControl_get_request_filter(struct vsfusbd_device_t *device)
 {
 	return vsfusbd_get_class_request_filter(device,
 				(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCControl_class);
 }
 
+#ifndef VSFCFG_STANDALONE_MODULE
 static const struct vsfusbd_setup_filter_t vsfusbd_CDCACMControl_class_setup[] =
 {
 	{
@@ -204,3 +205,4 @@ const struct vsfusbd_class_protocol_t vsfusbd_CDCACMData_class =
 
 	vsfusbd_CDCACMData_class_init, NULL
 };
+#endif

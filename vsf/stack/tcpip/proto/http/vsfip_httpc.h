@@ -1,9 +1,15 @@
 #ifndef __VSFIP_HTTPC_H_INCLUDED__
 #define __VSFIP_HTTPC_H_INCLUDED__
 
-#include "component/stream/stream.h"
-
 #define HTTPC_DEBUG
+
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFIP_DHCPC_XID			0xABCD1234
+struct vsfip_dhcpc_local_t
+{
+	uint32_t xid;
+};
+#endif
 
 struct vsfip_httpc_op_t
 {
@@ -23,23 +29,26 @@ struct vsfip_httpc_param_t
 	// private
 	struct vsfsm_pt_t local_pt;
 #ifdef HTTPC_DEBUG
-    struct vsfsm_pt_t debug_pt;
+	struct vsfsm_pt_t debug_pt;
 #endif
 
 	struct vsfip_socket_t *so;
 	struct vsfip_sockaddr_t hostip;
 
-    char *host;
-    char *file;
+	char *host;
+	char *file;
 
-    struct vsfip_buffer_t *buf;
+	struct vsfip_buffer_t *buf;
 	uint32_t resp_curptr;
-    uint8_t *resp_type;
-    uint8_t resp_code;
+	uint8_t *resp_type;
+	uint8_t resp_code;
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfip_httpc_op_t vsfip_httpc_op_stream;
 const struct vsfip_httpc_op_t vsfip_httpc_op_buffer;
+#endif
+
 vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						char *wwwaddr, void *output);
 

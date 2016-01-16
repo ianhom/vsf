@@ -21,9 +21,6 @@
 
 #include "vsfip_cfg.h"
 
-#include "framework/vsftimer/vsftimer.h"
-#include "stack/tcpip/vsfip.h"
-
 #define VSFIP_IPADDR_ANY				0
 
 #define VSFIP_IP_HEADLEN				20
@@ -275,6 +272,28 @@ struct vsfip_socket_t
 
 	struct vsfip_socket_t *next;
 };
+
+#ifdef VSFCFG_STANDALONE_MODULE
+struct vsfip_t
+{
+	struct vsfip_netif_t *netif_list;
+	struct vsfip_netif_t *netif_default;
+
+	struct vsfip_socket_t *udpconns;
+	struct vsfip_socket_t *tcpconns;
+
+	struct vsfsm_t tick_sm;
+	struct vsftimer_t tick_timer;
+
+	uint16_t udp_port;
+	uint16_t tcp_port;
+	uint16_t ip_id;
+	uint32_t tsn;
+
+	bool quit;
+	struct vsfip_mem_op_t *mem_op;
+};
+#endif
 
 struct vsfip_socket_t * vsfip_socket_get(void);
 void vsfip_socket_release(struct vsfip_socket_t *socket);

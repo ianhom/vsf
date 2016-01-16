@@ -16,15 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_type.h"
-#include "compiler.h"
-
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#include "../vsfip.h"
+#include "vsf.h"
 #include "../vsfip_priv.h"
-#include "vsfip_netif.h"
 
 enum vsfip_netif_EVT_t
 {

@@ -35,7 +35,7 @@ struct app_hwcfg_t
 		struct interface_gpio_pin_t pullup;
 	} usbd;
 
-#if VSFCFG_FUNC_BCMWIFI
+#ifdef VSFCFG_FUNC_BCMWIFI
 	struct
 	{
 		int type;
