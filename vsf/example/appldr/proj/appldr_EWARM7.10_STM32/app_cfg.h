@@ -20,6 +20,6 @@
 // compiler config
 #include "compiler.h"
 
-#define APPCFG_BUFMGR_SIZE				(16 * 1024)
+#define APPCFG_BUFMGR_SIZE				(60 * 1024)
 #define APPCFG_BOOTLOADER_ADDR			0x08004000
 #define APPCFG_MODULES_ADDR				0x08005000

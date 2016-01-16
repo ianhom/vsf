@@ -54,7 +54,7 @@ struct app_hwcfg_t
 			struct interface_gpio_pin_t eint;
 			uint8_t eint_idx;
 		} spi;
-	} bcm;
+	} bcmwifi;
 #endif
 };
 

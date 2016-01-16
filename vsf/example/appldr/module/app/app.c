@@ -1,8 +1,12 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
+#include "bcmwifi_handlers.h"
+
 #define VSF_MODULE_SHELL_NAME			"vsf.framework.shell"
 #define VSF_MODULE_USBD_NAME			"vsf.stack.usb.device"
+#define VSF_MODULE_TCPIP_NAME			"vsf.stack.net.tcpip"
+#define VSF_MODULE_BCMWIFI_NAME			"vsf.stack.net.bcmwifi"
 
 #define USB_EVT_PULLUP_TO				(VSFSM_EVT_USER_LOCAL + 0)
 
@@ -205,6 +209,9 @@ struct vsfapp_t
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, 16);
 	struct vsfsm_evtq_t pendsvq;
 	struct vsfsm_evtq_element_t pendsvq_ele[16];
+
+	struct vsfshell_bcmwifi_t bcmwifi;
+	struct vsfshell_handler_t bcmwifi_handlers[16];
 };
 
 // app
@@ -230,6 +237,65 @@ static void vsftimer_memop_free(struct vsftimer_t *timer)
 	VSFPOOL_FREE(&app->vsftimer_pool, timer);
 }
 
+// wifi
+static struct vsfip_buffer_t* app_bcmwifi_get_buffer(uint32_t size)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+	struct vsfip_buffer_t *buffer = NULL;
+
+	if (size <= sizeof(app->bcmwifi.vsfip_buffer128_mem[0]))
+	{
+		buffer = VSFPOOL_ALLOC(&app->bcmwifi.vsfip_buffer128_pool, struct vsfip_buffer_t);
+	}
+	if (NULL == buffer)
+	{
+		buffer = VSFPOOL_ALLOC(&app->bcmwifi.vsfip_buffer_pool, struct vsfip_buffer_t);
+	}
+	return buffer;
+}
+
+static void app_bcmwifi_release_buffer(struct vsfip_buffer_t *buffer)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	VSFPOOL_FREE(&app->bcmwifi.vsfip_buffer128_pool, buffer);
+	VSFPOOL_FREE(&app->bcmwifi.vsfip_buffer_pool, buffer);
+}
+
+static struct vsfip_socket_t* app_bcmwifi_get_socket(void)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	return VSFPOOL_ALLOC(&app->bcmwifi.vsfip_socket_pool, struct vsfip_socket_t);
+}
+
+static void app_bcmwifi_release_socket(struct vsfip_socket_t *socket)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	VSFPOOL_FREE(&app->bcmwifi.vsfip_socket_pool, socket);
+}
+
+static struct vsfip_tcppcb_t* app_bcmwifi_get_tcppcb(void)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	return VSFPOOL_ALLOC(&app->bcmwifi.vsfip_tcppcb_pool, struct vsfip_tcppcb_t);
+}
+
+static void app_bcmwifi_release_tcppcb(struct vsfip_tcppcb_t *tcppcb)
+{
+	struct vsf_module_t *module = vsf_module_get("app");
+	struct vsfapp_t *app = module->ifs;
+
+	VSFPOOL_FREE(&app->bcmwifi.vsfip_tcppcb_pool, tcppcb);
+}
+
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -247,6 +313,34 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		app->vsftimer_memop.free = vsftimer_memop_free;
 		vsftimer_init(&app->vsftimer_memop);
 		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
+
+		{
+			struct vsfip_buffer_t *buffer;
+			int i;
+
+			buffer = &app->bcmwifi.vsfip_buffer128_pool.buffer[0];
+			for (i = 0; i < 16; i++)
+			{
+				buffer->buffer = app->bcmwifi.vsfip_buffer128_mem[i];
+				buffer++;
+			}
+			buffer = &app->bcmwifi.vsfip_buffer_pool.buffer[i];
+			for (i = 0; i < 8; i++)
+			{
+				buffer->buffer = app->bcmwifi.vsfip_buffer_mem[i];
+				buffer++;
+			}
+		}
+		VSFPOOL_INIT(&app->bcmwifi.vsfip_buffer128_pool, struct vsfip_buffer_t, 16);
+		VSFPOOL_INIT(&app->bcmwifi.vsfip_buffer_pool, struct vsfip_buffer_t, 8);
+		VSFPOOL_INIT(&app->bcmwifi.vsfip_socket_pool, struct vsfip_socket_t, 16);
+		VSFPOOL_INIT(&app->bcmwifi.vsfip_tcppcb_pool, struct vsfip_tcppcb_t, 16);
+		app->bcmwifi.mem_op.get_buffer = app_bcmwifi_get_buffer;
+		app->bcmwifi.mem_op.release_buffer = app_bcmwifi_release_buffer;
+		app->bcmwifi.mem_op.get_socket = app_bcmwifi_get_socket;
+		app->bcmwifi.mem_op.release_socket = app_bcmwifi_release_socket;
+		app->bcmwifi.mem_op.get_tcppcb = app_bcmwifi_get_tcppcb;
+		app->bcmwifi.mem_op.release_tcppcb = app_bcmwifi_release_tcppcb;
 
 		// Application
 		// app init
@@ -320,6 +414,9 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		app->shell.stream_tx = &app->usbd.cdc.stream_tx;
 		app->shell.stream_rx = &app->usbd.cdc.stream_rx;
 		vsfshell_init(&app->shell);
+
+		bcmwifi_handlers_init(&app->bcmwifi, &app->shell,
+			(struct vsfshell_handler_t *)&app->bcmwifi_handlers, app->hwcfg);
 
 		// disable usb pull up
 		if (app->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
@@ -401,6 +498,18 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 		goto fail_load_shell;
 	}
 #endif
+#ifdef VSFCFG_MODULE_BCMWIFI
+	if (NULL == vsf_module_load(VSF_MODULE_BCMWIFI_NAME))
+	{
+		goto fail_load_bcmwifi;
+	}
+#endif
+#ifdef VSFCFG_MODULE_TCPIP
+	if (NULL == vsf_module_load(VSF_MODULE_TCPIP_NAME))
+	{
+		goto fail_load_tcpip;
+	}
+#endif
 
 	app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
 	if (NULL == app)
@@ -416,6 +525,14 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 	return main(app);
 
 fail_malloc_app:
+#ifdef VSFCFG_MODULE_TCPIP
+	vsf_module_unload(VSF_MODULE_TCPIP_NAME);
+fail_load_tcpip:
+#endif
+#ifdef VSFCFG_MODULE_BCMWIFI
+	vsf_module_unload(VSF_MODULE_BCMWIFI_NAME);
+fail_load_bcmwifi:
+#endif
 #ifdef VSFCFG_MODULE_SHELL
 	vsf_module_unload(VSF_MODULE_SHELL_NAME);
 fail_load_shell:
@@ -435,6 +552,12 @@ ROOTFUNC vsf_err_t module_exit(struct vsf_module_t *module)
 #endif
 #ifdef VSFCFG_MODULE_SHELL
 	vsf_module_unload(VSF_MODULE_SHELL_NAME);
+#endif
+#ifdef VSFCFG_MODULE_BCMWIFI
+	vsf_module_unload(VSF_MODULE_BCMWIFI_NAME);
+#endif
+#ifdef VSFCFG_MODULE_TCPIP
+	vsf_module_unload(VSF_MODULE_TCPIP_NAME);
 #endif
 	if (module->ifs != NULL)
 	{

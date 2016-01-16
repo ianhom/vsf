@@ -31,49 +31,23 @@
 #define USB_PULLUP_PORT					2
 #define USB_PULLUP_PIN					13
 
-// bcm wifi
-#define BCM_PORT_TYPE					BCM_BUS_TYPE_SPI
-#define BCM_PORT						1
-#define BCM_FREQ						18000
+// bcmwifi
+#define BCMWIFI_PORT_TYPE				BCM_BUS_TYPE_SPI
+#define BCMWIFI_PORT					1
+#define BCMWIFI_FREQ					18000
 
-#define BCM_RST_PORT					1
-#define BCM_RST_PIN						11
-#define BCM_WAKEUP_PORT					IFS_DUMMY_PORT
-#define BCM_WAKEUP_PIN					0
-#define BCM_MODE_PORT					IFS_DUMMY_PORT
-#define BCM_MODE_PIN					0
+#define BCMWIFI_RST_PORT				1
+#define BCMWIFI_RST_PIN					11
+#define BCMWIFI_WAKEUP_PORT				IFS_DUMMY_PORT
+#define BCMWIFI_WAKEUP_PIN				0
+#define BCMWIFI_MODE_PORT				IFS_DUMMY_PORT
+#define BCMWIFI_MODE_PIN				0
 
-#define BCM_SPI_CS_PORT					1
-#define BCM_SPI_CS_PIN					10
-#define BCM_EINT_PORT					0
-#define BCM_EINT_PIN					8
-#define BCM_EINT						0x08
+#define BCMWIFI_SPI_CS_PORT				1
+#define BCMWIFI_SPI_CS_PIN				10
+#define BCMWIFI_EINT_PORT				0
+#define BCMWIFI_EINT_PIN				8
+#define BCMWIFI_EINT					0x08
 
-#define BCM_PWRCTRL_PORT				0
-#define BCM_PWRCTRL_PIN					3
-
-// LED24
-#define LED24							{3, 4, 3, 6},\
-										{4, 1, 4, 0},\
-										{3, 5, 3, 3},\
-										{3, 9, 3, 10},\
-										{4, 15, 3, 8},\
-										{4, 13, 4, 14},\
-										{4, 11, 4, 12},\
-										{4, 9, 4, 10},\
-										{4, 7, 4, 8},\
-										{3, 0, 3, 1},\
-										{3, 14, 3, 15},\
-										{6, 13, 6, 14},\
-										{4, 6, 4, 2},\
-										{4, 4, 4, 5},\
-										{3, 13, 4, 3},\
-										{3, 11, 3, 12},\
-										{6, 4, 6, 5},\
-										{6, 2, 6, 3},\
-										{6, 0, 6, 1},\
-										{5, 14, 5, 15},\
-										{5, 12, 6, 13},\
-										{5, 4, 5, 5},\
-										{5, 2, 5, 3},\
-										{5, 0, 5, 1},
+#define BCMWIFI_PWRCTRL_PORT			0
+#define BCMWIFI_PWRCTRL_PIN				3
