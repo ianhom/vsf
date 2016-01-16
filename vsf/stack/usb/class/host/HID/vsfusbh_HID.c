@@ -16,12 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_cfg.h"
-#include "app_type.h"
-
-#include "interfaces.h"
-#include "stack/usb/core/vsfusbh.h"
-#include "vsfusbh_HID.h"
+#include "vsf.h"
 
 #define vsfusbh_hid_check_ret_value()	\
 	do {\

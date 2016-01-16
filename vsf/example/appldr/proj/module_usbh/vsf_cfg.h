@@ -17,11 +17,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __VSFUSBH_HUB_H_INCLUDED__
-#define __VSFUSBH_HUB_H_INCLUDED__
+// define the address of the api table
+#define VSFCFG_API_ADDR				0x00000200
 
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfusbh_class_drv_t vsfusbh_hub_drv;
-#endif
+// include VSFCFG_STANDALONE_MODULE to compile the project as a module
+#define VSFCFG_STANDALONE_MODULE
 
-#endif
+// include VSFCFG_MODULE to enable module support
+#define VSFCFG_MODULE
+
+// define VSFCFG_FUNC_XXXX to include corresponding func
+// define VSFCFG_MODULE_XXXX to declare corresponding func to be a module
+#define VSFCFG_FUNC_USBD
+#define VSFCFG_MODULE_USBD
+
+#define VSFCFG_FUNC_USBH
+#define VSFCFG_MODULE_USBH
+
+#define VSFCFG_FUNC_SHELL
+#define VSFCFG_MODULE_SHELL
+
+#define VSFCFG_FUNC_TCPIP
+#define VSFCFG_MODULE_TCPIP
+
+#define VSFCFG_FUNC_BCMWIFI
+#define VSFCFG_MODULE_BCMWIFI

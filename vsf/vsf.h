@@ -711,6 +711,28 @@ struct vsf_t
 #endif
 #endif
 
+#ifdef VSFCFG_FUNC_USBD
+#ifdef VSFCFG_MODULE_USBD
+#define vsfusbh_init					vsf.stack.usb.host->init
+#define vsfusbh_fini					vsf.stack.usb.host->fini
+#define vsfusbh_register_driver			vsf.stack.usb.host->register_driver
+#define vsfusbh_submit_urb				vsf.stack.usb.host->submit_urb
+
+#define vsfohci_drv						vsf.stack.usb.host->hcd.driver
+
+#define vsfusbh_hub_drv					vsf.stack.usb.host->classes.hub.driver
+#else
+#define vsfusbh_init					vsf.stack.usb.host.init
+#define vsfusbh_fini					vsf.stack.usb.host.fini
+#define vsfusbh_register_driver			vsf.stack.usb.host.register_driver
+#define vsfusbh_submit_urb				vsf.stack.usb.host.submit_urb
+
+#define vsfohci_drv						vsf.stack.usb.host.hcd.driver
+
+#define vsfusbh_hub_drv					vsf.stack.usb.host.classes.hub.driver
+#endif
+#endif
+
 #ifdef VSFCFG_FUNC_TCPIP
 #ifdef VSFCFG_MODULE_TCPIP
 #define vsfip							vsf.stack.net.tcpip->local

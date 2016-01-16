@@ -16,13 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_cfg.h"
-#include "app_type.h"
-
-#include "interfaces.h"
-#include "component/buffer/buffer.h"
-
-#include "stack/usb/core/vsfusbh.h"
+#include "vsf.h"
 
 struct vsfusbh_hub_t
 {
@@ -514,7 +508,7 @@ void *vsfusbh_hub_init(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev)
 	return cdata;
 }
 
-static void vsfusbh_hub_free(struct vsfusbh_device_t *dev)
+void vsfusbh_hub_free(struct vsfusbh_device_t *dev)
 {
 	struct vsfusbh_class_data_t *cdata = (struct vsfusbh_class_data_t *)(dev->priv);
 
@@ -522,7 +516,7 @@ static void vsfusbh_hub_free(struct vsfusbh_device_t *dev)
 	vsf_bufmgr_free(cdata);
 }
 
-static vsf_err_t vsfusbh_hub_match(struct vsfusbh_device_t *dev)
+vsf_err_t vsfusbh_hub_match(struct vsfusbh_device_t *dev)
 {
 	if (dev->descriptor.bDeviceClass == USB_CLASS_HUB)
 		return VSFERR_NONE;
@@ -530,9 +524,11 @@ static vsf_err_t vsfusbh_hub_match(struct vsfusbh_device_t *dev)
 	return VSFERR_FAIL;
 }
 
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbh_class_drv_t vsfusbh_hub_drv =
 {
 	vsfusbh_hub_init,
 	vsfusbh_hub_free,
 	vsfusbh_hub_match,
 };
+#endif

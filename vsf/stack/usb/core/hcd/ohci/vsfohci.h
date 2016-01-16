@@ -19,9 +19,8 @@
 #ifndef __VSFOHCI_H___
 #define __VSFOHCI_H___
 
-/**************************************************************************
- * export data
- **************************************************************************/
-extern const struct vsfusbh_hcddrv_t ohci_drv;
+#ifndef VSFCFG_STANDALONE_MODULE
+extern const struct vsfusbh_hcddrv_t vsfohci_drv;
+#endif
 
 #endif // __VSFOHCI_H___

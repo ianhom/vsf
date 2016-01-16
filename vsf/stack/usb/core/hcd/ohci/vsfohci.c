@@ -16,14 +16,7 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
-#include "app_cfg.h"
-#include "app_type.h"
-
-#include "interfaces.h"
-#include "component/list/list.h"
-#include "component/buffer/buffer.h"
-
-#include "stack/usb/core/vsfusbh.h"
+#include "vsf.h"
 #include "vsfohci_priv.h"
 
 #define OHCI_ISO_DELAY			4
@@ -183,6 +176,7 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *edi)
 		}
 	}
 		break;
+#if USBH_CFG_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
 		ed->hwNextED = 0;
 		ed->int_interval = 1;
@@ -208,6 +202,7 @@ static void ep_link(struct ohci_t *ohci, struct ed_t *edi)
 		}
 		ohci->ed_isotail = edi;
 		break;
+#endif
 	}
 }
 
@@ -961,7 +956,7 @@ static uint32_t vsfohci_init_hc_start(struct vsfohci_t *vsfohci)
 	return (ohci->regs->roothub.a >> 23) & 0x1fe;
 }
 
-static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
 	struct vsfohci_t *vsfohci;
@@ -971,12 +966,12 @@ static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_begin(pt);
 
 	err = vsfohci_init_get_resource(usbh,
-			(uint32_t)core_interfaces.hcd.regbase(usbh->hcd_index));
+			(uint32_t)vsfhal_hcd_regbase(usbh->hcd_index));
 	if (err)
 		return err;
 	vsfohci = (struct vsfohci_t *)usbh->hcd_data;
 
-	core_interfaces.hcd.init(usbh->hcd_index, vsfohci_interrupt, usbh->hcd_data);
+	vsfhal_hcd_init(usbh->hcd_index, vsfohci_interrupt, usbh->hcd_data);
 
 	vsfohci->ohci->regs->intrdisable = OHCI_INTR_MIE;
 	vsfohci->ohci->regs->control = 0;
@@ -1002,22 +997,22 @@ static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_fini(void *param)
+vsf_err_t vsfohci_fini(void *param)
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_suspend(void *param)
+vsf_err_t vsfohci_suspend(void *param)
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_resume(void *param)
+vsf_err_t vsfohci_resume(void *param)
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_alloc_device(void *param, struct vsfusbh_device_t *dev)
+vsf_err_t vsfohci_alloc_device(void *param, struct vsfusbh_device_t *dev)
 {
 	dev->priv = vsf_bufmgr_malloc(sizeof(struct ohci_device_t));
 	if (dev->priv == NULL)
@@ -1026,7 +1021,7 @@ static vsf_err_t vsfohci_alloc_device(void *param, struct vsfusbh_device_t *dev)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
+vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
 {
 	uint16_t i;
 	struct ed_t *ed;
@@ -1057,7 +1052,7 @@ static vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
+vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct ed_t *ed;
 	uint32_t i, pipe, size = 0;
@@ -1184,7 +1179,7 @@ else if (err == VSFERR_NOT_READY)
 else
 	err_deal();
 */
-static vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
+vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 	void *delay_free_buf)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
@@ -1236,7 +1231,7 @@ static vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 }
 
 // use for int/iso urb
-static vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
+vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
@@ -1253,6 +1248,7 @@ static vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 			return VSFERR_NONE;
 		}
 		break;
+#if USBH_CFG_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
 		vsfurb->actual_length = 0;
 		if ((urb_priv->state != URB_PRIV_DEL) && (vsfurb->status == URB_OK))
@@ -1268,6 +1264,7 @@ static vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 			td_submit_urb(ohci, vsfurb);
 			return VSFERR_NONE;
 		}
+#endif
 	default:
 		break;
 	}
@@ -1313,8 +1310,7 @@ const static uint8_t root_hub_str_index1[] =
 	0,					/* u8  Unicode */
 };
 
-static vsf_err_t vsfohci_roothub_control(void *param,
-		struct vsfusbh_urb_t *vsfurb)
+vsf_err_t vsfohci_rh_control(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	uint16_t typeReq, wValue, wIndex, wLength;
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
@@ -1473,7 +1469,8 @@ error:
 	return VSFERR_FAIL;
 }
 
-const struct vsfusbh_hcddrv_t ohci_drv =
+#ifndef VSFCFG_STANDALONE_MODULE
+const struct vsfusbh_hcddrv_t vsfohci_drv =
 {
 	vsfohci_init_thread,
 	vsfohci_fini,
@@ -1484,5 +1481,6 @@ const struct vsfusbh_hcddrv_t ohci_drv =
 	vsfohci_submit_urb,
 	vsfohci_unlink_urb,
 	vsfohci_relink_urb,
-	vsfohci_roothub_control,
+	vsfohci_rh_control,
 };
+#endif
