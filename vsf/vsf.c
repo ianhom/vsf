@@ -264,7 +264,7 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 
 #ifdef VSFCFG_FUNC_USBD
 #ifdef VSFCFG_MODULE_USBD
-	.stack.usd.device = &vsf_usbd_api,
+	.stack.usb.device = &vsf_usbd_api,
 #else
 	.stack.usb.device.init = vsfusbd_device_init,
 	.stack.usb.device.fini = vsfusbd_device_fini,

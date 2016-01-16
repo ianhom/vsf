@@ -3,14 +3,6 @@
 
 #define HTTPC_DEBUG
 
-#ifdef VSFCFG_STANDALONE_MODULE
-#define VSFIP_DHCPC_XID			0xABCD1234
-struct vsfip_dhcpc_local_t
-{
-	uint32_t xid;
-};
-#endif
-
 struct vsfip_httpc_op_t
 {
 	vsf_err_t (*on_connect)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);

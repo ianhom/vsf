@@ -21,13 +21,9 @@
 #include "vsfip_dhcp_common.h"
 
 #ifndef VSFCFG_STANDALONE_MODULE
-#define VSFIP_DHCPC_XID			0xABCD1234
-struct vsfip_dhcpc_local_t
+static struct vsfip_dhcpc_local_t vsfip_dhcpc =
 {
-	uint32_t xid;
-} static vsfip_dhcpc =
-{
-	.xid = 0xABCD1234;
+	.xid = VSFIP_DHCPC_XID;
 };
 #endif
 

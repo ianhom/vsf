@@ -11,7 +11,7 @@ const struct app_hwcfg_t app_hwcfg =
 	.usbd.pullup.port =		USB_PULLUP_PORT,
 	.usbd.pullup.pin =		USB_PULLUP_PIN,
 
-#if VSFCFG_FUNC_BCMWIFI
+#ifdef VSFCFG_FUNC_BCMWIFI
 	.bcm.type =				BCM_PORT_TYPE,
 	.bcm.index =			BCM_PORT,
 	.bcm.freq_khz =			BCM_FREQ,
@@ -33,8 +33,12 @@ const struct app_hwcfg_t app_hwcfg =
 
 struct vsfapp_t
 {
+	struct vsf_module_t bootloader;
 	uint8_t bufmgr_buffer[APPCFG_BUFMGR_SIZE];
-} static app;
+} static app =
+{
+	.bootloader.flash = (struct vsf_module_info_t *)APPCFG_BOOTLOADER_ADDR,
+};
 
 void main(void)
 {
@@ -48,6 +52,12 @@ void main(void)
 	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 
 	// initialize modules
+	module_ptr = (uint32_t *)(app.bootloader.flash);
+	if (*module_ptr != 0xFFFFFFFF)
+	{
+		vsf_module_register(&app.bootloader);
+	}
+
 	while (*flash != 0xFFFFFFFF)
 	{
 		module_ptr = (uint32_t *)(module_base + *flash);

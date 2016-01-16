@@ -1925,7 +1925,7 @@
   <group>
     <name>vsf_cfg</name>
     <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\dal_cfg.h</name>
+      <name>$PROJ_DIR$\vsf_cfg.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
@@ -1945,9 +1945,6 @@
   </file>
   <file>
     <name>$PROJ_DIR$\interfaces_cfg.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\vsf_cfg.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\vsf_undef.h</name>

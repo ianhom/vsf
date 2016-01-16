@@ -29,16 +29,16 @@
 // define VSFCFG_FUNC_XXXX to include corresponding func
 // define VSFCFG_MODULE_XXXX to declare corresponding func to be a module
 #define VSFCFG_FUNC_USBD
-//#define VSFCFG_MODULE_USBD
+#define VSFCFG_MODULE_USBD
 
-//#define VSFCFG_FUNC_USBH
-//#define VSFCFG_MODULE_USBH
+#define VSFCFG_FUNC_USBH
+#define VSFCFG_MODULE_USBH
 
 #define VSFCFG_FUNC_SHELL
 #define VSFCFG_MODULE_SHELL
 
-//#define VSFCFG_FUNC_TCPIP
-//#define VSFCFG_MODULE_TCPIP
+#define VSFCFG_FUNC_TCPIP
+#define VSFCFG_MODULE_TCPIP
 
-//#define VSFCFG_FUNC_BCMWIFI
-//#define VSFCFG_MODULE_BCMWIFI
+#define VSFCFG_FUNC_BCMWIFI
+#define VSFCFG_MODULE_BCMWIFI

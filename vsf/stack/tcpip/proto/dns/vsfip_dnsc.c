@@ -58,22 +58,7 @@ PACKED_HEAD struct PACKED_MID vsfip_dns_response_t
 }; PACKED_TAIL
 
 #ifndef VSFCFG_STANDALONE_MODULE
-struct vsfip_dns_local_t
-{
-	struct vsfsm_pt_t socket_pt;
-
-	struct vsfip_socket_t *so;
-	struct vsfip_sockaddr_t dnsaddr;
-
-	struct vsfip_buffer_t *inbuf;
-	struct vsfip_buffer_t *outbuf;
-
-	struct vsfsm_crit_t crit;
-
-	uint16_t id;
-	uint8_t try_cnt;
-	struct vsfip_ipaddr_t server[2];
-} static vsfip_dns;
+static struct vsfip_dns_local_t vsfip_dns;
 #endif
 
 #define VSFIP_DNS_PKG_SIZE		512

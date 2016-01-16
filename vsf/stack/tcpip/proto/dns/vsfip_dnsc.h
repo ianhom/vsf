@@ -19,7 +19,6 @@
 #ifndef __VSFIP_DNSC_H_INCLUDED__
 #define __VSFIP_DNSC_H_INCLUDED__
 
-#ifdef VSFCFG_STANDALONE_MODULE
 struct vsfip_dns_local_t
 {
 	struct vsfsm_pt_t socket_pt;
@@ -36,7 +35,6 @@ struct vsfip_dns_local_t
 	uint8_t try_cnt;
 	struct vsfip_ipaddr_t server[2];
 };
-#endif
 
 struct vsfip_hostent_t
 {

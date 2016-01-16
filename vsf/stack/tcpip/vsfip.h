@@ -273,7 +273,6 @@ struct vsfip_socket_t
 	struct vsfip_socket_t *next;
 };
 
-#ifdef VSFCFG_STANDALONE_MODULE
 struct vsfip_t
 {
 	struct vsfip_netif_t *netif_list;
@@ -295,10 +294,6 @@ struct vsfip_t
 	void (*input_sniffer)(struct vsfip_buffer_t *buf);
 	void (*output_sniffer)(struct vsfip_buffer_t *buf);
 };
-#else
-extern void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf);
-extern void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf);
-#endif
 
 struct vsfip_socket_t * vsfip_socket_get(void);
 void vsfip_socket_release(struct vsfip_socket_t *socket);

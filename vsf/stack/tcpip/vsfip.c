@@ -46,28 +46,7 @@ enum vsfip_EVT_t
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE
-struct vsfip_t
-{
-	struct vsfip_netif_t *netif_list;
-	struct vsfip_netif_t *netif_default;
-
-	struct vsfip_socket_t *udpconns;
-	struct vsfip_socket_t *tcpconns;
-
-	struct vsfsm_t tick_sm;
-	struct vsftimer_t tick_timer;
-
-	uint16_t udp_port;
-	uint16_t tcp_port;
-	uint16_t ip_id;
-	uint32_t tsn;
-
-	bool quit;
-	struct vsfip_mem_op_t *mem_op;
-} static vsfip;
-
-void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf) = NULL;
-void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf) = NULL;
+struct vsfip_t vsfip;
 #endif
 
 // socket buffer
@@ -455,9 +434,9 @@ static bool vsfip_ip_ismatch(struct vsfip_ipaddr_t *addr1,
 
 static vsf_err_t vsfip_ip_output_do(struct vsfip_buffer_t *buf)
 {
-	if (vsfip_output_sniffer != NULL)
+	if (vsfip.output_sniffer != NULL)
 	{
-		vsfip_output_sniffer(buf);
+		vsfip.output_sniffer(buf);
 	}
 	else
 	{
