@@ -170,7 +170,7 @@ struct vsf_usbh_api_t
 #include "stack/tcpip/proto/http/vsfip_httpc.h"
 struct vsf_tcpip_api_t
 {
-	struct vsfip_t stack_buff;
+	struct vsfip_t local;
 
 	vsf_err_t (*init)(struct vsfip_mem_op_t *mem_op);
 	vsf_err_t (*fini)(void);
@@ -713,7 +713,10 @@ struct vsf_t
 
 #ifdef VSFCFG_FUNC_TCPIP
 #ifdef VSFCFG_MODULE_TCPIP
-#define vsfip							vsf.stack.net.tcpip->stack_buff
+#define vsfip							vsf.stack.net.tcpip->local
+#define vsfip_input_sniffer				vsf.stack.net.tcpip->local.input_sniffer
+#define vsfip_output_sniffer			vsf.stack.net.tcpip->local.output_sniffer
+
 #define vsfip_init						vsf.stack.net.tcpip->init
 #define vsfip_fini						vsf.stack.net.tcpip->fini
 #define vsfip_netif_add					vsf.stack.net.tcpip->netif_add
@@ -752,7 +755,10 @@ struct vsf_t
 #define vsfip_httpc_op_stream			vsf.stack.net.tcpip->protocol.httpc.op_stream
 #define vsfip_httpc_op_buffer			vsf.stack.net.tcpip->protocol.httpc.op_buffer
 #else
-#define vsfip							vsf.stack.net.tcpip.stack_buff
+#define vsfip							vsf.stack.net.tcpip.local
+#define vsfip_input_sniffer				vsf.stack.net.tcpip.local.input_sniffer
+#define vsfip_output_sniffer			vsf.stack.net.tcpip.local.output_sniffer
+
 #define vsfip_init						vsf.stack.net.tcpip.init
 #define vsfip_fini						vsf.stack.net.tcpip.fini
 #define vsfip_netif_add					vsf.stack.net.tcpip.netif_add

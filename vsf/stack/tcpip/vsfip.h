@@ -292,7 +292,12 @@ struct vsfip_t
 
 	bool quit;
 	struct vsfip_mem_op_t *mem_op;
+	void (*input_sniffer)(struct vsfip_buffer_t *buf);
+	void (*output_sniffer)(struct vsfip_buffer_t *buf);
 };
+#else
+extern void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf);
+extern void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf);
 #endif
 
 struct vsfip_socket_t * vsfip_socket_get(void);
@@ -362,9 +367,5 @@ vsf_err_t vsfip_udp_async_recv(struct vsfip_socket_t *socket,
 vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);
-
-// for sniffer
-extern void (*vsfip_input_sniffer)(struct vsfip_buffer_t *buf);
-extern void (*vsfip_output_sniffer)(struct vsfip_buffer_t *buf);
 
 #endif		// __VSFIP_H_INCLUDED__
