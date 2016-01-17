@@ -108,8 +108,8 @@ struct vsfpool_t
 	struct vsfpool_##name##_t\
 	{\
 		struct vsfpool_t pool;\
-        uint32_t mskarr[((num) + 31) >> 5];\
-        type buffer[(num)];\
+		uint32_t mskarr[((num) + 31) >> 5];\
+		type buffer[(num)];\
 	} name
 
 #define VSFPOOL_INIT(p, type, n)			\

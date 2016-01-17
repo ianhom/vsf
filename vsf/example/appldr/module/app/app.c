@@ -324,7 +324,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				buffer->buffer = app->bcmwifi.vsfip_buffer128_mem[i];
 				buffer++;
 			}
-			buffer = &app->bcmwifi.vsfip_buffer_pool.buffer[i];
+			buffer = &app->bcmwifi.vsfip_buffer_pool.buffer[0];
 			for (i = 0; i < 8; i++)
 			{
 				buffer->buffer = app->bcmwifi.vsfip_buffer_mem[i];
