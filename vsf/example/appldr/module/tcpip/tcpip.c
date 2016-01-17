@@ -58,6 +58,9 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 	api->udp_async_recv = vsfip_udp_async_recv;
 	api->udp_recv = vsfip_udp_recv;
 
+	api->netif.eth.header = vsfip_eth_header;
+	api->netif.eth.input = vsfip_eth_input;
+
 	api->protocol.dhcpc.local.xid = VSFIP_DHCPC_XID;
 	api->protocol.dhcpc.start = vsfip_dhcpc_start;
 

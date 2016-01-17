@@ -525,10 +525,13 @@ void vsfip_ip4_input(struct vsfip_buffer_t *buf)
 	{
 		goto release_buf;
 	}
-	// forward ip if not for us
+
 	ipaddr.size = 4;
 	ipaddr.addr.s_addr = iphead->ipdest;
+	// forward ip if not for us:
+	// 		not boradcast and netif->ipaddr is valid and ipaddr not match
 	if (!vsfip_ip4_isbroadcast(&ipaddr, buf->netif) &&
+		(buf->netif->ipaddr.size > 0) &&
 		!vsfip_ip_ismatch(&ipaddr, &buf->netif->ipaddr))
 	{
 #if VSFIP_CFG_IPFORWORD_EN
