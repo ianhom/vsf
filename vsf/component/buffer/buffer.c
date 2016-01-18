@@ -747,7 +747,7 @@ void vsfpool_init(struct vsfpool_t *pool)
 
 void* vsfpool_alloc(struct vsfpool_t *pool)
 {
-	int index = mskarr_ffz(pool->flags, (pool->num + 31) >> 5);
+	uint32_t index = mskarr_ffz(pool->flags, (pool->num + 31) >> 5);
 
 	if (index >= pool->num)
 	{
@@ -759,7 +759,7 @@ void* vsfpool_alloc(struct vsfpool_t *pool)
 
 void vsfpool_free(struct vsfpool_t *pool, void *buffer)
 {
-	int index = ((uint8_t *)buffer - (uint8_t *)pool->buffer) / pool->size;
+	uint32_t index = ((uint8_t *)buffer - (uint8_t *)pool->buffer) / pool->size;
 
 	if (index < pool->num)
 	{
