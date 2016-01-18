@@ -421,9 +421,9 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// disable usb pull up
 		if (app->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
 		{
-			core_interfaces.gpio.init(app->hwcfg->usbd.pullup.port);
-			core_interfaces.gpio.clear(app->hwcfg->usbd.pullup.port, 1 << app->hwcfg->usbd.pullup.pin);
-			core_interfaces.gpio.config_pin(app->hwcfg->usbd.pullup.port, app->hwcfg->usbd.pullup.pin, GPIO_OUTPP);
+			vsfhal_gpio_init(app->hwcfg->usbd.pullup.port);
+			vsfhal_gpio_clear(app->hwcfg->usbd.pullup.port, 1 << app->hwcfg->usbd.pullup.pin);
+			vsfhal_gpio_config_pin(app->hwcfg->usbd.pullup.port, app->hwcfg->usbd.pullup.pin, GPIO_OUTPP);
 		}
 		app->usbd.device.drv->disconnect();
 		vsftimer_create(sm, 200, 1, USB_EVT_PULLUP_TO);
@@ -431,7 +431,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	case USB_EVT_PULLUP_TO:
 		if (app->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
 		{
-			core_interfaces.gpio.set(app->hwcfg->usbd.pullup.port, 1 << app->hwcfg->usbd.pullup.pin);
+			vsfhal_gpio_set(app->hwcfg->usbd.pullup.port, 1 << app->hwcfg->usbd.pullup.pin);
 		}
 		app->usbd.device.drv->connect();
 		break;
@@ -463,7 +463,7 @@ vsf_err_t main(struct vsfapp_t *app)
 	app->pendsvq.activate = app_pendsv_activate;
 	vsfsm_evtq_init(&app->pendsvq);
 	vsfsm_evtq_set(&app->pendsvq);
-	
+
 	app->sm.init_state.evt_handler = app_evt_handler;
 	app->sm.user_data = app;
 	vsfsm_init(&app->sm);

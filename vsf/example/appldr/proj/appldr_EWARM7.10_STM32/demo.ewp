@@ -1921,9 +1921,21 @@
         </file>
       </group>
       <group>
+        <name>file</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
+        </file>
+      </group>
+      <group>
         <name>list</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
+        </file>
+      </group>
+      <group>
+        <name>mal</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfmal.c</name>
         </file>
       </group>
       <group>

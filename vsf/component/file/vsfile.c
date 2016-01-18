@@ -17,10 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "app_cfg.h"
-#include "app_type.h"
-
-#include "vsfile.h"
+#include "vsf.h"
 
 #define VSFILE
 #define VSFILE_EVT_CRIT					VSFSM_EVT_USER
@@ -140,8 +137,8 @@ vsf_err_t vsfile_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 vsf_err_t vsfile_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsf_size_t offset,
-					vsf_size_t size, uint8_t *buff, vsf_size_t *rsize)
+					struct vsfile_t *file, vsfile_size_t offset,
+					vsfile_size_t size, uint8_t *buff, vsfile_size_t *rsize)
 {
 	if (file->attr & VSFILE_ATTR_WRITEONLY)
 	{
@@ -152,8 +149,8 @@ vsf_err_t vsfile_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 vsf_err_t vsfile_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsf_size_t offset,
-					vsf_size_t size, uint8_t *buff, vsf_size_t *wsize)
+					struct vsfile_t *file, vsfile_size_t offset,
+					vsfile_size_t size, uint8_t *buff, vsfile_size_t *wsize)
 {
 	if (file->attr & VSFILE_ATTR_READONLY)
 	{
@@ -230,8 +227,8 @@ static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 }
 
 static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsf_size_t offset,
-					vsf_size_t size, uint8_t *buff, vsf_size_t *rsize)
+					struct vsfile_t *file, vsfile_size_t offset,
+					vsfile_size_t size, uint8_t *buff, vsfile_size_t *rsize)
 {
 	uint8_t *pbuff = (uint8_t *)file->priv;
 
@@ -247,8 +244,8 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsf_size_t offset,
-					vsf_size_t size, uint8_t *buff, vsf_size_t *wsize)
+					struct vsfile_t *file, vsfile_size_t offset,
+					vsfile_size_t size, uint8_t *buff, vsfile_size_t *wsize)
 {
 	uint8_t *pbuff = (uint8_t *)file->priv;
 
