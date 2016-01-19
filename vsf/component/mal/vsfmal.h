@@ -75,7 +75,7 @@ vsf_err_t vsfmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 struct vsf_malstream_t
 {
 	struct vsfmal_t *mal;
-	struct vsf_multibuf_stream_t mbuf_stream;
+	struct vsf_multibuf_stream_t multibuf_stream;
 	void (*on_finish)(struct vsf_malstream_t *malstream);
 
 	// read only for user

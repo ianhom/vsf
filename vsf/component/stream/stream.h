@@ -71,15 +71,24 @@ void stream_connect_tx(struct vsf_stream_t *stream);
 void stream_disconnect_rx(struct vsf_stream_t *stream);
 void stream_disconnect_tx(struct vsf_stream_t *stream);
 
-// fifo stream: CAN be called in interrupt
+// fifo stream, user_mem is vsf_fifo_t: available in interrupt
 extern const struct vsf_stream_op_t fifo_stream_op;
-// mbuf stream: CANNOT be called in interrupt
+// multibuf stream, user_mem is vsf_multibuf_stream_t: unavailable in interrupt
 struct vsf_multibuf_stream_t
 {
-	struct vsf_multibuf_t mbuf;
+	struct vsf_multibuf_t multibuf;
 	// private
 	uint32_t rpos, wpos;
 };
-extern const struct vsf_stream_op_t mbuf_stream_op;
+extern const struct vsf_stream_op_t multibuf_stream_op;
+// buffer stream, user_mem is vsf_buffer_stream_t: unavailable in interrupt
+struct vsf_buffer_stream_t
+{
+	struct vsf_buffer_t buffer;
+	bool read;
+	// private
+	uint32_t pos;
+};
+extern const struct vsf_stream_op_t buffer_stream_op;
 
 #endif	// __STREAM_H_INCLUDED__

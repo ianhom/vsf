@@ -124,8 +124,8 @@ static void vsf_malstream_on_inout(void *param)
 
 vsf_err_t vsf_malstream_init(struct vsf_malstream_t *malstream)
 {
-	malstream->stream.user_mem = &malstream->mbuf_stream;
-	malstream->stream.op = &mbuf_stream_op;
+	malstream->stream.user_mem = &malstream->multibuf_stream;
+	malstream->stream.op = &multibuf_stream_op;
 	return stream_init(&malstream->stream);
 }
 
@@ -141,11 +141,12 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_begin(pt);
 
 	mal->block_size = mal->drv->block_size(malstream->addr, 0, VSFMAL_OP_READ);
-	if (mal->block_size != malstream->mbuf_stream.mbuf.size)
+	if (mal->block_size != malstream->multibuf_stream.multibuf.size)
 	{
 		return VSFERR_BUG;
 	}
 
+	malstream->offset = 0;
 	while (malstream->offset < malstream->size)
 	{
 		while (stream_get_free_size(stream) < mal->block_size)
@@ -157,10 +158,11 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		vsfsm_pt_entry(pt);
 		cur_addr = malstream->addr + malstream->offset;
 		err = mal->drv->read(&mal->pt, evt, cur_addr,
-				vsf_multibuf_get_empty(&malstream->mbuf_stream.mbuf),
+				vsf_multibuf_get_empty(&malstream->multibuf_stream.multibuf),
 				mal->block_size);
 		if (err > 0) return err; else if (err < 0) goto end;
-		vsf_multibuf_push(&malstream->mbuf_stream.mbuf);
+		vsf_multibuf_push(&malstream->multibuf_stream.multibuf);
+		malstream->offset += mal->block_size;
 	}
 
 end:
@@ -199,11 +201,12 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_begin(pt);
 
 	mal->block_size = mal->drv->block_size(malstream->addr, 0, VSFMAL_OP_WRITE);
-	if (mal->block_size != malstream->mbuf_stream.mbuf.size)
+	if (mal->block_size != malstream->multibuf_stream.multibuf.size)
 	{
 		return VSFERR_BUG;
 	}
 
+	malstream->offset = 0;
 	while (malstream->offset < malstream->size)
 	{
 		while (stream_get_data_size(stream) < mal->block_size)
@@ -215,10 +218,11 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		vsfsm_pt_entry(pt);
 		cur_addr = malstream->addr + malstream->offset;
 		err = mal->drv->write(&mal->pt, evt, cur_addr,
-				vsf_multibuf_get_payload(&malstream->mbuf_stream.mbuf),
+				vsf_multibuf_get_payload(&malstream->multibuf_stream.multibuf),
 				mal->block_size);
 		if (err > 0) return err; else if (err < 0) goto end;
-		vsf_multibuf_pop(&malstream->mbuf_stream.mbuf);
+		vsf_multibuf_pop(&malstream->multibuf_stream.multibuf);
+		malstream->offset += mal->block_size;
 	}
 
 end:
