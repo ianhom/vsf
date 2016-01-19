@@ -20,8 +20,6 @@
 #ifndef __VSFILE_H_INCLUDED__
 #define __VSFILE_H_INCLUDED__
 
-#define vsfile_size_t					uint64_t
-
 enum vsfile_attr_t
 {
 	VSFILE_ATTR_READONLY		= 1 << 0,
@@ -41,11 +39,11 @@ struct vsfile_fop_t
 	vsf_err_t (*close)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file);
 	vsf_err_t (*read)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsfile_size_t offset,
-					vsfile_size_t size, uint8_t *buff, vsfile_size_t *rsize);
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *rsize);
 	vsf_err_t (*write)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsfile_size_t offset,
-					vsfile_size_t size, uint8_t *buff, vsfile_size_t *wsize);
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *wsize);
 };
 struct vsfile_dop_t
 {
@@ -71,7 +69,7 @@ struct vsfile_fsop_t
 struct vsfile_t
 {
 	char *name;
-	vsfile_size_t size;
+	uint64_t size;
 	enum vsfile_attr_t attr;
 	struct vsfile_fsop_t *op;
 	void *priv;
@@ -93,11 +91,11 @@ vsf_err_t vsfile_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfile_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file);
 vsf_err_t vsfile_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsfile_size_t offset,
-					vsfile_size_t size, uint8_t *buff, vsfile_size_t *rsize);
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *rsize);
 vsf_err_t vsfile_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file, vsfile_size_t offset,
-					vsfile_size_t size, uint8_t *buff, vsfile_size_t *wsize);
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *wsize);
 
 // helper
 char* vsfile_getfileext(char* name);
