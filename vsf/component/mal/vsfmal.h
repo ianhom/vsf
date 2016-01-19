@@ -71,14 +71,15 @@ vsf_err_t vsfmal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 vsf_err_t vsfmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 					uint8_t *buff, uint32_t size);
 
-// mal stream
+// mal stream, IMPORTANT: stream MUST be mbuf_stream
 struct vsf_malstream_t
 {
 	struct vsfmal_t *mal;
-	struct vsf_stream_t *stream;
-	struct vsf_buffer_t buffer;
+	struct vsf_multibuf_stream_t mbuf_stream;
 	void (*on_finish)(struct vsf_malstream_t *malstream);
 
+	// read only for user
+	struct vsf_stream_t stream;
 	uint32_t offset;
 
 	// private
@@ -87,6 +88,7 @@ struct vsf_malstream_t
 	struct vsfsm_t sm;
 	struct vsfsm_pt_t pt;
 };
+vsf_err_t vsf_malstream_init(struct vsf_malstream_t *malstream);
 vsf_err_t vsf_malstream_read(struct vsf_malstream_t *malstream, uint64_t addr,
 							uint32_t size);
 vsf_err_t vsf_malstream_write(struct vsf_malstream_t *malstream, uint64_t addr,

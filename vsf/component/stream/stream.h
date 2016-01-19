@@ -71,7 +71,15 @@ void stream_connect_tx(struct vsf_stream_t *stream);
 void stream_disconnect_rx(struct vsf_stream_t *stream);
 void stream_disconnect_tx(struct vsf_stream_t *stream);
 
-// fifo stream
+// fifo stream: CAN be called in interrupt
 extern const struct vsf_stream_op_t fifo_stream_op;
+// mbuf stream: CANNOT be called in interrupt
+struct vsf_multibuf_stream_t
+{
+	struct vsf_multibuf_t mbuf;
+	// private
+	uint32_t rpos, wpos;
+};
+extern const struct vsf_stream_op_t mbuf_stream_op;
 
 #endif	// __STREAM_H_INCLUDED__
