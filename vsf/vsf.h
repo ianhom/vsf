@@ -33,6 +33,9 @@
 
 #include "component/buffer/buffer.h"
 #include "component/stream/stream.h"
+#include "component/mal/vsfmal.h"
+#include "component/mal/vsfscsi.h"
+#include "component/file/vsfile.h"
 
 #define VSF_API_VERSION						0x00000001
 
@@ -71,6 +74,7 @@ struct vsf_shell_api_t
 #include "stack/usb/core/vsfusbd.h"
 #include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
+#include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
 struct vsf_usbd_api_t
 {
 	vsf_err_t (*init)(struct vsfusbd_device_t *device);
