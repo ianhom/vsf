@@ -95,7 +95,7 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 		USBD->EP[0].EPMPS= 0;
 	}
 
-	if (0)
+	if (1)
 	{
 		// Enable USB FULL SPEED
 		USBD->OPER = 0;
@@ -405,6 +405,7 @@ vsf_err_t nuc505_usbd_ep_set_IN_stall(uint8_t idx)
 	if (0 == idx)
 	{
 		USBD->CEPCTL = 2;
+		USBD->CEPCTL |= USB_CEPCTL_FLUSH;
 		return VSFERR_NONE;
 	}
 	else if (index > 1)
@@ -412,6 +413,7 @@ vsf_err_t nuc505_usbd_ep_set_IN_stall(uint8_t idx)
 		index -= 2;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) =
 			(NUC505_USBD_EP_REG(index, EPRSPCTL) & 0xF7) | USB_EP_RSPCTL_HALT;
+		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_FLUSH;
 		return VSFERR_NONE;
 	}
 	return VSFERR_BUG;
@@ -435,6 +437,7 @@ vsf_err_t nuc505_usbd_ep_clear_IN_stall(uint8_t idx)
 	else if (index > 1)
 	{
 		index -= 2;
+		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_FLUSH;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) &= ~USB_EP_RSPCTL_HALT;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_TOGGLE;
 		return VSFERR_NONE;
@@ -656,6 +659,7 @@ vsf_err_t nuc505_usbd_ep_set_OUT_stall(uint8_t idx)
 	if (0 == idx)
 	{
 		USBD->CEPCTL = 2;
+		USBD->CEPCTL |= USB_CEPCTL_FLUSH;
 		return VSFERR_NONE;
 	}
 	else if (index > 1)
@@ -663,6 +667,7 @@ vsf_err_t nuc505_usbd_ep_set_OUT_stall(uint8_t idx)
 		index -= 2;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) =
 			(NUC505_USBD_EP_REG(index, EPRSPCTL) & 0xF7) | USB_EP_RSPCTL_HALT;
+		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_FLUSH;
 		return VSFERR_NONE;
 	}
 	return VSFERR_BUG;
@@ -686,6 +691,7 @@ vsf_err_t nuc505_usbd_ep_clear_OUT_stall(uint8_t idx)
 	else if (index > 1)
 	{
 		index -= 2;
+		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_FLUSH;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) &= ~USB_EP_RSPCTL_HALT;
 		NUC505_USBD_EP_REG(index, EPRSPCTL) |= USB_EP_RSPCTL_TOGGLE;
 		return VSFERR_NONE;
