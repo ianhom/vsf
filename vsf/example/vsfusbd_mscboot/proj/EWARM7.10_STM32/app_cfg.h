@@ -1,12 +1,12 @@
 /**************************************************************************
- *  Copyright (C) 2008 - 2010 by Simon Qian                               *
+ *  Copyright (C) 2008 - 2012 by Simon Qian                               *
  *  SimonQian@SimonQian.com                                               *
  *                                                                        *
- *  Project:    Versaloon                                                 *
- *  File:       interfaces.h                                              *
+ *  Project:    VSF                                                       *
+ *  File:       app_cfg.h                                                 *
  *  Author:     SimonQian                                                 *
  *  Versaion:   See changelog                                             *
- *  Purpose:    interfaces header file                                    *
+ *  Purpose:    configuration file                                        *
  *  License:    See license                                               *
  *------------------------------------------------------------------------*
  *  Change Log:                                                           *
@@ -14,11 +14,8 @@
  *      2008-11-07:     created(by SimonQian)                             *
  **************************************************************************/
 
-#ifndef __APP_INTERFACES_H_INCLUDED__
-#define __APP_INTERFACES_H_INCLUDED__
+// hardware config file
+#include "hw_cfg_STM32.h"
 
-#include "app_cfg.h"
-
-#define interfaces				(&core_interfaces)
-
-#endif	// __APP_INTERFACES_H_INCLUDED__
+// compiler config
+#include "compiler.h"

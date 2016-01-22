@@ -19,6 +19,11 @@
 
 #include "vsf.h"
 
+void vsfscsi_release_transact(struct vsfscsi_transact_t *transact)
+{
+	transact->lun = NULL;
+}
+
 vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev)
 {
 	uint32_t i;
@@ -57,6 +62,8 @@ vsf_err_t vsfscsi_execute_nb(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 
 void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact)
 {
+	// TODO: release other resources & callbacks
+	vsfscsi_release_transact(transact);
 }
 
 // mal2scsi

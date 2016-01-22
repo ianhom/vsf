@@ -1,24 +1,25 @@
 /**************************************************************************
- *  Copyright (C) 2008 - 2010 by Simon Qian                               *
+ *  Copyright (C) 2008 - 2012 by Simon Qian                               *
  *  SimonQian@SimonQian.com                                               *
  *                                                                        *
  *  Project:    Versaloon                                                 *
- *  File:       interfaces.h                                              *
+ *  File:       hw_cfg_VSFCore_STM32.h                                    *
  *  Author:     SimonQian                                                 *
  *  Versaion:   See changelog                                             *
- *  Purpose:    interfaces header file                                    *
+ *  Purpose:    hardware configuration file for VSFCore_STM32             *
  *  License:    See license                                               *
  *------------------------------------------------------------------------*
  *  Change Log:                                                           *
  *      YYYY-MM-DD:     What(by Who)                                      *
  *      2008-11-07:     created(by SimonQian)                             *
+ *      2008-11-22:     rewrite GPIO_Dir(by SimonQian)                    *
  **************************************************************************/
 
-#ifndef __APP_INTERFACES_H_INCLUDED__
-#define __APP_INTERFACES_H_INCLUDED__
+#ifndef HSE_VALUE
+#define HSE_VALUE						((uint32_t)12000000)
+#endif
 
-#include "app_cfg.h"
+#define OSC_HZ							HSE_VALUE
 
-#define interfaces				(&core_interfaces)
-
-#endif	// __APP_INTERFACES_H_INCLUDED__
+#define USB_PULLUP_PORT					2
+#define USB_PULLUP_PIN					13

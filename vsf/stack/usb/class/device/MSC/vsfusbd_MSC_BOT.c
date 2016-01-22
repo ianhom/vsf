@@ -39,7 +39,7 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 	if (param->scsi_transact != NULL)
 	{
 		remain_size -= param->scsi_transact->data_size;
-		param->scsi_transact->lun = NULL;
+		vsfscsi_release_transact(param->scsi_transact);
 	}
 	CSW.dCSWDataResidue = SYS_TO_LE_U32(remain_size);
 	CSW.dCSWStatus = param->dCSWStatus;
@@ -272,7 +272,6 @@ static vsf_err_t vsfusbd_MSCBOT_OUT_hanlder(struct vsfusbd_device_t *device,
 			if (param->scsi_transact->data_size && param->scsi_transact)
 			{
 				vsfscsi_cancel_transact(param->scsi_transact);
-				param->scsi_transact->lun = NULL;
 				param->scsi_transact = NULL;
 			}
 			return vsfusbd_MSCBOT_SendCSW(device, param);
@@ -313,7 +312,6 @@ static vsf_err_t vsfusbd_MSCBOT_OUT_hanlder(struct vsfusbd_device_t *device,
 		if (param->scsi_transact != NULL)
 		{
 			vsfscsi_cancel_transact(param->scsi_transact);
-			param->scsi_transact->lun = NULL;
 			param->scsi_transact = NULL;
 		}
 		vsfusbd_MSCBOT_ErrHandler(device, param, USBMSC_CSW_PHASE_ERROR);
