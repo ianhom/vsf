@@ -84,7 +84,7 @@ struct vsf_multibuf_stream_t
 };
 extern const struct vsf_stream_op_t multibuf_stream_op;
 // buffer stream, user_mem is vsf_buffer_stream_t: unavailable in interrupt
-struct vsf_buffer_stream_t
+struct vsf_bufstream_t
 {
 	struct vsf_buffer_t buffer;
 	bool read;

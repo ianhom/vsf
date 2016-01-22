@@ -55,7 +55,7 @@ uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = stream->op->read(stream, buffer);
 
-	if ((stream->callback_tx.on_out_int != NULL) && (count > 0))
+	if (stream->tx_ready && (stream->callback_tx.on_out_int != NULL) && count)
 	{
 		stream->callback_tx.on_out_int(stream->callback_tx.param);
 	}
@@ -70,7 +70,7 @@ uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	{
 		stream->overflow = true;
 	}
-	if ((stream->callback_rx.on_in_int != NULL) && (count > 0))
+	if (stream->rx_ready && (stream->callback_rx.on_in_int != NULL) && count)
 	{
 		stream->callback_rx.on_in_int(stream->callback_rx.param);
 	}
@@ -118,8 +118,8 @@ void stream_disconnect_rx(struct vsf_stream_t *stream)
 	if (stream->rx_ready && (stream->callback_tx.on_disconnect_rx != NULL))
 	{
 		stream->callback_tx.on_disconnect_rx(stream->callback_tx.param);
-		stream->rx_ready = false;
 	}
+	stream->rx_ready = false;
 }
 
 void stream_disconnect_tx(struct vsf_stream_t *stream)
@@ -127,8 +127,8 @@ void stream_disconnect_tx(struct vsf_stream_t *stream)
 	if (stream->tx_ready && (stream->callback_rx.on_disconnect_tx != NULL))
 	{
 		stream->callback_rx.on_disconnect_tx(stream->callback_rx.param);
-		stream->tx_ready = false;
 	}
+	stream->tx_ready = false;
 }
 
 // fifo stream
@@ -193,7 +193,7 @@ static uint32_t multibuf_stream_get_avail_length(struct vsf_stream_t *stream)
 							(struct vsf_multibuf_stream_t *)stream->user_mem;
 
 	return (multibuf->multibuf.count * multibuf->multibuf.size) -
-								multibuf_stream_get_avail_length(stream);
+								multibuf_stream_get_data_length(stream);
 }
 
 static uint32_t
@@ -260,30 +260,25 @@ const struct vsf_stream_op_t multibuf_stream_op =
 // buffer stream
 static void buffer_stream_init(struct vsf_stream_t *stream)
 {
-	struct vsf_buffer_stream_t *buf =
-							(struct vsf_buffer_stream_t *)stream->user_mem;
-	buf->pos = 0;
+	((struct vsf_bufstream_t *)stream->user_mem)->pos = 0;
 }
 
 static uint32_t buffer_stream_get_data_length(struct vsf_stream_t *stream)
 {
-	struct vsf_buffer_stream_t *buf =
-							(struct vsf_buffer_stream_t *)stream->user_mem;
+	struct vsf_bufstream_t *buf = (struct vsf_bufstream_t *)stream->user_mem;
 	return buf->read ? buf->buffer.size - buf->pos : 0;
 }
 
 static uint32_t buffer_stream_get_avail_length(struct vsf_stream_t *stream)
 {
-	struct vsf_buffer_stream_t *buf =
-							(struct vsf_buffer_stream_t *)stream->user_mem;
+	struct vsf_bufstream_t *buf = (struct vsf_bufstream_t *)stream->user_mem;
 	return buf->read ? 0 : buf->buffer.size - buf->pos;
 }
 
 static uint32_t
 buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
-	struct vsf_buffer_stream_t *buf =
-							(struct vsf_buffer_stream_t *)stream->user_mem;
+	struct vsf_bufstream_t *buf = (struct vsf_bufstream_t *)stream->user_mem;
 	uint32_t wsize = 0;
 
 	if (!buf->read)
@@ -299,8 +294,7 @@ buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 static uint32_t
 buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
-	struct vsf_buffer_stream_t *buf =
-							(struct vsf_buffer_stream_t *)stream->user_mem;
+	struct vsf_bufstream_t *buf = (struct vsf_bufstream_t *)stream->user_mem;
 	uint32_t rsize = 0;
 
 	if (buf->read)

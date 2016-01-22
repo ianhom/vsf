@@ -54,9 +54,12 @@ struct vsfmal_t
 	void const *cparam;
 	void *param;
 
+	uint32_t block_size;
+	uint32_t block_num;
+
 	// private
 	struct vsfsm_pt_t pt;
-	uint32_t block_size;
+	uint32_t op_block_size;
 	uint32_t offset;
 	struct vsfmal_capacity_t cap;
 };
@@ -76,13 +79,16 @@ struct vsf_malstream_t
 {
 	struct vsfmal_t *mal;
 	struct vsf_multibuf_stream_t multibuf_stream;
-	void (*on_finish)(struct vsf_malstream_t *malstream);
+
+	void (*on_finish)(void *param);
+	void *param;
 
 	// read only for user
 	struct vsf_stream_t stream;
 	uint32_t offset;
 
 	// private
+	bool mal_ready;
 	uint64_t addr;
 	uint32_t size;
 	struct vsfsm_t sm;

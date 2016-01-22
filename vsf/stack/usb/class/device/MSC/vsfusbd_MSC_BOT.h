@@ -77,7 +77,6 @@ struct vsfusbd_MSCBOT_param_t
 
 	// no need to initialize below by user
 	struct vsfscsi_transact_t *scsi_transact;
-	uint32_t data_size;
 	bool usb_idle;
 	struct USBMSC_CBW_t CBW;
 	uint8_t dCSWStatus;
