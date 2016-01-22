@@ -194,6 +194,11 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (err > 0) return err; else if (err < 0) goto end;
 		vsf_multibuf_push(&malstream->multibuf_stream.multibuf);
 		malstream->offset += mal->op_block_size;
+		if (malstream->offset >= malstream->size)
+		{
+			// fix before callback
+			stream->callback_tx.on_out_int = NULL;
+		}
 		if (stream->rx_ready && (stream->callback_rx.on_in_int != NULL))
 		{
 			stream->callback_rx.on_in_int(stream->callback_rx.param);
@@ -201,7 +206,6 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	stream->callback_tx.on_out_int = NULL;
 	if (malstream->on_finish != NULL)
 	{
 		malstream->on_finish(malstream->param);
@@ -263,6 +267,11 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (err > 0) return err; else if (err < 0) goto end;
 		vsf_multibuf_pop(&malstream->multibuf_stream.multibuf);
 		malstream->offset += mal->op_block_size;
+		if (malstream->offset >= malstream->size)
+		{
+			// fix before callback
+			stream->callback_tx.on_out_int = NULL;
+		}
 		if (stream->tx_ready && (stream->callback_tx.on_out_int != NULL))
 		{
 			stream->callback_tx.on_out_int(stream->callback_tx.param);
@@ -270,7 +279,6 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	stream->callback_tx.on_out_int = NULL;
 	if (malstream->on_finish != NULL)
 	{
 		malstream->on_finish(malstream);
