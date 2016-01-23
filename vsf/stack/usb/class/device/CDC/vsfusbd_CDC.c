@@ -276,54 +276,24 @@ void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 	stream_connect_rx(param->stream_tx);
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
-static const struct vsfusbd_setup_filter_t vsfusbd_CDCControl_class_setup[] =
+vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 {
-/*	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCREQ_SET_COMM_FEATURE,
-		vsfusbd_CDCControl_SetCommFeature_prepare,
-		NULL
-	},
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCREQ_GET_COMM_FEATURE,
-		vsfusbd_CDCControl_GetCommFeature_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCREQ_CLEAR_COMM_FEATURE,
-		vsfusbd_CDCControl_ClearCommFeature_prepare,
-		NULL
-	},
-*/	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCREQ_SEND_ENCAPSULATED_COMMAND,
-		vsfusbd_CDCControl_SendEncapsulatedCommand_prepare,
-		vsfusbd_CDCControl_SendEncapsulatedCommand_process,
-	},
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCREQ_GET_ENCAPSULATED_RESPONSE,
-		vsfusbd_CDCControl_GetEncapsulatedResponse_prepare,
-		NULL,
-	},
-	VSFUSBD_SETUP_NULL
-};
+}
 
+vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
+{
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class =
 {
-	NULL, NULL,
-	(struct vsfusbd_setup_filter_t *)vsfusbd_CDCControl_class_setup, NULL,
-
+	NULL,
+	vsfusbd_CDCControl_request_prepare, vsfusbd_CDCControl_request_process,
 	NULL, NULL
 };
 
 const struct vsfusbd_class_protocol_t vsfusbd_CDCData_class =
 {
-	NULL, NULL, NULL, NULL,
-
-	vsfusbd_CDCData_class_init, NULL
+	NULL, NULL, NULL, vsfusbd_CDCData_class_init, NULL
 };
 #endif

@@ -28,23 +28,43 @@
 
 struct vsfusbd_device_t;
 
-struct vsfusbd_ctrl_handler_t
+struct vsfusbd_transact_callback_t
 {
-	uint16_t ep_size;
-	struct usb_ctrlrequest_t request;
-	struct vsfusbd_setup_filter_t *filter;
-	int8_t iface;
-	uint8_t ctrl_reply_buffer[2];
+	void (*on_finish)(void *param);
+	void *param;
+};
+struct vsfusbd_transact_t
+{
+	uint8_t ep;
+	uint32_t data_size;
+	struct vsf_stream_t *stream;
+	struct vsfusbd_transact_callback_t cb;
+	bool zlp;
+
+	// private
+	bool idle;
+	struct vsfusbd_device_t *device;
 };
 
-#define VSFUSBD_DESC_DEVICE(lanid, ptr, size, func)			\
-	{USB_DT_DEVICE, 0, (lanid), {(uint8_t*)(ptr), (size)}, (func)}
-#define VSFUSBD_DESC_CONFIG(lanid, idx, ptr, size, func)	\
-	{USB_DT_CONFIG, (idx), (lanid), {(uint8_t*)(ptr), (size)}, (func)}
-#define VSFUSBD_DESC_STRING(lanid, idx, ptr, size, func)	\
-	{USB_DT_STRING, (idx), (lanid), {(uint8_t*)(ptr), (size)}, (func)}
+struct vsfusbd_ctrl_handler_t
+{
+	struct usb_ctrlrequest_t request;
+	struct vsf_stream_t stream;
+	uint32_t data_size;
+	uint16_t ep_size;
+	int8_t iface;
+	uint8_t ctrl_reply_buffer[2];
+	struct vsfusbd_transact_t transact;
+};
+
+#define VSFUSBD_DESC_DEVICE(lanid, ptr, size)			\
+	{USB_DT_DEVICE, 0, (lanid), {(uint8_t*)(ptr), (size)}}
+#define VSFUSBD_DESC_CONFIG(lanid, idx, ptr, size)	\
+	{USB_DT_CONFIG, (idx), (lanid), {(uint8_t*)(ptr), (size)}}
+#define VSFUSBD_DESC_STRING(lanid, idx, ptr, size)	\
+	{USB_DT_STRING, (idx), (lanid), {(uint8_t*)(ptr), (size)}}
 #define VSFUSBD_DESC_NULL									\
-	{0, 0, 0, {NULL, 0}, NULL}
+	{0, 0, 0, {NULL, 0}}
 struct vsfusbd_desc_filter_t
 {
 	uint8_t type;
@@ -52,49 +72,17 @@ struct vsfusbd_desc_filter_t
 	uint16_t lanid;
 
 	struct vsf_buffer_t buffer;
-	vsf_err_t (*read)(struct vsfusbd_device_t *device,
-						struct vsf_buffer_t *buffer);
-};
-
-struct vsfusbd_transact_callback_t
-{
-	uint8_t* (*data_io)(void *param);
-	void (*callback)(void *param);
-	void *param;
-};
-struct vsfusbd_transact_t
-{
-	struct vsf_transaction_buffer_t tbuffer;
-	struct vsfusbd_transact_callback_t callback;
-	bool zlp;
-
-	// private
-	bool need_poll;
 };
 
 #define VSFUSBD_SETUP_INVALID_TYPE	0xFF
 #define VSFUSBD_SETUP_NULL			{VSFUSBD_SETUP_INVALID_TYPE, 0, NULL, NULL}
 
-struct vsfusbd_setup_filter_t
-{
-	uint8_t type;
-	uint8_t request;
-
-	vsf_err_t (*prepare)(struct vsfusbd_device_t *device,
-		struct vsf_buffer_t *buffer, uint8_t* (*data_io)(void *param));
-	vsf_err_t (*process)(struct vsfusbd_device_t *device,
-							struct vsf_buffer_t *buffer);
-};
-
 struct vsfusbd_class_protocol_t
 {
 	vsf_err_t (*get_desc)(struct vsfusbd_device_t *device, uint8_t type,
 				uint8_t index, uint16_t lanid, struct vsf_buffer_t *buffer);
-	struct vsfusbd_desc_filter_t *desc_filter;
-	struct vsfusbd_setup_filter_t *req_filter;
-	// only use get_request_filter when req_filter doesn't contain the request
-	struct vsfusbd_setup_filter_t * (*get_request_filter)(
-									struct vsfusbd_device_t *device);
+	vsf_err_t (*request_prepare)(struct vsfusbd_device_t *device);
+	vsf_err_t (*request_process)(struct vsfusbd_device_t *device);
 
 	vsf_err_t (*init)(uint8_t iface, struct vsfusbd_device_t *device);
 	vsf_err_t (*fini)(uint8_t iface, struct vsfusbd_device_t *device);
@@ -173,8 +161,8 @@ struct vsfusbd_device_t
 	uint8_t feature;
 	struct vsfusbd_ctrl_handler_t ctrl_handler;
 
-	struct vsfusbd_transact_t IN_transact[VSFUSBD_CFG_MAX_IN_EP + 1];
-	struct vsfusbd_transact_t OUT_transact[VSFUSBD_CFG_MAX_OUT_EP + 1];
+	struct vsfusbd_transact_t *IN_transact[VSFUSBD_CFG_MAX_IN_EP + 1];
+	struct vsfusbd_transact_t *OUT_transact[VSFUSBD_CFG_MAX_OUT_EP + 1];
 
 	vsf_err_t (*IN_handler[VSFUSBD_CFG_MAX_IN_EP + 1])(
 										struct vsfusbd_device_t*, uint8_t);
@@ -185,14 +173,13 @@ struct vsfusbd_device_t
 vsf_err_t vsfusbd_device_get_descriptor(struct vsfusbd_device_t *device,
 		struct vsfusbd_desc_filter_t *filter, uint8_t type, uint8_t index,
 		uint16_t lanid, struct vsf_buffer_t *buffer);
-struct vsfusbd_setup_filter_t *vsfusbd_get_class_request_filter(
-		struct vsfusbd_device_t *device,
-		struct vsfusbd_class_protocol_t *class_protocol);
 
 vsf_err_t vsfusbd_device_init(struct vsfusbd_device_t *device);
 vsf_err_t vsfusbd_device_fini(struct vsfusbd_device_t *device);
-vsf_err_t vsfusbd_ep_send_nb(struct vsfusbd_device_t *device, uint8_t ep);
-vsf_err_t vsfusbd_ep_receive_nb(struct vsfusbd_device_t *device, uint8_t ep);
+vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
+								struct vsfusbd_transact_t *transact);
+vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
+								struct vsfusbd_transact_t *transact);
 
 vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep);
 vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep);

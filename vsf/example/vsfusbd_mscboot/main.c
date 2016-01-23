@@ -2,7 +2,6 @@
 
 #define APPCFG_VSFTIMER_NUM				16
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
-#define APPCFG_VSFSM_MAINQ_LEN			16
 
 // USB descriptors
 static const uint8_t USB_DeviceDescriptor[] =
@@ -108,12 +107,12 @@ static const uint8_t USB_StringProduct[] =
 
 static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 {
-	VSFUSBD_DESC_DEVICE(0, USB_DeviceDescriptor, sizeof(USB_DeviceDescriptor), NULL),
-	VSFUSBD_DESC_CONFIG(0, 0, USB_ConfigDescriptor, sizeof(USB_ConfigDescriptor), NULL),
-	VSFUSBD_DESC_STRING(0, 0, USB_StringLangID, sizeof(USB_StringLangID), NULL),
-	VSFUSBD_DESC_STRING(0x0409, 1, USB_StringVendor, sizeof(USB_StringVendor), NULL),
-	VSFUSBD_DESC_STRING(0x0409, 2, USB_StringProduct, sizeof(USB_StringProduct), NULL),
-	VSFUSBD_DESC_STRING(0x0409, 3, USB_StringSerial, sizeof(USB_StringSerial), NULL),
+	VSFUSBD_DESC_DEVICE(0, USB_DeviceDescriptor, sizeof(USB_DeviceDescriptor)),
+	VSFUSBD_DESC_CONFIG(0, 0, USB_ConfigDescriptor, sizeof(USB_ConfigDescriptor)),
+	VSFUSBD_DESC_STRING(0, 0, USB_StringLangID, sizeof(USB_StringLangID)),
+	VSFUSBD_DESC_STRING(0x0409, 1, USB_StringVendor, sizeof(USB_StringVendor)),
+	VSFUSBD_DESC_STRING(0x0409, 2, USB_StringProduct, sizeof(USB_StringProduct)),
+	VSFUSBD_DESC_STRING(0x0409, 3, USB_StringSerial, sizeof(USB_StringSerial)),
 	VSFUSBD_DESC_NULL
 };
 
@@ -160,15 +159,12 @@ struct vsfapp_t
 	struct vsfsm_t sm;
 
 	struct vsfsm_evtq_t pendsvq;
-	struct vsfsm_evtq_t mainq;
 
 	// private
 	// buffer mamager
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 
 	struct vsfsm_evtq_element_t pendsvq_ele[APPCFG_VSFSM_PENDSVQ_LEN];
-	struct vsfsm_evtq_element_t mainq_ele[APPCFG_VSFSM_MAINQ_LEN];
-	uint8_t bufmgr_buffer[8 * 1024];
 } static app =
 {
 	.usb_pullup.port						= USB_PULLUP_PORT,
@@ -215,9 +211,6 @@ struct vsfapp_t
 	.pendsvq.size							= dimof(app.pendsvq_ele),
 	.pendsvq.queue							= app.pendsvq_ele,
 	.pendsvq.activate						= app_pendsv_activate,
-	.mainq.size								= dimof(app.mainq_ele),
-	.mainq.queue							= app.mainq_ele,
-	.mainq.activate							= NULL,
 };
 
 // mem mal
@@ -303,8 +296,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsftimer_init(&vsftimer_memop);
 		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
 
-		vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
-
 		vsfusbd_device_init(&app.usbd.device);
 
 		if (app.usb_pullup.port != IFS_DUMMY_PORT)
@@ -344,7 +335,6 @@ int main(void)
 {
 	vsf_enter_critical();
 	vsfsm_evtq_init(&app.pendsvq);
-	vsfsm_evtq_init(&app.mainq);
 
 	vsfsm_evtq_set(&app.pendsvq);
 	vsfsm_init(&app.sm);
@@ -352,7 +342,7 @@ int main(void)
 	vsfhal_core_pendsv_config(app_on_pendsv, &app.pendsvq);
 	vsf_leave_critical();
 
-	vsfsm_evtq_set(&app.mainq);
+	vsfsm_evtq_set(NULL);
 	while (1)
 	{
 		// no thread runs in mainq, just sleep in main loop

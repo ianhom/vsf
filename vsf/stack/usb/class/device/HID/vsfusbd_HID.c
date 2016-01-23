@@ -82,13 +82,13 @@ static vsf_err_t vsfusbd_HID_OUT_hanlder(struct vsfusbd_device_t *device,
 		report_id = buffer[0];
 		report = vsfusbd_HID_find_report(param, USB_HID_REPORT_OUTPUT,
 											report_id);
-		if ((NULL == report) || (pkg_size > report->buffer.size))
+		if ((NULL == report) || (pkg_size > report->bufstream.buffer.size))
 		{
 			return VSFERR_FAIL;
 		}
 
-		memcpy(report->buffer.buffer, pbuffer, pkg_size);
-		if (pkg_size < report->buffer.size)
+		memcpy(report->bufstream.buffer.buffer, pbuffer, pkg_size);
+		if (pkg_size < report->bufstream.buffer.size)
 		{
 			report->pos = pkg_size;
 			param->output_state = HID_OUTPUT_STATE_RECEIVING;
@@ -104,14 +104,14 @@ static vsf_err_t vsfusbd_HID_OUT_hanlder(struct vsfusbd_device_t *device,
 		report = vsfusbd_HID_find_report(param, USB_HID_REPORT_OUTPUT,
 											report_id);
 		if ((NULL == report) ||
-			((pkg_size + report->pos) > report->buffer.size))
+			((pkg_size + report->pos) > report->bufstream.buffer.size))
 		{
 			return VSFERR_FAIL;
 		}
 
-		memcpy(report->buffer.buffer + report->pos, pbuffer, pkg_size);
+		memcpy(report->bufstream.buffer.buffer + report->pos, pbuffer, pkg_size);
 		report->pos += pkg_size;
-		if (report->pos >= report->buffer.size)
+		if (report->pos >= report->bufstream.buffer.size)
 		{
 			report->pos = 0;
 			if (report->on_set_report != NULL)
@@ -127,7 +127,6 @@ static vsf_err_t vsfusbd_HID_OUT_hanlder(struct vsfusbd_device_t *device,
 	return drv->ep.enable_OUT(param->ep_out);
 }
 
-// state machines
 static void vsfusbd_HID_INREPORT_callback(void *param)
 {
 	struct vsfusbd_HID_param_t *HID_param =
@@ -172,25 +171,29 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 		param->output_state = HID_OUTPUT_STATE_WAIT;
 		param->busy = false;
-		param->num_of_INPUT_report = 0;
-		param->num_of_OUTPUT_report = 0;
-		param->num_of_FEATURE_report = 0;
 		for(i = 0; i < param->num_of_report; i++)
 		{
-			param->reports[i].pos = 0;
-			param->reports[i].idle_cnt = 0;
-			param->reports[i].changed = true;
-			switch (param->reports[i].type)
+			struct vsfusbd_HID_report_t *report = &param->reports[i];
+
+			report->pos = 0;
+			report->idle_cnt = 0;
+			report->changed = true;
+			report->bufstream.read = (USB_HID_REPORT_INPUT == report->type);
+			report->stream.user_mem = &report->bufstream;
+			report->stream.op = &buffer_stream_op;
+			if (report->bufstream.read)
 			{
-			case USB_HID_REPORT_OUTPUT:
-				param->num_of_OUTPUT_report++;
-				break;
-			case USB_HID_REPORT_INPUT:
-				param->num_of_INPUT_report++;
-				break;
-			case USB_HID_REPORT_FEATURE:
-				param->num_of_FEATURE_report++;
-				break;
+				report->stream.callback_tx.on_connect_rx = NULL;
+				report->stream.callback_tx.on_disconnect_rx = NULL;
+				report->stream.callback_tx.on_out_int = NULL;
+				report->stream.callback_tx.param = NULL;
+			}
+			else
+			{
+				report->stream.callback_rx.on_connect_tx = NULL;
+				report->stream.callback_rx.on_disconnect_tx = NULL;
+				report->stream.callback_rx.on_in_int = NULL;
+				report->stream.callback_rx.param = NULL;
 			}
 		}
 
@@ -223,8 +226,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// fall through
 	case VSFUSBD_HID_EVT_INREPORT:
 		{
-			uint8_t ep = param->ep_in;
-			struct vsfusbd_transact_t *transact = &device->IN_transact[ep];
+			struct vsfusbd_transact_t *transact = &param->IN_transact;
 			struct vsfusbd_HID_report_t *report;
 			uint8_t i;
 
@@ -235,13 +237,19 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					(report->changed || ((report->idle != 0) &&
 							(report->idle_cnt >= report->idle))))
 				{
-					report->idle_cnt = 0;
+					stream_init(&report->stream);
+					stream_connect_tx(&report->stream);
+
+					transact->ep = param->ep_in;
+					transact->data_size = report->bufstream.buffer.size;
+					transact->stream = &report->stream;
 					transact->zlp = false;
-					transact->tbuffer.buffer = report->buffer;
-					transact->callback.callback = vsfusbd_HID_INREPORT_callback;
-					transact->callback.param = param;
-					vsfusbd_ep_send_nb(device, ep);
+					transact->cb.on_finish = vsfusbd_HID_INREPORT_callback;
+					transact->cb.param = param;
+					vsfusbd_ep_send(device, transact);
+
 					report->changed = false;
+					report->idle_cnt = 0;
 					param->busy = true;
 					break;
 				}
@@ -286,8 +294,8 @@ vsf_err_t vsfusbd_HID_GetReport_prepare(
 		return VSFERR_FAIL;
 	}
 
-	buffer->size = report->buffer.size;
-	buffer->buffer = report->buffer.buffer;
+	buffer->size = report->bufstream.buffer.size;
+	buffer->buffer = report->bufstream.buffer.buffer;
 	return VSFERR_NONE;
 }
 
@@ -352,8 +360,8 @@ vsf_err_t vsfusbd_HID_SetReport_prepare(
 		return VSFERR_FAIL;
 	}
 
-	buffer->size = report->buffer.size;
-	buffer->buffer = report->buffer.buffer;
+	buffer->size = report->bufstream.buffer.size;
+	buffer->buffer = report->bufstream.buffer.buffer;
 	return VSFERR_NONE;
 }
 vsf_err_t vsfusbd_HID_SetReport_process(
@@ -447,53 +455,19 @@ vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
 											lanid, buffer);
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
-static const struct vsfusbd_setup_filter_t vsfusbd_HID_class_setup[] =
+vsf_err_t vsfusbd_HID_request_prepare(struct vsfusbd_device_t *device)
 {
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_GET_REPORT,
-		vsfusbd_HID_GetReport_prepare,
-		NULL
-	},
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_GET_IDLE,
-		vsfusbd_HID_GetIdle_prepare,
-		NULL
-	},
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_GET_PROTOCOL,
-		vsfusbd_HID_GetProtocol_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_SET_REPORT,
-		vsfusbd_HID_SetReport_prepare,
-		vsfusbd_HID_SetReport_process
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_SET_IDLE,
-		vsfusbd_HID_SetIdle_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_HIDREQ_SET_PROTOCOL,
-		vsfusbd_HID_SetProtocol_prepare,
-		NULL
-	},
-	VSFUSBD_SETUP_NULL
-};
+}
 
+vsf_err_t vsfusbd_HID_request_process(struct vsfusbd_device_t *device)
+{
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbd_class_protocol_t vsfusbd_HID_class =
 {
-	vsfusbd_HID_get_desc, NULL,
-	(struct vsfusbd_setup_filter_t *)vsfusbd_HID_class_setup, NULL,
-
+	vsfusbd_HID_get_desc,
+	vsfusbd_HID_request_prepare, vsfusbd_HID_request_process,
 	vsfusbd_HID_class_init, NULL
 };
 #endif

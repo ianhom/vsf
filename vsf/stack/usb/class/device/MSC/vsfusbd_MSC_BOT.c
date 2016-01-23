@@ -18,36 +18,39 @@
  ***************************************************************************/
 #include "vsf.h"
 
-static uint16_t vsfusbd_MSCBOT_GetPkgSize(struct interface_usbd_t *drv, bool in,
-											uint8_t ep, uint32_t size)
-{
-	uint16_t epsize = in ? drv->ep.get_IN_epsize(ep) :
-							drv->ep.get_OUT_epsize(ep);
-	return min(epsize, size);
-}
+static void vsfusbd_MSCBOT_on_idle(void *p);
+static void vsfusbd_MSCBOT_on_data_finish(void *p);
 
 static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 							struct vsfusbd_MSCBOT_param_t *param)
 {
-	struct interface_usbd_t *drv = device->drv;
+	struct USBMSC_CSW_t *CSW = &param->CSW;
 	uint32_t remain_size;
-	struct USBMSC_CSW_t CSW;
 
-	CSW.dCSWSignature = SYS_TO_LE_U32(USBMSC_CSW_SIGNATURE);
-	CSW.dCSWTag = param->CBW.dCBWTag;
+	CSW->dCSWSignature = SYS_TO_LE_U32(USBMSC_CSW_SIGNATURE);
+	CSW->dCSWTag = param->CBW.dCBWTag;
 	remain_size = param->CBW.dCBWDataTransferLength;
 	if (param->scsi_transact != NULL)
 	{
 		remain_size -= param->scsi_transact->data_size;
 		vsfscsi_release_transact(param->scsi_transact);
 	}
-	CSW.dCSWDataResidue = SYS_TO_LE_U32(remain_size);
-	CSW.dCSWStatus = param->dCSWStatus;
+	CSW->dCSWDataResidue = SYS_TO_LE_U32(remain_size);
+	CSW->dCSWStatus = param->dCSWStatus;
 
-	param->bot_status = VSFUSBD_MSCBOT_STATUS_CSW;
-	drv->ep.write_IN_buffer(param->ep_in, (uint8_t *)&CSW, USBMSC_CSW_SIZE);
-	drv->ep.set_IN_count(param->ep_in, USBMSC_CSW_SIZE);
-	return VSFERR_NONE;
+	param->bufstream.buffer.buffer = (uint8_t *)&param->CSW;
+	param->bufstream.buffer.size = sizeof(param->CSW);
+	param->bufstream.read = true;
+	param->stream.user_mem = &param->bufstream;
+	param->stream.op = &buffer_stream_op;
+	stream_init(&param->stream);
+
+	param->transact.ep = param->ep_in;
+	param->transact.data_size = sizeof(param->CSW);
+	param->transact.stream = &param->stream;
+	param->transact.cb.on_finish = vsfusbd_MSCBOT_on_idle;
+	param->transact.cb.param = param;
+	return vsfusbd_ep_send(param->device, &param->transact);
 }
 
 static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
@@ -67,8 +70,13 @@ static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 		{
 			param->scsi_transact->data_size = 0;
 		}
-		param->bot_status = VSFUSBD_MSCBOT_STATUS_IN;
-		device->drv->ep.set_IN_count(param->ep_in, 0);
+
+		param->transact.ep = param->ep_in;
+		param->transact.data_size = 0;
+		param->transact.stream = NULL;
+		param->transact.cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
+		param->transact.cb.param = param;
+		return vsfusbd_ep_send(param->device, &param->transact);
 	}
 	else
 	{
@@ -78,278 +86,111 @@ static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_MSCBOT_IN_hanlder(struct vsfusbd_device_t *device,
-											uint8_t ep)
-{
-	struct interface_usbd_t *drv = device->drv;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	int8_t iface = config->ep_OUT_iface_map[ep];
-	struct vsfusbd_MSCBOT_param_t *param = NULL;
-	uint16_t pkg_size;
-	uint32_t data_size;
-	uint8_t buffer_mem[64];
-
-	if (iface < 0)
-	{
-		return VSFERR_FAIL;
-	}
-	param = (struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
-	if (NULL == param)
-	{
-		return VSFERR_FAIL;
-	}
-
-	switch (param->bot_status)
-	{
-	case VSFUSBD_MSCBOT_STATUS_ERROR:
-	case VSFUSBD_MSCBOT_STATUS_CSW:
-		param->scsi_transact = NULL;
-		param->bot_status = VSFUSBD_MSCBOT_STATUS_IDLE;
-		drv->ep.enable_OUT(param->ep_out);
-		break;
-	case VSFUSBD_MSCBOT_STATUS_IN:
-		if (NULL == param->scsi_transact)
-		{
-			return vsfusbd_MSCBOT_SendCSW(device, param);
-		}
-
-		data_size = param->scsi_transact->data_size;
-		if (data_size > 0)
-		{
-			pkg_size = vsfusbd_MSCBOT_GetPkgSize(drv, 1, ep, data_size);
-			if (stream_get_data_size(param->scsi_transact->stream) >= pkg_size)
-			{
-				struct vsf_buffer_t buffer =
-				{
-					.buffer = buffer_mem,
-					.size = pkg_size,
-				};
-				// stream_write and stream_read will send event.
-				// If the corresponding evt_handler will use the value,
-				// change it before call stream_read or stream_write
-				param->scsi_transact->data_size -= pkg_size;
-				stream_read(param->scsi_transact->stream, &buffer);
-				drv->ep.write_IN_buffer(param->ep_in, buffer_mem, pkg_size);
-				drv->ep.set_IN_count(param->ep_in, pkg_size);
-				param->usb_idle = false;
-			}
-			else
-			{
-				param->usb_idle = true;
-			}
-			return VSFERR_NONE;
-		}
-
-		return vsfusbd_MSCBOT_SendCSW(device, param);
-	default:
-		return VSFERR_FAIL;
-	}
-	return VSFERR_NONE;
-}
-
-static void vsfusbd_MSCBOT_stream_on_in(void *p)
+static void vsfusbd_MSCBOT_on_data_finish(void *p)
 {
 	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
-
-	if (param->usb_idle)
-	{
-		vsfusbd_MSCBOT_IN_hanlder(param->device, param->ep_in);
-	}
+	vsfusbd_MSCBOT_SendCSW(param->device, param);
 }
 
-static void vsfusbd_MSCBOT_stream_on_out(void *p)
+static void vsfusbd_MSCBOT_on_cbw(void *p)
 {
 	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
-
-	if (param->usb_idle)
-	{
-		if (param->scsi_transact->data_size)
-		{
-			param->device->drv->ep.enable_OUT(param->ep_out);
-		}
-		else
-		{
-			vsfusbd_MSCBOT_SendCSW(param->device, param);
-		}
-	}
-}
-
-static vsf_err_t vsfusbd_MSCBOT_OUT_hanlder(struct vsfusbd_device_t *device,
-											uint8_t ep)
-{
-	struct interface_usbd_t *drv = device->drv;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	int8_t iface = config->ep_OUT_iface_map[ep];
-	struct vsfusbd_MSCBOT_param_t *param = NULL;
-	uint16_t pkg_size, ep_size;
-	uint8_t buffer_mem[64];
+	struct vsfusbd_device_t *device = param->device;
 	struct vsfscsi_lun_t *lun;
 
-	if (iface < 0)
+	if ((param->CBW.dCBWSignature != USBMSC_CBW_SIGNATURE) ||
+		(param->CBW.bCBWCBLength < 1) || (param->CBW.bCBWCBLength > 16))
 	{
-		return VSFERR_FAIL;
-	}
-	param = (struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
-	if (NULL == param)
-	{
-		return VSFERR_FAIL;
+		// TODO: invalid CBW, how to process this error?
+		return;
 	}
 
-	ep_size = drv->ep.get_OUT_epsize(ep);
-	pkg_size = drv->ep.get_OUT_count(ep);
-	if (pkg_size > ep_size)
+	if (param->CBW.bCBWLUN > param->scsi_dev.max_lun)
 	{
-		return VSFERR_FAIL;
+	reply_failure:
+		vsfusbd_MSCBOT_ErrHandler(device, param, USBMSC_CSW_FAIL);
+		return;
 	}
-	drv->ep.read_OUT_buffer(ep, buffer_mem, pkg_size);
 
-	switch (param->bot_status)
+	param->dCSWStatus = USBMSC_CSW_OK;
+	lun = &param->scsi_dev.lun[param->CBW.bCBWLUN];
+	if (vsfscsi_execute_nb(lun, param->CBW.CBWCB))
 	{
-	case VSFUSBD_MSCBOT_STATUS_IDLE:
-		memcpy(&param->CBW, buffer_mem, USBMSC_CBW_SIZE);
+		goto reply_failure;
+	}
 
-		if ((param->CBW.dCBWSignature != USBMSC_CBW_SIGNATURE) ||
-			(param->CBW.bCBWCBLength < 1) || (param->CBW.bCBWCBLength > 16) ||
-			(pkg_size != USBMSC_CBW_SIZE))
-		{
-			// TODO: invalid CBW, how to process this error?
-			return VSFERR_FAIL;
-		}
-		if (param->CBW.bCBWLUN > param->scsi_dev.max_lun)
-		{
-		reply_failure:
-			vsfusbd_MSCBOT_ErrHandler(device, param, USBMSC_CSW_FAIL);
-			return VSFERR_FAIL;
-		}
+	if (param->CBW.dCBWDataTransferLength)
+	{
+		struct vsfusbd_transact_t *transact = &param->transact;
 
-		param->dCSWStatus = USBMSC_CSW_OK;
-		lun = &param->scsi_dev.lun[param->CBW.bCBWLUN];
-		if (vsfscsi_execute_nb(lun, param->CBW.CBWCB))
+		if (!lun->transact.data_size)
 		{
 			goto reply_failure;
 		}
+		param->scsi_transact = &lun->transact;
+		transact->data_size = param->scsi_transact->data_size;
+		transact->stream = param->scsi_transact->stream;
+		transact->cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
+		transact->cb.param = param;
 
-		if (param->CBW.dCBWDataTransferLength)
+		if ((param->CBW.bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) ==
+					USBMSC_CBWFLAGS_DIR_IN)
 		{
-			struct vsf_stream_t *stream;
-
-			if (!lun->transact.data_size)
-			{
-				goto reply_failure;
-			}
-			param->scsi_transact = &lun->transact;
-			stream = param->scsi_transact->stream;
-
-			if ((param->CBW.bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) ==
-						USBMSC_CBWFLAGS_DIR_IN)
-			{
-				param->bot_status = VSFUSBD_MSCBOT_STATUS_IN;
-				param->usb_idle = true;
-
-				stream->callback_rx.param = param;
-				stream->callback_rx.on_connect_tx =
-				stream->callback_rx.on_in_int = vsfusbd_MSCBOT_stream_on_in;
-				stream->callback_rx.on_disconnect_tx = NULL;
-				stream_connect_rx(stream);
-
-				return VSFERR_NONE;
-			}
-			else
-			{
-				stream->callback_tx.param = param;
-				stream->callback_tx.on_out_int = vsfusbd_MSCBOT_stream_on_out;
-				stream->callback_tx.on_connect_rx = NULL;
-				stream->callback_tx.on_disconnect_rx = NULL;
-				stream_connect_tx(stream);
-
-				param->usb_idle = false;
-				param->bot_status = VSFUSBD_MSCBOT_STATUS_OUT;
-				return drv->ep.enable_OUT(param->ep_out);
-			}
+			transact->ep = param->ep_in;
+			vsfusbd_ep_send(param->device, transact);
 		}
 		else
 		{
-			if (param->scsi_transact->data_size && param->scsi_transact)
-			{
-				vsfscsi_cancel_transact(param->scsi_transact);
-				param->scsi_transact = NULL;
-			}
-			return vsfusbd_MSCBOT_SendCSW(device, param);
+			transact->ep = param->ep_out;
+			vsfusbd_ep_recv(param->device, transact);
 		}
-		break;
-	case VSFUSBD_MSCBOT_STATUS_OUT:
-		if (param->scsi_transact->data_size)
-		{
-			struct vsf_buffer_t buffer =
-			{
-				.buffer = buffer_mem,
-				.size = pkg_size,
-			};
-			// stream_write and stream_read will send event
-			// if the corresponding evt_handler will use the value,
-			// change it before call stream_read or stream_write
-			param->scsi_transact->data_size -= pkg_size;
-			if (!param->scsi_transact->data_size)
-			{
-				param->usb_idle = true;
-			}
-			stream_write(param->scsi_transact->stream, &buffer);
-
-			pkg_size = vsfusbd_MSCBOT_GetPkgSize(drv, 0, ep,
-											param->scsi_transact->data_size);
-			if (stream_get_free_size(param->scsi_transact->stream) > pkg_size)
-			{
-				drv->ep.enable_OUT(param->ep_out);
-				param->usb_idle = false;
-			}
-			else
-			{
-				param->usb_idle = true;
-			}
-			break;
-		}
-	default:
-		if (param->scsi_transact != NULL)
+	}
+	else
+	{
+		if (param->scsi_transact->data_size && param->scsi_transact)
 		{
 			vsfscsi_cancel_transact(param->scsi_transact);
 			param->scsi_transact = NULL;
 		}
-		vsfusbd_MSCBOT_ErrHandler(device, param, USBMSC_CSW_PHASE_ERROR);
-		return VSFERR_FAIL;
+		vsfusbd_MSCBOT_SendCSW(device, param);
 	}
-	return VSFERR_NONE;
+}
+
+static void vsfusbd_MSCBOT_on_idle(void *p)
+{
+	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
+
+	param->bufstream.buffer.buffer = (uint8_t *)&param->CBW;
+	param->bufstream.buffer.size = sizeof(param->CBW);
+	param->bufstream.read = false;
+	param->stream.user_mem = &param->bufstream;
+	param->stream.op = &buffer_stream_op;
+	stream_init(&param->stream);
+
+	param->transact.ep = param->ep_out;
+	param->transact.data_size = sizeof(param->CBW);
+	param->transact.stream = &param->stream;
+	param->transact.cb.on_finish = vsfusbd_MSCBOT_on_cbw;
+	param->transact.cb.param = param;
+	vsfusbd_ep_recv(param->device, &param->transact);
 }
 
 static vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 											struct vsfusbd_device_t *device)
 {
-	struct interface_usbd_t *drv = device->drv;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_MSCBOT_param_t *param =
 		(struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
-
-	if ((NULL == param) ||
-		// minium ep size of MSCBOT is 32 bytes,
-		// so that CBW and CSW can be transfered in one package
-		(drv->ep.get_IN_epsize(param->ep_in) < 32) ||
-		(drv->ep.get_OUT_epsize(param->ep_in) < 32) ||
-		vsfusbd_set_IN_handler(device, param->ep_in,
-											vsfusbd_MSCBOT_IN_hanlder) ||
-		vsfusbd_set_OUT_handler(device, param->ep_out,
-											vsfusbd_MSCBOT_OUT_hanlder) ||
-		drv->ep.enable_OUT(param->ep_out))
-	{
-		return VSFERR_FAIL;
-	}
 
 	param->scsi_transact = NULL;
 	param->device = device;
 	vsfscsi_init(&param->scsi_dev);
 	param->bot_status = VSFUSBD_MSCBOT_STATUS_IDLE;
+	vsfusbd_MSCBOT_on_idle(param);
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_MSCBOT_GetMaxLun_prepare(
+vsf_err_t vsfusbd_MSCBOT_GetMaxLun_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -370,7 +211,7 @@ static vsf_err_t vsfusbd_MSCBOT_GetMaxLun_prepare(
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfusbd_MSCBOT_Reset_prepare(
+vsf_err_t vsfusbd_MSCBOT_Reset_prepare(
 	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
 		uint8_t* (*data_io)(void *param))
 {
@@ -392,27 +233,19 @@ static vsf_err_t vsfusbd_MSCBOT_Reset_prepare(
 	return VSFERR_NONE;
 }
 
-static const struct vsfusbd_setup_filter_t vsfusbd_MSCBOT_class_setup[] =
+vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 {
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_MSCBOTREQ_GET_MAX_LUN,
-		vsfusbd_MSCBOT_GetMaxLun_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_MSCBOTREQ_RESET,
-		vsfusbd_MSCBOT_Reset_prepare,
-		NULL
-	},
-	VSFUSBD_SETUP_NULL
-};
+}
 
+vsf_err_t vsfusbd_MSCBOT_request_process(struct vsfusbd_device_t *device)
+{
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class =
 {
-	NULL, NULL,
-	(struct vsfusbd_setup_filter_t *)vsfusbd_MSCBOT_class_setup, NULL,
-
+	NULL,
+	vsfusbd_MSCBOT_request_prepare, vsfusbd_MSCBOT_request_process,
 	vsfusbd_MSCBOT_class_init, NULL
 };
+#endif

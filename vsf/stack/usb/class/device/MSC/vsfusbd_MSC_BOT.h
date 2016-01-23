@@ -57,7 +57,9 @@ enum usb_MSCBOT_req_t
 #define USBMSC_CSW_FAIL					0x01
 #define USBMSC_CSW_PHASE_ERROR			0x02
 
+#ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class;
+#endif
 
 enum vsfusbd_MSCBOT_status_t
 {
@@ -79,8 +81,12 @@ struct vsfusbd_MSCBOT_param_t
 	struct vsfscsi_transact_t *scsi_transact;
 	bool usb_idle;
 	struct USBMSC_CBW_t CBW;
+	struct USBMSC_CSW_t CSW;
 	uint8_t dCSWStatus;
 	enum vsfusbd_MSCBOT_status_t bot_status;
+	struct vsfusbd_transact_t transact;
+	struct vsf_bufstream_t bufstream;
+	struct vsf_stream_t stream;
 	struct vsfusbd_device_t *device;
 };
 

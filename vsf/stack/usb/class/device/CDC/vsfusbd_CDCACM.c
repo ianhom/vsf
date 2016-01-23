@@ -153,56 +153,25 @@ vsf_err_t vsfusbd_CDCACMControl_SendBreak_prepare(
 	return VSFERR_NONE;
 }
 
-struct vsfusbd_setup_filter_t *
-vsfusbd_CDCACMControl_get_request_filter(struct vsfusbd_device_t *device)
+vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 {
-	return vsfusbd_get_class_request_filter(device,
-				(struct vsfusbd_class_protocol_t *)&vsfusbd_CDCControl_class);
+}
+
+vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
+{
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE
-static const struct vsfusbd_setup_filter_t vsfusbd_CDCACMControl_class_setup[] =
-{
-	{
-		USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCACMREQ_GET_LINE_CODING,
-		vsfusbd_CDCACMControl_GetLineCoding_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCACMREQ_SET_LINE_CODING,
-		vsfusbd_CDCACMControl_SetLineCoding_prepare,
-		vsfusbd_CDCACMControl_SetLineCoding_process
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCACMREQ_SET_CONTROL_LINE_STATE,
-		vsfusbd_CDCACMControl_SetControlLineState_prepare,
-		NULL
-	},
-	{
-		USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		USB_CDCACMREQ_SEND_BREAK,
-		vsfusbd_CDCACMControl_SendBreak_prepare,
-		NULL
-	},
-	VSFUSBD_SETUP_NULL
-};
-
 const struct vsfusbd_class_protocol_t vsfusbd_CDCACMControl_class =
 {
-	NULL, NULL,
-	(struct vsfusbd_setup_filter_t *)vsfusbd_CDCACMControl_class_setup,
-	vsfusbd_CDCACMControl_get_request_filter,
-
+	NULL,
+	vsfusbd_CDCACMControl_request_prepare,
+	vsfusbd_CDCACMControl_request_process,
 	NULL, NULL
 };
 
 const struct vsfusbd_class_protocol_t vsfusbd_CDCACMData_class =
 {
-	NULL, NULL, NULL, NULL,
-
-	vsfusbd_CDCACMData_class_init, NULL
+	NULL, NULL, NULL, vsfusbd_CDCACMData_class_init, NULL
 };
 #endif
