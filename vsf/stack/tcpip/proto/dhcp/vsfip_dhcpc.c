@@ -23,7 +23,7 @@
 #ifndef VSFCFG_STANDALONE_MODULE
 static struct vsfip_dhcpc_local_t vsfip_dhcpc =
 {
-	.xid = VSFIP_DHCPC_XID;
+	.xid = VSFIP_DHCPC_XID,
 };
 #endif
 

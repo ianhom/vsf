@@ -1401,6 +1401,7 @@ static void vsfip_tcp_data_input(struct vsfip_socket_t *socket,
 	}
 	else
 	{
+		buf->ttl = VSFIP_CFG_TTL_INPUT;
 		vsfq_append(&socket->inq, &buf->proto_node);
 	}
 }
@@ -1843,7 +1844,7 @@ vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 
 	size = vsfip_bufferlist_len(&socket->outq);
 	window = min(VSFIP_CFG_TCP_TX_WINDOW, pcb->rwnd);
-	if ((size + buf->app.size) <= window)
+	if ((size + buf->app.size) > window)
 	{
 		return VSFERR_NOT_READY;
 	}
