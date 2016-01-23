@@ -206,9 +206,9 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	if (malstream->on_finish != NULL)
+	if (malstream->cb.on_finish != NULL)
 	{
-		malstream->on_finish(malstream->param);
+		malstream->cb.on_finish(malstream->cb.param);
 	}
 
 	vsfsm_pt_end(pt);
@@ -279,9 +279,9 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	if (malstream->on_finish != NULL)
+	if (malstream->cb.on_finish != NULL)
 	{
-		malstream->on_finish(malstream);
+		malstream->cb.on_finish(malstream->cb.param);
 	}
 
 	vsfsm_pt_end(pt);

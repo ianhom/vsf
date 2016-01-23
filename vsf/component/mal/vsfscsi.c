@@ -119,8 +119,8 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		struct vsf_malstream_t *malstream = &mal2scsi->malstream;
 
 		// setup malstream
-		mal2scsi->malstream.param = lun;
-		mal2scsi->malstream.on_finish = write ?
+		mal2scsi->malstream.cb.param = lun;
+		mal2scsi->malstream.cb.on_finish = write ?
 							vsf_mal2scsi_malstream_on_write_finish : NULL;
 		stream->user_mem = &malstream->multibuf_stream;
 		stream->op = &multibuf_stream_op;
