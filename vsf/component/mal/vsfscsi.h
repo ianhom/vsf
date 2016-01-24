@@ -125,10 +125,8 @@ struct vsfscsi_device_t
 };
 
 vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev);
-vsf_err_t vsfscsi_execute_nb(struct vsfscsi_lun_t *lun, uint8_t *CDB);
+vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB);
 void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact);
-
-struct vsfscsi_transact_t* vsfscsi_get_transact(struct vsfscsi_lun_t *lun);
 void vsfscsi_release_transact(struct vsfscsi_transact_t *transact);
 
 // mal2scsi

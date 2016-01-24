@@ -1944,6 +1944,12 @@
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\HID\vsfusbd_HID.c</name>
               </file>
             </group>
+            <group>
+              <name>MSC</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\MSC\vsfusbd_MSC_BOT.c</name>
+              </file>
+            </group>
           </group>
         </group>
         <group>

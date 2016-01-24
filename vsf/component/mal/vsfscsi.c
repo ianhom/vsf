@@ -55,7 +55,7 @@ vsfscsi_get_handler(struct vsfscsi_handler_t *handlers, uint8_t opcode)
 	return NULL;
 }
 
-vsf_err_t vsfscsi_execute_nb(struct vsfscsi_lun_t *lun, uint8_t *CDB)
+vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 {
 	return lun->op->execute ? lun->op->execute(lun, CDB) : VSFERR_FAIL;
 }
@@ -194,8 +194,8 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 		case SCSI_CMDCODE_INQUIRY:
 			if (CDB[1] & 1)
 			{
-				// When the EVPD bit is set to one, 
-				// the PAGE CODE field specifies which page of 
+				// When the EVPD bit is set to one,
+				// the PAGE CODE field specifies which page of
 				// vital product data information the device server shall return
 				if (CDB[2] != 0)
 				{
@@ -216,15 +216,15 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 
 				if (CDB[2] != 0)
 				{
-					// If the PAGE CODE field is not set to zero 
-					// when the EVPD bit is set to zero, 
-					// the command shall be terminated with CHECK CONDITION status, 
-					// with the sense key set to ILLEGAL REQUEST, 
+					// If the PAGE CODE field is not set to zero
+					// when the EVPD bit is set to zero,
+					// the command shall be terminated with CHECK CONDITION status,
+					// with the sense key set to ILLEGAL REQUEST,
 					// and the additional sense code set to INVALID FIELD IN CDB.
 					goto exit_invalid_field_in_command;
 				}
 
-				// If the EVPD bit is set to zero, 
+				// If the EVPD bit is set to zero,
 				// the device server shall return the standard INQUIRY data.
 				pbuf = vsf_mal2scsi_prepare_transact(lun, 36, false, true);
 				if (NULL == pbuf)

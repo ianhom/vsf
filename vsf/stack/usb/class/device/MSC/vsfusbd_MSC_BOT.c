@@ -113,7 +113,7 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 
 	param->CSW.dCSWStatus = USBMSC_CSW_OK;
 	lun = &param->scsi_dev.lun[param->CBW.bCBWLUN];
-	if (vsfscsi_execute_nb(lun, param->CBW.CBWCB))
+	if (vsfscsi_execute(lun, param->CBW.CBWCB))
 	{
 		goto reply_failure;
 	}
@@ -174,7 +174,7 @@ static void vsfusbd_MSCBOT_on_idle(void *p)
 	vsfusbd_ep_recv(param->device, &param->transact);
 }
 
-static vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
+vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 											struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];

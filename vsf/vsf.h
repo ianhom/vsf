@@ -63,10 +63,9 @@ struct vsf_module_t
 #include "framework/vsfshell/vsfshell.h"
 struct vsf_shell_api_t
 {
-	vsf_err_t (*init)(struct vsfshell_t *shell);
-	void (*register_handlers)(struct vsfshell_t *shell,
-								struct vsfshell_handler_t *handlers);
-	void (*free_handler_thread)(struct vsfshell_t *shell, struct vsfsm_t *sm);
+	vsf_err_t (*init)(struct vsfshell_t*);
+	void (*register_handlers)(struct vsfshell_t*, struct vsfshell_handler_t*);
+	void (*free_handler_thread)(struct vsfshell_t*, struct vsfsm_t*);
 };
 #endif
 
@@ -77,18 +76,16 @@ struct vsf_shell_api_t
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
 struct vsf_usbd_api_t
 {
-	vsf_err_t (*init)(struct vsfusbd_device_t *device);
-	vsf_err_t (*fini)(struct vsfusbd_device_t *device);
+	vsf_err_t (*init)(struct vsfusbd_device_t*);
+	vsf_err_t (*fini)(struct vsfusbd_device_t*);
 
-	vsf_err_t (*ep_send)(struct vsfusbd_device_t *device, uint8_t ep);
-	vsf_err_t (*ep_recv)(struct vsfusbd_device_t *device, uint8_t ep);
+	vsf_err_t (*ep_send)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
+	vsf_err_t (*ep_recv)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
 
-	vsf_err_t (*set_IN_handler)(struct vsfusbd_device_t *device,
-				uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));
-	vsf_err_t (*set_OUT_handler)(struct vsfusbd_device_t *device,
-				uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));
-
-	struct vsfusbd_setup_filter_t *stdreq_filter;
+	vsf_err_t (*set_IN_handler)(struct vsfusbd_device_t*, uint8_t,
+				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
+	vsf_err_t (*set_OUT_handler)(struct vsfusbd_device_t*, uint8_t,
+				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
 
 	struct
 	{
@@ -120,6 +117,14 @@ struct vsf_usbd_api_t
 			struct vsfusbd_class_protocol_t *data_protocol;
 #endif
 		} cdcacm;
+		struct
+		{
+#if defined(VSFCFG_MODULE_USBD)
+			struct vsfusbd_class_protocol_t protocol;
+#else
+			struct vsfusbd_class_protocol_t *protocol;
+#endif
+		} mscbot;
 	} classes;
 };
 #endif
@@ -130,13 +135,12 @@ struct vsf_usbd_api_t
 #include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
 struct vsf_usbh_api_t
 {
-	vsf_err_t (*init)(struct vsfusbh_t *usbh);
-	vsf_err_t (*fini)(struct vsfusbh_t *usbh);
-	vsf_err_t (*register_driver)(struct vsfusbh_t *usbh,
-					const struct vsfusbh_class_drv_t *drv);
+	vsf_err_t (*init)(struct vsfusbh_t*);
+	vsf_err_t (*fini)(struct vsfusbh_t*);
+	vsf_err_t (*register_driver)(struct vsfusbh_t*,
+					const struct vsfusbh_class_drv_t*);
 
-	vsf_err_t (*submit_urb)(struct vsfusbh_t *usbh,
-					struct vsfusbh_urb_t *vsfurb);
+	vsf_err_t (*submit_urb)(struct vsfusbh_t*, struct vsfusbh_urb_t*);
 
 #if IFS_HCD_EN
 	struct
@@ -176,62 +180,61 @@ struct vsf_tcpip_api_t
 {
 	struct vsfip_t local;
 
-	vsf_err_t (*init)(struct vsfip_mem_op_t *mem_op);
+	vsf_err_t (*init)(struct vsfip_mem_op_t*);
 	vsf_err_t (*fini)(void);
 
-	vsf_err_t (*netif_add)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							struct vsfip_netif_t *netif);
-	vsf_err_t (*netif_remove)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							struct vsfip_netif_t *netif);
+	vsf_err_t (*netif_add)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							struct vsfip_netif_t*);
+	vsf_err_t (*netif_remove)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							struct vsfip_netif_t*);
 
-	struct vsfip_buffer_t* (*buffer_get)(uint32_t size);
-	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t header, uint32_t app);
-	void (*buffer_reference)(struct vsfip_buffer_t *buf);
-	void (*buffer_release)(struct vsfip_buffer_t *buf);
+	struct vsfip_buffer_t* (*buffer_get)(uint32_t);
+	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t, uint32_t);
+	void (*buffer_reference)(struct vsfip_buffer_t*);
+	void (*buffer_release)(struct vsfip_buffer_t*);
 
-	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t family,
-									enum vsfip_sockproto_t protocol);
-	vsf_err_t (*close)(struct vsfip_socket_t *socket);
+	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t,
+							enum vsfip_sockproto_t);
+	vsf_err_t (*close)(struct vsfip_socket_t*);
 
-	vsf_err_t (*listen)(struct vsfip_socket_t *socket, uint8_t backlog);
-	vsf_err_t (*bind)(struct vsfip_socket_t *socket, uint16_t port);
+	vsf_err_t (*listen)(struct vsfip_socket_t*, uint8_t);
+	vsf_err_t (*bind)(struct vsfip_socket_t*, uint16_t);
 
-	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
-	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
-	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t *socket,
-				struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
-	vsf_err_t (*tcp_send)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-				struct vsfip_buffer_t *buf, bool flush);
-	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t *socket,
-				struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
-	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-				struct vsfip_buffer_t **buf);
-	vsf_err_t (*tcp_close)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket);
+	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
+	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_socket_t**);
+	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
+	vsf_err_t (*tcp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t*, bool);
+	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
+	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t**);
+	vsf_err_t (*tcp_close)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*);
 
-	vsf_err_t (*udp_async_send)(struct vsfip_socket_t *socket,
-				struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
-	vsf_err_t (*udp_send)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-				struct vsfip_buffer_t *buf);
-	vsf_err_t (*udp_async_recv)(struct vsfip_socket_t *socket,
-				struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
-	vsf_err_t (*udp_recv)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-				struct vsfip_buffer_t **buf);
+	vsf_err_t (*udp_async_send)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
+	vsf_err_t (*udp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t*);
+	vsf_err_t (*udp_async_recv)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
+	vsf_err_t (*udp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t**);
 
 	struct
 	{
 		struct
 		{
-			vsf_err_t (*header)(struct vsfip_buffer_t *buf,
-				enum vsfip_netif_proto_t proto,
-				const struct vsfip_macaddr_t *dest_addr);
-			void (*input)(struct vsfip_buffer_t *buf);
+			vsf_err_t (*header)(struct vsfip_buffer_t ,
+				enum vsfip_netif_proto_t, const struct vsfip_macaddr_t*);
+			void (*input)(struct vsfip_buffer_t*);
 		} eth;
 	} netif;
 
@@ -240,17 +243,15 @@ struct vsf_tcpip_api_t
 		struct
 		{
 			struct vsfip_dhcpc_local_t local;
-			vsf_err_t (*start)(struct vsfip_netif_t *netif,
-								struct vsfip_dhcpc_t *dhcp);
+			vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
 		} dhcpc;
 		struct
 		{
 			struct vsfip_dns_local_t local;
 			vsf_err_t (*init)(void);
-			vsf_err_t (*setserver)(uint8_t numdns,
-							struct vsfip_ipaddr_t *dnsserver);
-			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							char *domain, struct vsfip_ipaddr_t  *domainip);
+			vsf_err_t (*setserver)(uint8_t, struct vsfip_ipaddr_t*);
+			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							char*, struct vsfip_ipaddr_t*);
 		} dns;
 		struct
 		{
@@ -290,13 +291,11 @@ struct vsf_bcmwifi_api_t
 	struct vsfip_netdrv_op_t *netdrv_op;
 #endif
 
-	vsf_err_t (*scan)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				struct vsfip_buffer_t **result, uint8_t interface);
-	vsf_err_t (*join)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				uint32_t *status, const char *ssid,
-				enum bcm_authtype_t authtype, const uint8_t *key,
-				uint8_t keylen);
-	vsf_err_t (*leave)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+	vsf_err_t (*scan)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_buffer_t**, uint8_t);
+	vsf_err_t (*join)(struct vsfsm_pt_t*, vsfsm_evt_t, uint32_t*, const char*,
+				enum bcm_authtype_t, const uint8_t*, uint8_t);
+	vsf_err_t (*leave)(struct vsfsm_pt_t*, vsfsm_evt_t);
 };
 #endif
 
@@ -307,49 +306,48 @@ struct vsf_t
 
 	struct vsf_framework_t
 	{
-		void (*evtq_init)(struct vsfsm_evtq_t *queue);
-		void (*evtq_set)(struct vsfsm_evtq_t *queue);
+		void (*evtq_init)(struct vsfsm_evtq_t*);
+		void (*evtq_set)(struct vsfsm_evtq_t*);
 		struct vsfsm_evtq_t* (*evtq_get)(void);
 		vsf_err_t (*poll)(void);
 		uint32_t (*get_event_pending)(void);
-		vsf_err_t (*sm_init)(struct vsfsm_t *sm);
-		vsf_err_t (*sm_fini)(struct vsfsm_t *sm);
-		vsf_err_t (*pt_init)(struct vsfsm_t *sm, struct vsfsm_pt_t *pt);
-		vsf_err_t (*post_evt)(struct vsfsm_t *sm, vsfsm_evt_t evt);
-		vsf_err_t (*post_evt_pending)(struct vsfsm_t *sm, vsfsm_evt_t evt);
+		vsf_err_t (*sm_init)(struct vsfsm_t*);
+		vsf_err_t (*sm_fini)(struct vsfsm_t*);
+		vsf_err_t (*pt_init)(struct vsfsm_t*, struct vsfsm_pt_t*);
+		vsf_err_t (*post_evt)(struct vsfsm_t*, vsfsm_evt_t);
+		vsf_err_t (*post_evt_pending)(struct vsfsm_t*, vsfsm_evt_t);
 
 		void (*enter_critical)(void);
 		void (*leave_critical)(void);
 
 		struct
 		{
-			vsf_err_t (*init)(struct vsfsm_sync_t *sync, uint32_t cur_value,
-								uint32_t max_value, vsfsm_evt_t evt);
-			vsf_err_t (*cancel)(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
-			vsf_err_t (*increase)(struct vsfsm_sync_t *sync);
-			vsf_err_t (*decrease)(struct vsfsm_sync_t *sync,
-								struct vsfsm_t *sm);
+			vsf_err_t (*init)(struct vsfsm_sync_t*, uint32_t, uint32_t,
+								vsfsm_evt_t);
+			vsf_err_t (*cancel)(struct vsfsm_sync_t*, struct vsfsm_t*);
+			vsf_err_t (*increase)(struct vsfsm_sync_t*);
+			vsf_err_t (*decrease)(struct vsfsm_sync_t*, struct vsfsm_t*);
 		} sync;
 
 		struct
 		{
-			vsf_err_t (*init)(struct vsftimer_mem_op_t *mem_op);
-			struct vsftimer_t * (*create)(struct vsfsm_t *sm, uint32_t interval,
-										int16_t trigger_cnt, vsfsm_evt_t evt);
-			void (*free)(struct vsftimer_t *timer);
-			void (*enqueue)(struct vsftimer_t *timer);
-			void (*dequeue)(struct vsftimer_t *timer);
+			vsf_err_t (*init)(struct vsftimer_mem_op_t*);
+			struct vsftimer_t * (*create)(struct vsfsm_t*, uint32_t, int16_t,
+								vsfsm_evt_t);
+			void (*free)(struct vsftimer_t*);
+			void (*enqueue)(struct vsftimer_t*);
+			void (*dequeue)(struct vsftimer_t*);
 			void (*callback)(void);
 		} timer;
 
 #ifdef VSFCFG_MODULE
 		struct
 		{
-			struct vsf_module_t* (*get)(char *name);
-			void (*reg)(struct vsf_module_t *module);
-			void (*unreg)(struct vsf_module_t *module);
-			void* (*load)(char *name);
-			void (*unload)(char *name);
+			struct vsf_module_t* (*get)(char*);
+			void (*reg)(struct vsf_module_t*);
+			void (*unreg)(struct vsf_module_t*);
+			void* (*load)(char*);
+			void (*unload)(char*);
 		} module;
 #endif
 
@@ -368,54 +366,86 @@ struct vsf_t
 		{
 			struct
 			{
-				void (*init)(struct vsfq_t *q);
-				void (*append)(struct vsfq_t *q, struct vsfq_node_t *n);
-				void (*remove)(struct vsfq_t *q, struct vsfq_node_t *n);
-				void (*enqueue)(struct vsfq_t *q, struct vsfq_node_t *n);
-				struct vsfq_node_t* (*dequeue)(struct vsfq_t *q);
+				void (*init)(struct vsfq_t*);
+				void (*append)(struct vsfq_t*, struct vsfq_node_t*);
+				void (*remove)(struct vsfq_t*, struct vsfq_node_t*);
+				void (*enqueue)(struct vsfq_t*, struct vsfq_node_t*);
+				struct vsfq_node_t* (*dequeue)(struct vsfq_t*);
 			} queue;
 
 			struct
 			{
-				vsf_err_t (*init)(struct vsf_fifo_t *fifo);
-				uint32_t (*push8)(struct vsf_fifo_t *fifo, uint8_t data);
-				uint8_t (*pop8)(struct vsf_fifo_t *fifo);
-				uint32_t (*push)(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
-				uint32_t (*pop)(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
-				uint32_t (*get_data_length)(struct vsf_fifo_t *fifo);
-				uint32_t (*get_avail_length)(struct vsf_fifo_t *fifo);
+				vsf_err_t (*init)(struct vsf_fifo_t*);
+				uint32_t (*push8)(struct vsf_fifo_t*, uint8_t);
+				uint8_t (*pop8)(struct vsf_fifo_t*);
+				uint32_t (*push)(struct vsf_fifo_t*, uint32_t, uint8_t*);
+				uint32_t (*pop)(struct vsf_fifo_t*, uint32_t, uint8_t*);
+				uint32_t (*get_data_length)(struct vsf_fifo_t*);
+				uint32_t (*get_avail_length)(struct vsf_fifo_t*);
 			} fifo;
 
 			struct
 			{
-				void* (*malloc)(uint32_t size);
-				void* (*malloc_aligned)(uint32_t size, uint32_t align);
-				void (*free)(void *ptr);
+				void* (*malloc)(uint32_t);
+				void* (*malloc_aligned)(uint32_t, uint32_t);
+				void (*free)(void*);
 			} bufmgr;
 
 			struct
 			{
-				void (*init)(struct vsfpool_t *pool);
-				void* (*alloc)(struct vsfpool_t *pool);
-				void (*free)(struct vsfpool_t *pool, void *buffer);
+				void (*init)(struct vsfpool_t*);
+				void* (*alloc)(struct vsfpool_t*);
+				void (*free)(struct vsfpool_t*, void*);
 			} pool;
 		} buffer;
 
 		struct
 		{
-			vsf_err_t (*init)(struct vsf_stream_t *stream);
-			vsf_err_t (*fini)(struct vsf_stream_t *stream);
-			uint32_t (*read)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
-			uint32_t (*write)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
-			uint32_t (*get_data_size)(struct vsf_stream_t *stream);
-			uint32_t (*get_free_size)(struct vsf_stream_t *stream);
-			void (*connect_rx)(struct vsf_stream_t *stream);
-			void (*connect_tx)(struct vsf_stream_t *stream);
-			void (*disconnect_rx)(struct vsf_stream_t *stream);
-			void (*disconnect_tx)(struct vsf_stream_t *stream);
+			vsf_err_t (*init)(struct vsf_stream_t*);
+			vsf_err_t (*fini)(struct vsf_stream_t*);
+			uint32_t (*read)(struct vsf_stream_t*, struct vsf_buffer_t*);
+			uint32_t (*write)(struct vsf_stream_t*, struct vsf_buffer_t*);
+			uint32_t (*get_data_size)(struct vsf_stream_t*);
+			uint32_t (*get_free_size)(struct vsf_stream_t*);
+			void (*connect_rx)(struct vsf_stream_t*);
+			void (*connect_tx)(struct vsf_stream_t*);
+			void (*disconnect_rx)(struct vsf_stream_t*);
+			void (*disconnect_tx)(struct vsf_stream_t*);
 
 			const struct vsf_stream_op_t *fifo_stream_op;
+			const struct vsf_stream_op_t *multibuf_stream_op;
+			const struct vsf_stream_op_t *buffer_stream_op;
 		} stream;
+
+		struct
+		{
+			vsf_err_t (*init)(struct vsfsm_pt_t*, vsfsm_evt_t);
+			vsf_err_t (*fini)(struct vsfsm_pt_t*, vsfsm_evt_t);
+			vsf_err_t (*erase_all)(struct vsfsm_pt_t*, vsfsm_evt_t);
+			vsf_err_t (*erase)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
+									uint32_t);
+			vsf_err_t (*read)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
+									uint8_t*, uint32_t);
+			vsf_err_t (*write)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
+									uint8_t*, uint32_t);
+
+			struct
+			{
+				vsf_err_t (*init)(struct vsf_malstream_t*);
+				vsf_err_t (*read)(struct vsf_malstream_t*, uint64_t, uint32_t);
+				vsf_err_t (*write)(struct vsf_malstream_t*, uint64_t, uint32_t);
+			} malstream;
+
+			struct
+			{
+				vsf_err_t (*init)(struct vsfscsi_device_t*);
+				vsf_err_t (*execute)(struct vsfscsi_lun_t*, uint8_t*);
+				void (*cancel_transact)(struct vsfscsi_transact_t*);
+				void (*release_transact)(struct vsfscsi_transact_t*);
+
+				const struct vsfscsi_lun_op_t *mal2scsi_op;
+			} scsi;
+		} mal;
 	} component;
 
 	struct
@@ -427,23 +457,23 @@ struct vsf_t
 			uint32_t (*bit_reverse_u32)(uint32_t);
 			uint64_t (*bit_reverse_u64)(uint64_t);
 
-			uint16_t (*get_u16_msb)(uint8_t *p);
-			uint32_t (*get_u24_msb)(uint8_t *p);
-			uint32_t (*get_u32_msb)(uint8_t *p);
-			uint64_t (*get_u64_msb)(uint8_t *p);
-			uint16_t (*get_u16_lsb)(uint8_t *p);
-			uint32_t (*get_u24_lsb)(uint8_t *p);
-			uint32_t (*get_u32_lsb)(uint8_t *p);
-			uint64_t (*get_u64_lsb)(uint8_t *p);
+			uint16_t (*get_u16_msb)(uint8_t*);
+			uint32_t (*get_u24_msb)(uint8_t*);
+			uint32_t (*get_u32_msb)(uint8_t*);
+			uint64_t (*get_u64_msb)(uint8_t*);
+			uint16_t (*get_u16_lsb)(uint8_t*);
+			uint32_t (*get_u24_lsb)(uint8_t*);
+			uint32_t (*get_u32_lsb)(uint8_t*);
+			uint64_t (*get_u64_lsb)(uint8_t*);
 
-			void (*set_u16_msb)(uint8_t *p, uint16_t v16);
-			void (*set_u24_msb)(uint8_t *p, uint32_t v32);
-			void (*set_u32_msb)(uint8_t *p, uint32_t v32);
-			void (*set_u64_msb)(uint8_t *p, uint64_t v64);
-			void (*set_u16_lsb)(uint8_t *p, uint16_t v16);
-			void (*set_u24_lsb)(uint8_t *p, uint32_t v32);
-			void (*set_u32_lsb)(uint8_t *p, uint32_t v32);
-			void (*set_u64_lsb)(uint8_t *p, uint64_t v64);
+			void (*set_u16_msb)(uint8_t*, uint16_t);
+			void (*set_u24_msb)(uint8_t*, uint32_t);
+			void (*set_u32_msb)(uint8_t*, uint32_t);
+			void (*set_u64_msb)(uint8_t*, uint64_t);
+			void (*set_u16_lsb)(uint8_t*, uint16_t);
+			void (*set_u24_lsb)(uint8_t*, uint32_t);
+			void (*set_u32_lsb)(uint8_t*, uint32_t);
+			void (*set_u64_lsb)(uint8_t*, uint64_t);
 
 			uint16_t (*swap_u16)(uint16_t);
 			uint32_t (*swap_u24)(uint32_t);
@@ -452,9 +482,9 @@ struct vsf_t
 
 			struct
 			{
-				void (*set)(uint32_t *arr, int bit);
-				void (*clr)(uint32_t *arr, int bit);
-				int (*ffz)(uint32_t *arr, int arrlen);
+				void (*set)(uint32_t*, int);
+				void (*clr)(uint32_t*, int);
+				int (*ffz)(uint32_t*, int);
 			} mskarr;
 		} bittool;
 	} tool;
@@ -631,6 +661,24 @@ struct vsf_t
 #define stream_disconnect_rx			vsf.component.stream.disconnect_rx
 #define stream_disconnect_tx			vsf.component.stream.disconnect_tx
 #define fifo_stream_op					(*vsf.component.stream.fifo_stream_op)
+#define multibuf_stream_op				(*vsf.component.stream.multibuf_stream_op)
+#define buffer_stream_op				(*vsf.component.stream.buffer_stream_op)
+
+#define vsfmal_init						vsf.component.mal.init
+#define vsfmal_fini						vsf.component.mal.fini
+#define vsfmal_erase_all				vsf.component.mal.erase_all
+#define vsfmal_erase					vsf.component.mal.erase
+#define vsfmal_read						vsf.component.mal.read
+#define vsfmal_write					vsf.component.mal.write
+#define vsf_malstream_init				vsf.component.mal.malstream.init
+#define vsf_malstream_read				vsf.component.mal.malstream.read
+#define vsf_malstream_write				vsf.component.mal.malstream.write
+
+#define vsfscsi_init					vsf.component.mal.scsi.init
+#define vsfscsi_execute					vsf.component.mal.scsi.execute
+#define vsfscsi_cancel_transact			vsf.component.mal.scsi.cancel_transact
+#define vsfscsi_release_transact		vsf.component.mal.scsi.release_transact
+#define vsf_mal2scsi_op					(*vsf.component.mal.scsi.mal2scsi_op)
 
 #define vsfq_init						vsf.component.buffer.queue.init
 #define vsfq_append						vsf.component.buffer.queue.append
@@ -687,8 +735,8 @@ struct vsf_t
 #ifdef VSFCFG_MODULE_USBD
 #define vsfusbd_device_init				vsf.stack.usb.device->init
 #define vsfusbd_device_fini				vsf.stack.usb.device->fini
-#define vsfusbd_ep_send_nb				vsf.stack.usb.device->ep_send
-#define vsfusbd_ep_receive_nb			vsf.stack.usb.device->ep_recv
+#define vsfusbd_ep_send					vsf.stack.usb.device->ep_send
+#define vsfusbd_ep_recv					vsf.stack.usb.device->ep_recv
 #define vsfusbd_set_IN_handler			vsf.stack.usb.device->set_IN_handler
 #define vsfusbd_set_OUT_handler			vsf.stack.usb.device->set_OUT_handler
 #define vsfusbd_HID_class				vsf.stack.usb.device->classes.hid.protocol
@@ -701,8 +749,8 @@ struct vsf_t
 #else
 #define vsfusbd_device_init				vsf.stack.usb.device.init
 #define vsfusbd_device_fini				vsf.stack.usb.device.fini
-#define vsfusbd_ep_send_nb				vsf.stack.usb.device.ep_send
-#define vsfusbd_ep_receive_nb			vsf.stack.usb.device.ep_recv
+#define vsfusbd_ep_send					vsf.stack.usb.device.ep_send
+#define vsfusbd_ep_recv					vsf.stack.usb.device.ep_recv
 #define vsfusbd_set_IN_handler			vsf.stack.usb.device.set_IN_handler
 #define vsfusbd_set_OUT_handler			vsf.stack.usb.device.set_OUT_handler
 #define vsfusbd_HID_class				(*vsf.stack.usb.device.classes.hid.protocol)

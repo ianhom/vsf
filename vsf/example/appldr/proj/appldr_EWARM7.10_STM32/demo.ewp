@@ -1937,6 +1937,9 @@
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfmal.c</name>
         </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfscsi.c</name>
+        </file>
       </group>
       <group>
         <name>stream</name>

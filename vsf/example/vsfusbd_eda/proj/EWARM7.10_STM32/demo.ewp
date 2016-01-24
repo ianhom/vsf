@@ -2097,6 +2097,30 @@
             <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\vsfip_netif.c</name>
           </file>
         </group>
+        <group>
+          <name>proto</name>
+          <group>
+            <name>dhcp</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcp_common.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>dns</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dns\vsfip_dnsc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>http</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\http\vsfip_httpc.c</name>
+            </file>
+          </group>
+        </group>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\vsfip.c</name>
         </file>
