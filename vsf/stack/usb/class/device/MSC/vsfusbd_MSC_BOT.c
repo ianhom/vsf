@@ -206,7 +206,6 @@ vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 		{
 			return VSFERR_FAIL;
 		}
-
 		buffer->buffer = &param->scsi_dev.max_lun;
 		buffer->size = 1;
 		break;

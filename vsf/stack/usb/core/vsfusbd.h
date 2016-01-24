@@ -55,7 +55,8 @@ struct vsfusbd_ctrl_handler_t
 	uint16_t ep_size;
 	int8_t iface;
 	uint8_t reply_buffer[2];
-	struct vsfusbd_transact_t transact;
+	struct vsfusbd_transact_t IN_transact;
+	struct vsfusbd_transact_t OUT_transact;
 };
 
 #define VSFUSBD_DESC_DEVICE(lanid, ptr, size)			\
