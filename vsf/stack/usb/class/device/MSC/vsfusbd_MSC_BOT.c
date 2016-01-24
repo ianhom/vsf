@@ -188,62 +188,48 @@ static vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_MSCBOT_GetMaxLun_prepare(
-	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_MSCBOT_param_t *param =
-		(struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
-
-	if ((NULL == param) || (request->wLength != 1) || (request->wValue != 0))
-	{
-		return VSFERR_FAIL;
-	}
-
-	buffer->buffer = &param->scsi_dev.max_lun;
-	buffer->size = 1;
-
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_MSCBOT_Reset_prepare(
-	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct interface_usbd_t *drv = device->drv;
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_MSCBOT_param_t *param =
-		(struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
-
-	if ((NULL == param) || (request->wLength != 0) || (request->wValue != 0) ||
-		drv->ep.reset_IN_toggle(param->ep_in) ||
-		drv->ep.reset_OUT_toggle(param->ep_out) ||
-		drv->ep.enable_OUT(param->ep_out))
-	{
-		return VSFERR_FAIL;
-	}
-
-	return VSFERR_NONE;
-}
-
 vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 {
-}
+	struct interface_usbd_t *drv = device->drv; 
+	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
+	uint8_t iface = request->wIndex;
+	struct vsfusbd_config_t *config = &device->config[device->configuration];
+	struct vsfusbd_MSCBOT_param_t *param =
+		(struct vsfusbd_MSCBOT_param_t *)config->iface[iface].protocol_param;
 
-vsf_err_t vsfusbd_MSCBOT_request_process(struct vsfusbd_device_t *device)
-{
+	switch (request->bRequest)
+	{
+	case USB_MSCBOTREQ_GET_MAX_LUN:
+		if ((request->wLength != 1) || (request->wValue != 0))
+		{
+			return VSFERR_FAIL;
+		}
+
+		buffer->buffer = &param->scsi_dev.max_lun;
+		buffer->size = 1;
+		break;
+	case USB_MSCBOTREQ_RESET:
+		if ((request->wLength != 0) || (request->wValue != 0) ||
+			drv->ep.reset_IN_toggle(param->ep_in) ||
+			drv->ep.reset_OUT_toggle(param->ep_out) ||
+			drv->ep.enable_OUT(param->ep_out))
+		{
+			return VSFERR_FAIL;
+		}
+		break;
+	default:
+		return VSFERR_FAIL;
+	}
+	return VSFERR_NONE;
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class =
 {
 	NULL,
-	vsfusbd_MSCBOT_request_prepare, vsfusbd_MSCBOT_request_process,
+	vsfusbd_MSCBOT_request_prepare, NULL,
 	vsfusbd_MSCBOT_class_init, NULL
 };
 #endif

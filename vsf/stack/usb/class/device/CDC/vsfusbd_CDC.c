@@ -213,63 +213,6 @@ vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	return vsfsm_init(&ifs->sm);
 }
 
-vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_prepare(
-	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	struct vsfusbd_CDC_param_t *param =
-		(struct vsfusbd_CDC_param_t *)config->iface[iface].protocol_param;
-
-	if (request->wLength > param->encapsulated_command_buffer.size)
-	{
-		return VSFERR_FAIL;
-	}
-
-	buffer->buffer = param->encapsulated_command_buffer.buffer;
-	buffer->size = request->wLength;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_CDCControl_SendEncapsulatedCommand_process(
-	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	struct vsfusbd_CDC_param_t *param =
-		(struct vsfusbd_CDC_param_t *)config->iface[iface].protocol_param;
-
-	if ((param->callback.send_encapsulated_command != NULL) &&
-		param->callback.send_encapsulated_command(buffer))
-	{
-		return VSFERR_FAIL;
-	}
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_CDCControl_GetEncapsulatedResponse_prepare(
-	struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	struct vsfusbd_CDC_param_t *param =
-		(struct vsfusbd_CDC_param_t *)config->iface[iface].protocol_param;
-
-	if (request->wLength > param->encapsulated_response_buffer.size)
-	{
-		return VSFERR_FAIL;
-	}
-
-	buffer->buffer = param->encapsulated_response_buffer.buffer;
-	buffer->size = request->wLength;
-	return VSFERR_NONE;
-}
-
 void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 {
 	stream_connect_tx(param->stream_rx);
@@ -278,10 +221,57 @@ void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 
 vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 {
+	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
+	uint8_t iface = request->wIndex;
+	struct vsfusbd_config_t *config = &device->config[device->configuration];
+	struct vsfusbd_CDC_param_t *param =
+			(struct vsfusbd_CDC_param_t *)config->iface[iface].protocol_param;
+
+	switch (request->bRequest)
+	{
+	case USB_CDCREQ_SEND_ENCAPSULATED_COMMAND:
+		if (request->wLength > param->encapsulated_command_buffer.size)
+		{
+			return VSFERR_FAIL;
+		}
+		buffer->buffer = param->encapsulated_command_buffer.buffer;
+		buffer->size = request->wLength;
+		break;
+	case USB_CDCREQ_GET_ENCAPSULATED_RESPONSE:
+		if (request->wLength > param->encapsulated_response_buffer.size)
+		{
+			return VSFERR_FAIL;
+		}
+		buffer->buffer = param->encapsulated_response_buffer.buffer;
+		buffer->size = request->wLength;
+		break;
+	default:
+		return VSFERR_FAIL;
+	}
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
 {
+	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
+	uint8_t iface = request->wIndex;
+	struct vsfusbd_config_t *config = &device->config[device->configuration];
+	struct vsfusbd_CDC_param_t *param =
+			(struct vsfusbd_CDC_param_t *)config->iface[iface].protocol_param;
+
+	if (USB_CDCREQ_SEND_ENCAPSULATED_COMMAND == request->bRequest)
+	{
+		if ((param->callback.send_encapsulated_command != NULL) &&
+			param->callback.send_encapsulated_command(buffer))
+		{
+			return VSFERR_FAIL;
+		}
+	}
+	return VSFERR_NONE;
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE

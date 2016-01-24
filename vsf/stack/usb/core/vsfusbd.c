@@ -340,8 +340,6 @@ static vsf_err_t vsfusbd_stdctrl_prepare(struct vsfusbd_device_t *device)
 	uint8_t *reply_buffer = ctrl_handler->reply_buffer;
 	uint8_t recip = request->bRequestType & USB_RECIP_MASK;
 
-	buffer->buffer = ctrl_handler->reply_buffer;
-
 	if (USB_RECIP_DEVICE == recip)
 	{
 		switch (request->bRequest)
@@ -605,6 +603,8 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 	// set default stream
 	ctrl_handler->stream.user_mem = &ctrl_handler->bufstream;
 	ctrl_handler->stream.op = &buffer_stream_op;
+	ctrl_handler->bufstream.buffer.buffer = ctrl_handler->reply_buffer;
+	ctrl_handler->bufstream.buffer.size = 0;
 	ctrl_handler->bufstream.read =
 			(request->bRequestType & USB_DIR_MASK) == USB_DIR_IN;
 
