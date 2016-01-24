@@ -213,7 +213,7 @@ vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 		if ((request->wLength != 0) || (request->wValue != 0) ||
 			drv->ep.reset_IN_toggle(param->ep_in) ||
 			drv->ep.reset_OUT_toggle(param->ep_out) ||
-            vsfusbd_MSCBOT_class_init(iface, device))
+			vsfusbd_MSCBOT_class_init(iface, device))
 		{
 			return VSFERR_FAIL;
 		}
