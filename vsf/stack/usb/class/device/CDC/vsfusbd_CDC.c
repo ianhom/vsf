@@ -250,6 +250,7 @@ vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 	default:
 		return VSFERR_FAIL;
 	}
+	ctrl_handler->data_size = buffer->size;
 	return VSFERR_NONE;
 }
 

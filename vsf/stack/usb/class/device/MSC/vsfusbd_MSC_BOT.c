@@ -190,7 +190,7 @@ vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 
 vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 {
-	struct interface_usbd_t *drv = device->drv; 
+	struct interface_usbd_t *drv = device->drv;
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
@@ -221,6 +221,7 @@ vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 	default:
 		return VSFERR_FAIL;
 	}
+	ctrl_handler->data_size = buffer->size;
 	return VSFERR_NONE;
 }
 
