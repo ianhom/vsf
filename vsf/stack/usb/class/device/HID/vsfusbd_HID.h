@@ -57,13 +57,12 @@ struct vsfusbd_HID_report_t
 	enum usb_HID_report_type_t type;
 	uint8_t id;
 	uint8_t idle;
-	struct vsf_bufstream_t bufstream;
+	struct vsf_buffer_t buffer;
 	vsf_err_t (*on_set_report)(struct vsfusbd_HID_param_t *param,
 								struct vsfusbd_HID_report_t *report);
 	bool changed;
 	
 	// private
-	struct vsf_stream_t stream;
 	uint32_t pos;
 	uint8_t idle_cnt;
 };
@@ -96,7 +95,8 @@ struct vsfusbd_HID_param_t
 	uint8_t current_output_report_id;
 	
 	struct vsfusbd_transact_t IN_transact;
-	struct vsfusbd_transact_t OUT_transact;
+	struct vsf_bufstream_t bufstream;
+	struct vsf_stream_t stream;
 	struct vsftimer_t timer4ms;
 	struct vsfusbd_device_t *device;
 	struct vsfusbd_iface_t *iface;

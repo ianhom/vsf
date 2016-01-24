@@ -36,7 +36,6 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 		vsfscsi_release_transact(param->scsi_transact);
 	}
 	CSW->dCSWDataResidue = SYS_TO_LE_U32(remain_size);
-	CSW->dCSWStatus = param->dCSWStatus;
 
 	param->bufstream.buffer.buffer = (uint8_t *)&param->CSW;
 	param->bufstream.buffer.size = sizeof(param->CSW);
@@ -56,7 +55,7 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 			struct vsfusbd_MSCBOT_param_t *param,  uint8_t error)
 {
-	param->dCSWStatus = error;
+	param->CSW.dCSWStatus = error;
 
 	// OUT:	NACK(don't enable_OUT, if OUT is enabled, it will be disabled after data is sent)
 	// IN:	if (dCBWDataTransferLength > 0)
@@ -112,7 +111,7 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 		return;
 	}
 
-	param->dCSWStatus = USBMSC_CSW_OK;
+	param->CSW.dCSWStatus = USBMSC_CSW_OK;
 	lun = &param->scsi_dev.lun[param->CBW.bCBWLUN];
 	if (vsfscsi_execute_nb(lun, param->CBW.CBWCB))
 	{
@@ -185,7 +184,6 @@ static vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 	param->scsi_transact = NULL;
 	param->device = device;
 	vsfscsi_init(&param->scsi_dev);
-	param->bot_status = VSFUSBD_MSCBOT_STATUS_IDLE;
 	vsfusbd_MSCBOT_on_idle(param);
 	return VSFERR_NONE;
 }

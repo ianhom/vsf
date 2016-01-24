@@ -49,11 +49,12 @@ struct vsfusbd_transact_t
 struct vsfusbd_ctrl_handler_t
 {
 	struct usb_ctrlrequest_t request;
+	struct vsf_bufstream_t bufstream;
 	struct vsf_stream_t stream;
 	uint32_t data_size;
 	uint16_t ep_size;
 	int8_t iface;
-	uint8_t ctrl_reply_buffer[2];
+	uint8_t reply_buffer[2];
 	struct vsfusbd_transact_t transact;
 };
 

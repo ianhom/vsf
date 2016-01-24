@@ -85,9 +85,6 @@ struct vsfscsi_device_t;
 struct vsfscsi_lun_t;
 struct vsfscsi_transact_t
 {
-	struct vsfsm_t sm;
-	struct vsfsm_pt_t pt;
-
 	uint64_t LBA;
 	uint32_t data_size;
 	struct vsf_stream_t *stream;

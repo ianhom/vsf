@@ -61,15 +61,6 @@ enum usb_MSCBOT_req_t
 extern const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class;
 #endif
 
-enum vsfusbd_MSCBOT_status_t
-{
-	VSFUSBD_MSCBOT_STATUS_IDLE,
-	VSFUSBD_MSCBOT_STATUS_OUT,
-	VSFUSBD_MSCBOT_STATUS_IN,
-	VSFUSBD_MSCBOT_STATUS_CSW,
-	VSFUSBD_MSCBOT_STATUS_ERROR,
-};
-
 struct vsfusbd_MSCBOT_param_t
 {
 	uint8_t ep_out;
@@ -79,11 +70,8 @@ struct vsfusbd_MSCBOT_param_t
 
 	// no need to initialize below by user
 	struct vsfscsi_transact_t *scsi_transact;
-	bool usb_idle;
 	struct USBMSC_CBW_t CBW;
 	struct USBMSC_CSW_t CSW;
-	uint8_t dCSWStatus;
-	enum vsfusbd_MSCBOT_status_t bot_status;
 	struct vsfusbd_transact_t transact;
 	struct vsf_bufstream_t bufstream;
 	struct vsf_stream_t stream;

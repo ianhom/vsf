@@ -189,235 +189,8 @@ vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
 }
 
 // standard request handlers
-vsf_err_t vsfusbd_stdreq_get_device_status_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-
-	if ((request->wValue != 0) || (request->wIndex != 0))
-	{
-		return VSFERR_FAIL;
-	}
-
-	ctrl_handler->ctrl_reply_buffer[0] = device->feature;
-	ctrl_handler->ctrl_reply_buffer[1] = 0;
-	buffer->buffer = ctrl_handler->ctrl_reply_buffer;
-	buffer->size = 2;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_get_interface_status_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-
-	if ((request->wValue != 0) ||
-		(request->wIndex >= config->num_of_ifaces))
-	{
-		return VSFERR_FAIL;
-	}
-
-	ctrl_handler->ctrl_reply_buffer[0] = 0;
-	ctrl_handler->ctrl_reply_buffer[1] = 0;
-	buffer->buffer = ctrl_handler->ctrl_reply_buffer;
-	buffer->size = 2;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_get_endpoint_status_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-	uint8_t ep_num = request->wIndex & 0x7F;
-	uint8_t ep_dir = request->wIndex & 0x80;
-
-	if ((request->wValue != 0) ||
-		(request->wIndex >= *device->drv->ep.num_of_ep))
-	{
-		return VSFERR_FAIL;
-	}
-
-	if ((ep_dir && device->drv->ep.is_IN_stall(ep_num)) ||
-		(!ep_dir && device->drv->ep.is_OUT_stall(ep_num)))
-	{
-		ctrl_handler->ctrl_reply_buffer[0] = 1;
-	}
-	else
-	{
-		ctrl_handler->ctrl_reply_buffer[0] = 0;
-	}
-	ctrl_handler->ctrl_reply_buffer[1] = 0;
-	buffer->buffer = ctrl_handler->ctrl_reply_buffer;
-	buffer->size = 2;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_clear_device_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-
-	if ((request->wIndex != 0) ||
-		(request->wValue != USB_DEVICE_REMOTE_WAKEUP))
-	{
-		return VSFERR_FAIL;
-	}
-
-	device->feature &= ~USB_CONFIG_ATT_WAKEUP;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_clear_interface_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_clear_endpoint_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t ep_num = request->wIndex & 0x7F;
-	uint8_t ep_dir = request->wIndex & 0x80;
-
-	if ((request->wValue != USB_ENDPOINT_HALT) ||
-		(ep_num >= *device->drv->ep.num_of_ep))
-	{
-		return VSFERR_FAIL;
-	}
-
-	if (ep_dir)
-	{
-		device->drv->ep.reset_IN_toggle(ep_num);
-		device->drv->ep.clear_IN_stall(ep_num);
-	}
-	else
-	{
-		device->drv->ep.reset_OUT_toggle(ep_num);
-		device->drv->ep.clear_OUT_stall(ep_num);
-		device->drv->ep.enable_OUT(ep_num);
-	}
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_set_device_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-
-	if ((request->wIndex != 0) ||
-		(request->wValue != USB_DEVICE_REMOTE_WAKEUP))
-	{
-		return VSFERR_FAIL;
-	}
-
-	device->feature |= USB_CONFIG_ATT_WAKEUP;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_set_interface_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_set_endpoint_feature_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	return VSFERR_FAIL;
-}
-
-vsf_err_t vsfusbd_stdreq_set_address_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-
-	if ((request->wValue > 127) || (request->wIndex != 0) ||
-		(device->configuration != 0))
-	{
-		return VSFERR_FAIL;
-	}
-
-	return VSFERR_NONE;
-}
-vsf_err_t vsfusbd_stdreq_set_address_process(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-
-	device->address = (uint8_t)request->wValue;
-	return device->drv->set_address(device->address);
-}
-
-vsf_err_t vsfusbd_stdreq_get_device_descriptor_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t type = (request->wValue >> 8) & 0xFF;
-	uint8_t index = request->wValue & 0xFF;
-	uint16_t lanid = request->wIndex;
-
-	return vsfusbd_device_get_descriptor(device, device->desc_filter, type,
-											index, lanid, buffer);
-}
-
-vsf_err_t vsfusbd_stdreq_get_interface_descriptor_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-	uint8_t type = (request->wValue >> 8) & 0xFF;
-	uint8_t index = request->wValue & 0xFF;
-	uint16_t iface = request->wIndex;
-	struct vsfusbd_class_protocol_t *protocol =
-										config->iface[iface].class_protocol;
-
-	if ((iface > config->num_of_ifaces) || (NULL == protocol) ||
-		(NULL == protocol->get_desc))
-	{
-		return VSFERR_FAIL;
-	}
-
-	return protocol->get_desc(device, type, index, 0, buffer);
-}
-
-vsf_err_t vsfusbd_stdreq_get_configuration_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-
-	if ((request->wValue != 0) || (request->wIndex != 0))
-	{
-		return VSFERR_FAIL;
-	}
-
-	ctrl_handler->ctrl_reply_buffer[0] =
-					device->config[device->configuration].configuration_value;
-	buffer->buffer = ctrl_handler->ctrl_reply_buffer;
-	buffer->size = 1;
-	return VSFERR_NONE;
-}
-
-static int16_t vsfusbd_get_config(struct vsfusbd_device_t *device,
-									uint8_t value)
+static int16_t
+vsfusbd_get_config(struct vsfusbd_device_t *device, uint8_t value)
 {
 	uint8_t i;
 
@@ -429,22 +202,6 @@ static int16_t vsfusbd_get_config(struct vsfusbd_device_t *device,
 		}
 	}
 	return -1;
-}
-
-vsf_err_t vsfusbd_stdreq_set_configuration_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-
-	if ((request->wIndex != 0) ||
-		(vsfusbd_get_config(device, request->wValue) < 0))
-	{
-		return VSFERR_FAIL;
-	}
-
-	device->configured = false;
-	return VSFERR_NONE;
 }
 
 #if VSFUSBD_CFG_AUTOSETUP
@@ -571,112 +328,150 @@ static vsf_err_t vsfusbd_auto_init(struct vsfusbd_device_t *device)
 #endif
 	return VSFERR_NONE;
 }
-#endif
-
-vsf_err_t vsfusbd_stdreq_set_configuration_process(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer)
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	struct vsfusbd_config_t *config;
-	int16_t config_idx;
-	uint8_t i;
-#if __VSF_DEBUG__
-	uint8_t num_iface, num_endpoint;
-#endif
-
-	config_idx = vsfusbd_get_config(device, request->wValue);
-	if (config_idx < 0)
-	{
-		return VSFERR_FAIL;
-	}
-	device->configuration = (uint8_t)config_idx;
-	config = &device->config[device->configuration];
-
-#if VSFUSBD_CFG_AUTOSETUP
-	if (vsfusbd_auto_init(device))
-	{
-		return VSFERR_FAIL;
-	}
-#endif
-
-	// call user initialization
-	if ((config->init != NULL) && config->init(device))
-	{
-		return VSFERR_FAIL;
-	}
-
-	for (i = 0; i < config->num_of_ifaces; i++)
-	{
-		config->iface[i].alternate_setting = 0;
-
-		if ((config->iface[i].class_protocol != NULL) &&
-				(config->iface[i].class_protocol->init != NULL) &&
-				config->iface[i].class_protocol->init(i, device))
-		{
-			return VSFERR_FAIL;
-		}
-	}
-
-	device->configured = true;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_get_interface_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-	uint8_t iface = request->wIndex;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-
-	if ((request->wValue != 0) ||
-		(iface >= device->config[device->configuration].num_of_ifaces))
-	{
-		return VSFERR_FAIL;
-	}
-
-	ctrl_handler->ctrl_reply_buffer[0] = config->iface[iface].alternate_setting;
-	buffer->buffer = ctrl_handler->ctrl_reply_buffer;
-	buffer->size = 1;
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbd_stdreq_set_interface_prepare(
-		struct vsfusbd_device_t *device, struct vsf_buffer_t *buffer,
-		uint8_t* (*data_io)(void *param))
-{
-	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
-	uint8_t iface_idx = request->wIndex;
-	uint8_t alt = request->wValue;
-	struct vsfusbd_config_t *config = &device->config[device->configuration];
-
-	if (iface_idx >= device->config[device->configuration].num_of_ifaces)
-	{
-		return VSFERR_FAIL;
-	}
-
-	config->iface[iface_idx].alternate_setting = alt;
-	if (device->callback.on_set_interface != NULL)
-	{
-		return device->callback.on_set_interface(device, iface_idx, alt);
-	}
-	return VSFERR_NONE;
-}
+#endif	// VSFUSBD_CFG_AUTOSETUP
 
 static vsf_err_t vsfusbd_stdctrl_prepare(struct vsfusbd_device_t *device)
 {
+	struct interface_usbd_t *drv = device->drv; 
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	uint8_t *reply_buffer = ctrl_handler->reply_buffer;
+	uint8_t recip = request->bRequestType & USB_RECIP_MASK;
 
-	if ((request->bRequestType & USB_RECIP_MASK) == USB_RECIP_DEVICE)
+	buffer->buffer = ctrl_handler->reply_buffer;
+
+	if (USB_RECIP_DEVICE == recip)
 	{
+		switch (request->bRequest)
+		{
+		case USB_REQ_GET_STATUS:
+			if ((request->wValue != 0) || (request->wIndex != 0))
+			{
+				goto fail;
+			}
+			reply_buffer[0] = device->feature;
+			reply_buffer[1] = 0;
+			buffer->size = 2;
+			break;
+		case USB_REQ_CLEAR_FEATURE:
+			if ((request->wIndex != 0) ||
+				(request->wValue != USB_DEVICE_REMOTE_WAKEUP))
+			{
+				goto fail;
+			}
+			device->feature &= ~USB_CONFIG_ATT_WAKEUP;
+			break;
+		case USB_REQ_SET_FEATURE:
+			if ((request->wIndex != 0) ||
+				(request->wValue != USB_DEVICE_REMOTE_WAKEUP))
+			{
+				goto fail;
+			}
+			device->feature |= USB_CONFIG_ATT_WAKEUP;
+			break;
+		case USB_REQ_SET_ADDRESS:
+			if ((request->wValue > 127) || (request->wIndex != 0) ||
+				(device->configuration != 0))
+			{
+				goto fail;
+			}
+			break;
+		case USB_REQ_GET_DESCRIPTOR:
+			{
+				uint8_t type = (request->wValue >> 8) & 0xFF;
+				uint8_t index = request->wValue & 0xFF;
+				uint16_t lanid = request->wIndex;
+
+				if (vsfusbd_device_get_descriptor(device, device->desc_filter,
+								type, index, lanid, buffer))
+				{
+					goto fail;
+				}
+			}
+			break;
+		case USB_REQ_GET_CONFIGURATION:
+			if ((request->wValue != 0) || (request->wIndex != 0))
+			{
+				goto fail;
+			}
+			reply_buffer[0] = config->configuration_value;
+			buffer->size = 2;
+			break;
+		case USB_REQ_SET_CONFIGURATION:
+			if ((request->wIndex != 0) ||
+				(vsfusbd_get_config(device, request->wValue) < 0))
+			{
+				goto fail;
+			}
+			device->configured = false;
+			break;
+		default:
+			goto fail;
+		}
 	}
-	else if ((request->bRequestType & USB_RECIP_MASK) == USB_RECIP_INTERFACE)
+	else if (USB_RECIP_INTERFACE == recip)
 	{
+		uint8_t iface_idx = request->wIndex;
+		struct vsfusbd_iface_t *iface = &config->iface[iface_idx];
+		struct vsfusbd_class_protocol_t *protocol = iface->class_protocol;
+
+		if (iface_idx >= config->num_of_ifaces)
+		{
+			goto fail;
+		}
+
+		switch (request->bRequest)
+		{
+		case USB_REQ_GET_STATUS:
+			if ((request->wValue != 0) ||
+				(request->wIndex >= config->num_of_ifaces))
+			{
+				goto fail;
+			}
+			reply_buffer[0] = 0;
+			reply_buffer[1] = 0;
+			buffer->size = 2;
+			break;
+		case USB_REQ_CLEAR_FEATURE:
+			break;
+		case USB_REQ_SET_FEATURE:
+			break;
+		case USB_REQ_GET_DESCRIPTOR:
+			{
+				uint8_t type = (request->wValue >> 8) & 0xFF;
+				uint8_t index = request->wValue & 0xFF;
+
+				if ((NULL == protocol) || (NULL == protocol->get_desc) ||
+					protocol->get_desc(device, type, index, 0, buffer))
+				{
+					goto fail;
+				}
+			}
+			break;
+		case USB_REQ_GET_INTERFACE:
+			if (request->wValue != 0)
+			{
+				goto fail;
+			}
+			reply_buffer[0] = iface->alternate_setting;
+			buffer->size = 1;
+			break;
+		case USB_REQ_SET_INTERFACE:
+			iface->alternate_setting = request->wValue;
+			if ((device->callback.on_set_interface != NULL) &&
+				device->callback.on_set_interface(device, iface_idx,
+													iface->alternate_setting))
+			{
+				goto fail;
+			}
+			break;
+		default:
+			goto fail;
+		}
 	}
-	else if ((request->bRequestType & USB_RECIP_MASK) == USB_RECIP_ENDPOINT)
+	else if (USB_RECIP_ENDPOINT == recip)
 	{
 		uint8_t ep_num = request->wIndex & 0x7F;
 		uint8_t ep_dir = request->wIndex & 0x80;
@@ -689,21 +484,113 @@ static vsf_err_t vsfusbd_stdctrl_prepare(struct vsfusbd_device_t *device)
 		switch (request->bRequest)
 		{
 		case USB_REQ_GET_STATUS:
-			if (request->wValue != 0)
+			if ((request->wValue != 0) ||
+				(request->wIndex >= *drv->ep.num_of_ep))
 			{
-				return VSFERR_FAIL;
+				goto fail;
 			}
-
+			if ((ep_dir && drv->ep.is_IN_stall(ep_num)) ||
+				(!ep_dir && drv->ep.is_OUT_stall(ep_num)))
+			{
+				reply_buffer[0] = 1;
+			}
+			else
+			{
+				reply_buffer[0] = 0;
+			}
+			reply_buffer[1] = 0;
+			buffer->size = 2;
 			break;
 		case USB_REQ_CLEAR_FEATURE:
+			if ((request->wValue != USB_ENDPOINT_HALT) ||
+				(ep_num >= *drv->ep.num_of_ep))
+			{
+				goto fail;
+			}
+			if (ep_dir)
+			{
+				drv->ep.reset_IN_toggle(ep_num);
+				drv->ep.clear_IN_stall(ep_num);
+			}
+			else
+			{
+				drv->ep.reset_OUT_toggle(ep_num);
+				drv->ep.clear_OUT_stall(ep_num);
+				drv->ep.enable_OUT(ep_num);
+			}
 			break;
 		case USB_REQ_SET_FEATURE:
-			break;
+		default:
+			goto fail;
 		}
 	}
 	else
 	{
+	fail:
 		return VSFERR_FAIL;
+	}
+
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsfusbd_stdctrl_process(struct vsfusbd_device_t *device)
+{
+	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
+	uint8_t recip = request->bRequestType & USB_RECIP_MASK;
+
+	if (USB_RECIP_DEVICE == recip)
+	{
+		switch (request->bRequest)
+		{
+		case USB_REQ_SET_ADDRESS:
+			device->address = (uint8_t)request->wValue;
+			return device->drv->set_address(device->address);
+		case USB_REQ_SET_CONFIGURATION:
+			{
+				struct vsfusbd_config_t *config;
+				int16_t config_idx;
+				uint8_t i;
+#if __VSF_DEBUG__
+				uint8_t num_iface, num_endpoint;
+#endif
+
+				config_idx = vsfusbd_get_config(device, request->wValue);
+				if (config_idx < 0)
+				{
+					return VSFERR_FAIL;
+				}
+				device->configuration = (uint8_t)config_idx;
+				config = &device->config[device->configuration];
+
+#if VSFUSBD_CFG_AUTOSETUP
+				if (vsfusbd_auto_init(device))
+				{
+					return VSFERR_FAIL;
+				}
+#endif
+
+				// call user initialization
+				if ((config->init != NULL) && config->init(device))
+				{
+					return VSFERR_FAIL;
+				}
+
+				for (i = 0; i < config->num_of_ifaces; i++)
+				{
+					config->iface[i].alternate_setting = 0;
+
+					if ((config->iface[i].class_protocol != NULL) &&
+							(config->iface[i].class_protocol->init != NULL) &&
+							config->iface[i].class_protocol->init(i, device))
+					{
+						return VSFERR_FAIL;
+					}
+				}
+
+				device->configured = true;
+			}
+			break;
+		}
 	}
 	return VSFERR_NONE;
 }
@@ -713,14 +600,22 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-	int8_t iface = -1;
+	uint8_t type = request->bRequestType & USB_TYPE_MASK;
 
-	switch (request->bRequestType & USB_TYPE_MASK)
+	// set default stream
+	ctrl_handler->stream.user_mem = &ctrl_handler->bufstream;
+	ctrl_handler->stream.op = &buffer_stream_op;
+	ctrl_handler->bufstream.read =
+			(request->bRequestType & USB_DIR_MASK) == USB_DIR_IN;
+
+	if (USB_TYPE_STANDARD == type)
 	{
-	case USB_TYPE_STANDARD:
 		return vsfusbd_stdctrl_prepare(device);
-		break;
-	case USB_TYPE_CLASS:
+	}
+	else if (USB_TYPE_CLASS == type)
+	{
+		int8_t iface = -1;
+
 		switch (request->bRequestType & USB_RECIP_MASK)
 		{
 		case USB_RECIP_DEVICE:
@@ -730,19 +625,45 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 			iface = (int8_t)request->wIndex;
 			break;
 		}
-		break;
-	}
-
-	if ((iface >= 0) && (iface < config->num_of_ifaces) &&
-		(config->iface[iface].class_protocol->request_prepare != NULL))
-	{
-		return config->iface[iface].class_protocol->request_prepare(device);
+		if ((iface >= 0) && (iface < config->num_of_ifaces) &&
+			(config->iface[iface].class_protocol->request_prepare != NULL))
+		{
+			return config->iface[iface].class_protocol->request_prepare(device);
+		}
 	}
 	return VSFERR_FAIL;
 }
 
 static void vsfusbd_ctrl_process(struct vsfusbd_device_t *device)
 {
+	struct vsfusbd_config_t *config = &device->config[device->configuration];
+	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
+	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
+	uint8_t type = request->bRequestType & USB_TYPE_MASK;
+
+	if (USB_TYPE_STANDARD == type)
+	{
+		vsfusbd_stdctrl_process(device);
+	}
+	else if (USB_TYPE_CLASS == type)
+	{
+		int8_t iface = -1;
+
+		switch (request->bRequestType & USB_RECIP_MASK)
+		{
+		case USB_RECIP_DEVICE:
+			iface = (int8_t)device->device_class_iface;
+			break;
+		case USB_RECIP_INTERFACE:
+			iface = (int8_t)request->wIndex;
+			break;
+		}
+		if ((iface >= 0) && (iface < config->num_of_ifaces) &&
+			(config->iface[iface].class_protocol->request_process != NULL))
+		{
+			config->iface[iface].class_protocol->request_process(device);
+		}
+	}
 }
 
 // on_IN and on_OUT
