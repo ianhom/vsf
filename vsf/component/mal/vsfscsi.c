@@ -271,8 +271,8 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 			}
 
 			pbuf[3] = 8;
-			SET_BE_U32(&pbuf[4], mal->block_num);
-			SET_BE_U32(&pbuf[8], mal->block_size);
+			SET_BE_U32(&pbuf[4], mal->cap.block_num);
+			SET_BE_U32(&pbuf[8], mal->cap.block_size);
 			pbuf[8] = 2;
 			break;
 		case SCSI_CMDCODE_READ_CAPACITY:
@@ -282,8 +282,8 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 				goto exit_not_ready;
 			}
 
-			SET_BE_U32(&pbuf[0], mal->block_num - 1);
-			SET_BE_U32(&pbuf[4], mal->block_size);
+			SET_BE_U32(&pbuf[0], mal->cap.block_num - 1);
+			SET_BE_U32(&pbuf[4], mal->cap.block_size);
 			break;
 		case SCSI_CMDCODE_READ:
 			transact->LBA = GET_BE_U32(&CDB[2]);
@@ -318,8 +318,8 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 			transact->data_size = GET_BE_U32(&CDB[10]);
 
 		do_mal_read:
-			transact->LBA *= mal->block_size;
-			transact->data_size *= mal->block_size;
+			transact->LBA *= mal->cap.block_size;
+			transact->data_size *= mal->cap.block_size;
 			pbuf = vsf_mal2scsi_prepare_transact(lun, transact->data_size,
 													false, false);
 			if (NULL == pbuf)
@@ -335,8 +335,8 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 			transact->data_size = GET_BE_U32(&CDB[10]);
 
 		do_mal_write:
-			transact->LBA *= mal->block_size;
-			transact->data_size *= mal->block_size;
+			transact->LBA *= mal->cap.block_size;
+			transact->data_size *= mal->cap.block_size;
 			pbuf = vsf_mal2scsi_prepare_transact(lun, transact->data_size,
 													true, false);
 			if (NULL == pbuf)

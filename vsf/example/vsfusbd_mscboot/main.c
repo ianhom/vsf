@@ -172,8 +172,8 @@ struct vsfapp_t
 
 	.mal.mal.drv							= &memmal_op,
 	.mal.mal.param							= &app,
-	.mal.mal.block_size						= 512,
-	.mal.mal.block_num						= sizeof(app.mal.mal_mem) / 512,
+	.mal.mal.cap.block_size					= 512,
+	.mal.mal.cap.block_num					= sizeof(app.mal.mal_mem) / 512,
 	.mal.pbuffer[0]							= app.mal.buffer[0],
 	.mal.pbuffer[1]							= app.mal.buffer[1],
 

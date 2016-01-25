@@ -23,7 +23,7 @@
 struct vsfmal_capacity_t
 {
 	uint64_t block_size;
-	uint64_t block_number;
+	uint64_t block_num;
 };
 
 enum vsfmal_op_t
@@ -49,19 +49,15 @@ struct vsfmal_drv_t
 
 struct vsfmal_t
 {
-	void const *ifs;
+	struct vsfmal_capacity_t cap;
 	struct vsfmal_drv_t const *drv;
 	void const *cparam;
 	void *param;
-
-	uint32_t block_size;
-	uint32_t block_num;
 
 	// private
 	struct vsfsm_pt_t pt;
 	uint32_t op_block_size;
 	uint32_t offset;
-	struct vsfmal_capacity_t cap;
 };
 
 vsf_err_t vsfmal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
