@@ -367,7 +367,6 @@ struct urb_priv_t
 	uint16_t state;
 	struct td_t *td[TD_MAX_NUM_EACH_UARB];	/* list pointer to all corresponding TDs associated with this request */
 
-	struct vsfusbh_urb_t *vsfurb;
 	void *extra_buf;
 };
 

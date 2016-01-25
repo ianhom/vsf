@@ -68,7 +68,7 @@ static void ed_free(struct ed_t *ed)
 	ed->busy = 0;
 }
 
-static void urb_free_priv(struct urb_priv_t *urb_priv)
+static void urb_free_tds(struct urb_priv_t *urb_priv)
 {
 	uint32_t i;
 	for (i = 0; i < urb_priv->length; i++)
@@ -78,6 +78,12 @@ static void urb_free_priv(struct urb_priv_t *urb_priv)
 			td_free(urb_priv->td[i]);
 		}
 	}
+}
+
+
+static void urb_free_priv(struct urb_priv_t *urb_priv)
+{
+	urb_free_tds(urb_priv);
 	if (urb_priv->extra_buf != NULL)
 		vsf_bufmgr_free(urb_priv->extra_buf);
 	vsf_bufmgr_free(urb_priv);
@@ -426,7 +432,8 @@ static void iso_td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
 {
 	struct td_t *td, *td_pt;
 	uint32_t bufferStart;
-	struct vsfusbh_urb_t *vsfurb = urb_priv->vsfurb;
+	struct vsfusbh_urb_t *vsfurb = container_of(urb_priv, struct vsfusbh_urb_t,
+			urb_priv);
 
 	if (index > urb_priv->length)
 		return;
@@ -462,7 +469,7 @@ static void td_submit_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 {
 	uint32_t data_len, info = 0, toggle = 0, cnt = 0;
 	void *data;
-	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
 	data = vsfurb->transfer_buffer;
 	data_len = vsfurb->transfer_length;
@@ -530,7 +537,7 @@ static void td_submit_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 
 static void dl_transfer_length(struct vsfusbh_urb_t *vsfurb, struct td_t *td)
 {
-	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
 #if USBH_CFG_ENABLE_ISO
 	if (td->is_iso)
@@ -640,7 +647,7 @@ static void dl_del_urb(struct vsfusbh_urb_t *vsfurb)
 
 static void sohci_return_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 {
-	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
 	switch (usb_pipetype(vsfurb->pipe))
 	{
@@ -650,7 +657,7 @@ static void sohci_return_urb(struct ohci_t *ohci, struct vsfusbh_urb_t *vsfurb)
 		break;
 	case PIPE_BULK:
 	case PIPE_CONTROL:
-		urb_free_priv(urb_priv);
+		urb_free_tds(urb_priv);
 		vsfsm_post_evt_pending(vsfurb->sm, VSFSM_EVT_URB_COMPLETE);
 		break;
 	}
@@ -679,7 +686,7 @@ static void dl_done_list(struct ohci_t *ohci)
 		}
 		else
 		{
-			vsfurb = urb_priv->vsfurb;
+			vsfurb = container_of(urb_priv, struct vsfusbh_urb_t, urb_priv);
 
 			dl_transfer_length(vsfurb, td);
 			cc = TD_CC_GET(td->hwINFO);
@@ -969,6 +976,7 @@ vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			(uint32_t)vsfhal_hcd_regbase(usbh->hcd_index));
 	if (err)
 		return err;
+	usbh->priv_urb_length = sizeof(struct urb_priv_t);
 	vsfohci = (struct vsfohci_t *)usbh->hcd_data;
 
 	vsfhal_hcd_init(usbh->hcd_index, vsfohci_interrupt, usbh->hcd_data);
@@ -1056,9 +1064,9 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct ed_t *ed;
 	uint32_t i, pipe, size = 0;
-	struct urb_priv_t *urb_priv;
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
 	pipe = vsfurb->pipe;
 
@@ -1105,9 +1113,6 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	if (size > TD_MAX_NUM_EACH_UARB)
 		return VSFERR_FAIL;
 
-	urb_priv = vsf_bufmgr_malloc(sizeof(struct urb_priv_t));
-	if (urb_priv == NULL)
-		return VSFERR_FAIL;
 	memset(urb_priv, 0, sizeof(struct urb_priv_t));
 
 	for (i = 0; i < size; i++)
@@ -1115,7 +1120,7 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 		urb_priv->td[i] = td_alloc(vsfohci);
 		if (NULL == urb_priv->td[i])
 		{
-			urb_free_priv(urb_priv);
+			urb_free_tds(urb_priv);
 			return VSFERR_FAIL;
 		}
 	}
@@ -1139,9 +1144,6 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	vsfurb->actual_length = 0;
 	vsfurb->status = URB_PENDING;
 
-	vsfurb->urb_priv = urb_priv;
-	urb_priv->vsfurb = vsfurb;
-
 	if (ed->state != ED_OPER)
 		ep_link(ohci, ed);
 
@@ -1149,43 +1151,14 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	return VSFERR_NONE;
 }
 
-/*
-example_1:
-err = vsfohci_unlink_urb (vsfohci, vsfurb, NULL);
-if (err == 0) // app can free all resource now!
-{
-	free(vsfurb->transfer_buffer);
-	free(vsfurb->setup_packet);
-	free(vsfurb);
-	return VSFERR_NONE;
-}
-else
-	err_deal(err);
-
-example_2: // only one pointer can be free by ohci driver
-err = vsfohci_unlink_urb (vsfohci, vsfurb, vsfurb->transfer_buffer);
-if (err == 0) // app can free all resource now!
-{
-	free(vsfurb->transfer_buffer);
-	free(vsfurb);
-	return VSFERR_NONE;
-}
-// ohci driver will free vsfurb->transfer_buffer next frame!
-else if (err == VSFERR_NOT_READY)
-{
-	free(vsfurb);
-	return VSFERR_NONE;
-}
-else
-	err_deal();
-*/
 vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 	void *delay_free_buf)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
-	if (vsfurb == NULL)
+	if (urb_priv == NULL)
 		return VSFERR_INVALID_PARAMETER;
 
 	// rh address check
@@ -1196,29 +1169,23 @@ vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 	{
 		if (ohci->disabled)
 		{
-			urb_free_priv(vsfurb->urb_priv);
-			//if (vsfurb->transfer_flags & USB_ASYNC_UNLINK)
-			//{
-			//	vsfurb->status = URB_FAIL;
-			//}
-			//else
-			//	vsfurb->status = URB_FAIL;
+			urb_priv->extra_buf = delay_free_buf;
 			vsfurb->status = URB_FAIL;
 		}
 		else
 		{
-			if (vsfurb->urb_priv->state == URB_PRIV_DEL)
+			if (urb_priv->state == URB_PRIV_DEL)
 				return VSFERR_NOT_SUPPORT;
 
-			vsfurb->urb_priv->state = URB_PRIV_DEL;
+			urb_priv->state = URB_PRIV_DEL;
 
-			ep_rm_ed(vsfohci, vsfurb->urb_priv->ed);
-			vsfurb->urb_priv->ed->state |= ED_URB_DEL;
+			ep_rm_ed(vsfohci, urb_priv->ed);
+			urb_priv->ed->state |= ED_URB_DEL;
 
 			if (!(vsfurb->transfer_flags & USB_ASYNC_UNLINK))
 			{
-				vsfurb->urb_priv->extra_buf = delay_free_buf;
-				return VSFERR_NOT_READY;
+				urb_priv->extra_buf = delay_free_buf;
+				goto delay_free;
 			}
 			else
 			{
@@ -1227,6 +1194,8 @@ vsf_err_t vsfohci_unlink_urb(void *param, struct vsfusbh_urb_t *vsfurb,
 			}
 		}
 	}
+	urb_free_priv((struct urb_priv_t *)vsfurb->urb_priv);
+delay_free:
 	return VSFERR_NONE;
 }
 
@@ -1235,7 +1204,7 @@ vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
-	struct urb_priv_t *urb_priv = vsfurb->urb_priv;
+	struct urb_priv_t *urb_priv = (struct urb_priv_t *)vsfurb->urb_priv;
 
 	switch (usb_pipetype(vsfurb->pipe))
 	{

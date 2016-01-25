@@ -1,30 +1,13 @@
-/***************************************************************************
- *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
- ***************************************************************************/
 #ifndef __VSFUSBH_H_INCLUDED__
 #define __VSFUSBH_H_INCLUDED__
 
 #include "vsfusbh_cfg.h"
 #include "stack/usb/common/usb_common.h"
 #include "stack/usb/common/usb_ch11.h"
-#include "hcd.h"
+#include "hcd/hcd.h"
 
 #define VSFSM_EVT_URB_COMPLETE	(VSFSM_EVT_USER + 1)
+#define VSFSM_EVT_NEW_DEVICE	(VSFSM_EVT_USER + 2)
 
 #define DEFAULT_TIMEOUT			50	// 50ms
 
@@ -32,7 +15,8 @@ struct vsfusbh_device_t
 {
 	uint8_t devnum;
 	uint8_t devnum_temp;
-	uint16_t speed;		/* full/low/high */
+	uint8_t speed;		/* full/low/high */
+	uint8_t slow;
 
 	struct usb_device_descriptor_t descriptor;
 	struct usb_config_t *config;
@@ -43,15 +27,13 @@ struct vsfusbh_device_t
 
 	uint16_t epmaxpacketin[USB_MAXENDPOINTS];
 	uint16_t epmaxpacketout[USB_MAXENDPOINTS];
-
+	
 	struct vsfusbh_device_t *parent;
 	struct vsfusbh_device_t *children[USB_MAXCHILDREN];
-	uint16_t maxchild;
-	uint16_t portnr;
 
-	uint8_t act_config;
-	uint8_t act_interface;
-	uint8_t alternate_interface;
+	uint8_t num_config;
+	uint8_t maxchild;
+	uint8_t temp_u8;
 
 	// TODO
 	// *deiver[num]
@@ -59,6 +41,31 @@ struct vsfusbh_device_t
 
 	// save priv device pointer
 	void *priv;
+};
+
+#define USB_DEVICE_ID_MATCH_VENDOR		0x0001
+#define USB_DEVICE_ID_MATCH_PRODUCT		0x0002
+#define USB_DEVICE_ID_MATCH_DEV_LO		0x0004
+#define USB_DEVICE_ID_MATCH_DEV_HI		0x0008
+#define USB_DEVICE_ID_MATCH_DEV_CLASS		0x0010
+#define USB_DEVICE_ID_MATCH_DEV_SUBCLASS	0x0020
+#define USB_DEVICE_ID_MATCH_DEV_PROTOCOL	0x0040
+#define USB_DEVICE_ID_MATCH_INT_CLASS		0x0080
+#define USB_DEVICE_ID_MATCH_INT_SUBCLASS	0x0100
+#define USB_DEVICE_ID_MATCH_INT_PROTOCOL	0x0200
+struct vsfusbh_device_id_t
+{
+	uint16_t match_flags;
+	uint16_t idVendor;
+	uint16_t idProduct;
+	uint16_t bcdDevice_lo, bcdDevice_hi;
+	uint8_t bDeviceClass;
+	uint8_t bDeviceSubClass;
+	uint8_t bDeviceProtocol;
+	uint8_t bInterfaceClass;
+	uint8_t bInterfaceSubClass;
+	uint8_t bInterfaceProtocol;
+	//uint32_t driver_info;
 };
 
 struct iso_packet_descriptor_t
@@ -100,8 +107,6 @@ struct iso_packet_descriptor_t
 
 struct vsfusbh_urb_t
 {
-	struct urb_priv_t *urb_priv;	// TODO: void *urb_priv;
-
 	struct vsfusbh_device_t *vsfdev;
 	uint32_t pipe;					/*!< pipe information						*/
 	int32_t status;					/*!< returned status						*/
@@ -125,28 +130,20 @@ struct vsfusbh_urb_t
 	uint32_t timeout;
 	struct vsfsm_t *sm;
 
-	struct sllist list;
-
-	// unused
-	//void *context;				/*!< USB Driver internal used		*/
+	uint32_t urb_priv[1];
 };
 
 struct vsfusbh_t;
 struct vsfusbh_class_drv_t
 {
-	void * (*init)(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev);
-	void(*free)(struct vsfusbh_device_t *dev);
-	vsf_err_t(*match)(struct vsfusbh_device_t *dev);
-};
-
-struct vsfusbh_class_data_t
-{
-	const struct vsfusbh_class_drv_t *drv;
-
-	struct vsfusbh_device_t *dev;
-	void *param;
-
-	struct sllist list;
+	const char *name;
+	const struct vsfusbh_device_id_t *id_table;
+	void * (*probe)(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
+			struct usb_interface_t *interface,
+			const struct vsfusbh_device_id_t *id);
+	void (*disconnect)(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
+			void *priv);
+	vsf_err_t (*ioctl)(struct vsfusbh_device_t *dev, uint32_t code, void *buf);
 };
 
 struct vsfusbh_hcddrv_t
@@ -171,21 +168,23 @@ struct vsfusbh_t
 
 	// private
 	void *hcd_data; // print to 'struct vsfohci_t *vsfohci'
+	uint32_t priv_urb_length;
 	uint32_t device_bitmap[4];
 	struct vsfusbh_device_t *rh_dev;
 	struct vsfusbh_device_t *new_dev;
 	struct sllist drv_list;
-	struct sllist dev_list;
 
 	struct vsfsm_t sm;
 	struct vsfsm_pt_t dev_probe_pt;
 	struct vsfsm_pt_t hcd_init_pt;
 
-	struct vsfusbh_urb_t probe_urb;
+	struct vsfusbh_urb_t *probe_urb;
 };
 
+vsf_err_t vsfusbh_alloc_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb);
+vsf_err_t vsfusbh_free_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb);
+
 vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
-vsf_err_t vsfusbh_unlink_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
 vsf_err_t vsfusbh_relink_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
 
 vsf_err_t vsfusbh_init(struct vsfusbh_t *usbh);
@@ -194,10 +193,12 @@ vsf_err_t vsfusbh_register_driver(struct vsfusbh_t *usbh,
 		const struct vsfusbh_class_drv_t *drv);
 struct vsfusbh_device_t *vsfusbh_alloc_device(struct vsfusbh_t *usbh);
 void vsfusbh_free_device(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev);
+void vsfusbh_remove_intrface(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_interface_t *interface);
 vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev);
-void vsfusbh_remove_device(struct vsfusbh_t *usbh,
-		struct vsfusbh_device_t *dev);
+void vsfusbh_disconnect_device(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t **pdev);
 
 vsf_err_t vsfusbh_control_msg(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb,
 		uint8_t bRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex);
@@ -206,9 +207,16 @@ vsf_err_t vsfusbh_set_address(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb);
 vsf_err_t vsfusbh_get_descriptor(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint8_t type, uint8_t index);
+vsf_err_t vsfusbh_get_class_descriptor(struct vsfusbh_t *usbh,
+		struct vsfusbh_urb_t *vsfurb, uint16_t ifnum, uint8_t type, uint8_t id);
 vsf_err_t vsfusbh_set_configuration(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint8_t configuration);
 vsf_err_t vsfusbh_set_interface(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint16_t interface, uint16_t alternate);
+
+vsf_err_t vsfusbh_get_extra_descriptor(uint8_t *buf, uint16_t size,
+		uint8_t type, void **ptr);
+
+void sllist_append(struct sllist *head, struct sllist *new);
 
 #endif	// __VSFUSBH_H_INCLUDED__
