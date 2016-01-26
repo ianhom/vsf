@@ -19,5 +19,3 @@
 
 // compiler config
 #include "compiler.h"
-
-#define PROJECT_GLOBAL_HEAP_SIZE		(10 * 1024)

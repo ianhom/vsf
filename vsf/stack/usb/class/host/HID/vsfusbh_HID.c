@@ -41,65 +41,91 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 
 	switch (tag)
 	{
-		case HID_ITEM_INPUT:
-			if ((desc->usage_min != -1) && (desc->usage_max != -1))
+	case HID_ITEM_INPUT:
+		if ((desc->usage_min != -1) && (desc->usage_max != -1))
+		{
+			desc->usage_num = desc->usage_max - desc->usage_min + 1;
+			usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+			if (usage == NULL)
+				return VSFERR_FAIL;
+
+			usage->data_flag = (uint32_t)value;
+			usage->report_size = (int32_t)desc->report_size;
+			usage->report_count = (int32_t)desc->report_count;
+
+			usage->usage_page = (uint16_t)desc->usage_page;
+			usage->usage_min = (uint8_t)desc->usage_min;
+			usage->usage_max = (uint8_t)desc->usage_max;
+			usage->bit_offset = (int32_t)hidrpt->input_bitlen;
+			usage->bit_length = (int32_t)(desc->report_size * desc->report_count);
+
+			usage->logical_min = desc->logical_min;
+			usage->logical_max = desc->logical_max;
+
+			sllist_append(&hidrpt->input_list, &usage->list);
+
+			desc->usage_min = -1;
+			desc->usage_max = -1;
+		}
+		else
+		{
+			for (i = 0; i < desc->usage_num; i++)
 			{
-				desc->usage_num = desc->usage_max - desc->usage_min + 1;
 				usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
 				if (usage == NULL)
 					return VSFERR_FAIL;
 
-				usage->data_flag = (uint32_t)value;
 				usage->report_size = (int32_t)desc->report_size;
-				usage->report_count = (int32_t)desc->report_count;
+				usage->report_count = (int32_t)desc->report_count/desc->usage_num;
+				usage->data_flag = (uint32_t)value;
 
 				usage->usage_page = (uint16_t)desc->usage_page;
-				usage->usage_min = (uint8_t)desc->usage_min;
-				usage->usage_max = (uint8_t)desc->usage_max;
-				usage->bit_offset = (int32_t)hidrpt->input_bitlen;
-				usage->bit_length = (int32_t)(desc->report_size * desc->report_count);
+				usage->usage_min = (uint8_t)desc->usages[i];
+				usage->usage_max = (uint8_t)desc->usages[i];
+				usage->bit_length = (int32_t)(desc->report_size * desc->report_count/desc->usage_num);
+				usage->bit_offset = (int32_t)(hidrpt->input_bitlen + i*usage->bit_length);
 
 				usage->logical_min = desc->logical_min;
 				usage->logical_max = desc->logical_max;
 
 				sllist_append(&hidrpt->input_list, &usage->list);
-
-				desc->usage_min = -1;
-				desc->usage_max = -1;
 			}
-			else
+		}
+
+		desc->usage_num = 0;
+		hidrpt->input_bitlen += (desc->report_size * desc->report_count);
+		break;
+
+	case HID_ITEM_OUTPUT:
+		if ((desc->usage_min != -1) && (desc->usage_max != -1))
+		{
+			desc->usage_num = desc->usage_max - desc->usage_min + 1;
+			usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+			if (usage == NULL)
+				return VSFERR_FAIL;
+
+			usage->report_size = desc->report_size;
+			usage->report_count = desc->report_count;
+			usage->data_flag = value;
+
+			usage->usage_page = desc->usage_page;
+			usage->usage_min = desc->usage_min;
+			usage->usage_max = desc->usage_max;
+			usage->bit_offset = hidrpt->output_bitlen;
+			usage->bit_length = desc->report_size * desc->report_count;
+
+			usage->logical_min = desc->logical_min;
+			usage->logical_max = desc->logical_max;
+
+			sllist_append(&hidrpt->output_list, &usage->list);
+
+			desc->usage_min = -1;
+			desc->usage_max = -1;
+		}
+		else
+		{
+			for (i = 0; i < desc->usage_num; i++)
 			{
-				for (i = 0; i < desc->usage_num; i++)
-				{
-					usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
-					if (usage == NULL)
-						return VSFERR_FAIL;
-
-					usage->report_size = (int32_t)desc->report_size;
-					usage->report_count = (int32_t)desc->report_count/desc->usage_num;
-					usage->data_flag = (uint32_t)value;
-
-					usage->usage_page = (uint16_t)desc->usage_page;
-					usage->usage_min = (uint8_t)desc->usages[i];
-					usage->usage_max = (uint8_t)desc->usages[i];
-					usage->bit_length = (int32_t)(desc->report_size * desc->report_count/desc->usage_num);
-					usage->bit_offset = (int32_t)(hidrpt->input_bitlen + i*usage->bit_length);
-
-					usage->logical_min = desc->logical_min;
-					usage->logical_max = desc->logical_max;
-
-					sllist_append(&hidrpt->input_list, &usage->list);
-				}
-			}
-
-			desc->usage_num = 0;
-			hidrpt->input_bitlen += (desc->report_size * desc->report_count);
-			break;
-
-		case HID_ITEM_OUTPUT:
-			if ((desc->usage_min != -1) && (desc->usage_max != -1))
-			{
-				desc->usage_num = desc->usage_max - desc->usage_min + 1;
 				usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
 				if (usage == NULL)
 					return VSFERR_FAIL;
@@ -107,137 +133,111 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 				usage->report_size = desc->report_size;
 				usage->report_count = desc->report_count;
 				usage->data_flag = value;
+				value = desc->report_size * desc->report_count/desc->usage_num;
 
 				usage->usage_page = desc->usage_page;
-				usage->usage_min = desc->usage_min;
-				usage->usage_max = desc->usage_max;
-				usage->bit_offset = hidrpt->output_bitlen;
-				usage->bit_length = desc->report_size * desc->report_count;
+				usage->usage_min = desc->usages[i];
+				usage->usage_max = desc->usages[i];
+				usage->bit_offset = hidrpt->output_bitlen + i*value;
+				usage->bit_length = value;
 
 				usage->logical_min = desc->logical_min;
 				usage->logical_max = desc->logical_max;
 
 				sllist_append(&hidrpt->output_list, &usage->list);
-
-				desc->usage_min = -1;
-				desc->usage_max = -1;
 			}
-			else
-			{
-				for (i = 0; i < desc->usage_num; i++)
-				{
-					usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
-					if (usage == NULL)
-						return VSFERR_FAIL;
+		}
 
-					usage->report_size = desc->report_size;
-					usage->report_count = desc->report_count;
-					usage->data_flag = value;
-					value = desc->report_size * desc->report_count/desc->usage_num;
+		desc->usage_num = 0;
+		hidrpt->output_bitlen += (desc->report_size * desc->report_count);
+		break;
 
-					usage->usage_page = desc->usage_page;
-					usage->usage_min = desc->usages[i];
-					usage->usage_max = desc->usages[i];
-					usage->bit_offset = hidrpt->output_bitlen + i*value;
-					usage->bit_length = value;
+	case HID_ITEM_FEATURE:
+		break;
 
-					usage->logical_min = desc->logical_min;
-					usage->logical_max = desc->logical_max;
+	case HID_ITEM_COLLECTION:
+		desc->collection++;
+		desc->usage_num = 0;
+		break;
 
-					sllist_append(&hidrpt->output_list, &usage->list);
-				}
-			}
+	case HID_ITEM_END_COLLECTION:
+		desc->collection--;
+		break;
 
-			desc->usage_num = 0;
-			hidrpt->output_bitlen += (desc->report_size * desc->report_count);
-			break;
+	case HID_ITEM_USAGE_PAGE:
+		desc->usage_page = value;
+		break;
 
-		case HID_ITEM_FEATURE:
-			break;
+	case HID_ITEM_LOGI_MINI:
+		if (size == 1)
+			value = *(int8_t *)buf;
+		else if (size == 2)
+			value = *(int16_t *)buf;
+		else if (size == 4)
+			value = *(int32_t *)buf;
+		desc->logical_min = value;
+		break;
 
-		case HID_ITEM_COLLECTION:
-			desc->collection++;
-			desc->usage_num = 0;
-			break;
+	case HID_ITEM_LOGI_MAXI:
+		if (size == 1)
+			value = *(int8_t *)buf;
+		else if (size == 2)
+			value = *(int16_t *)buf;
+		else if (size == 4)
+			value = *(int32_t *)buf;
+		desc->logical_max = value;
+		break;
 
-		case HID_ITEM_END_COLLECTION:
-			desc->collection--;
-			break;
+	case HID_ITEM_PHY_MINI:
+		break;
 
-		case HID_ITEM_USAGE_PAGE:
-			desc->usage_page = value;
-			break;
+	case HID_ITEM_PHY_MAXI:
+		break;
 
-		case HID_ITEM_LOGI_MINI:
-			if (size == 1)
-				value = *(int8_t *)buf;
-			else if (size == 2)
-				value = *(int16_t *)buf;
-			else if (size == 4)
-				value = *(int32_t *)buf;
-			desc->logical_min = value;
-			break;
+	case HID_ITEM_UNIT_EXPT:
+		break;
 
-		case HID_ITEM_LOGI_MAXI:
-			if (size == 1)
-				value = *(int8_t *)buf;
-			else if (size == 2)
-				value = *(int16_t *)buf;
-			else if (size == 4)
-				value = *(int32_t *)buf;
-			desc->logical_max = value;
-			break;
+	case HID_ITEM_UNIT:
+		break;
 
-		case HID_ITEM_PHY_MINI:
-			break;
+	case HID_ITEM_REPORT_SIZE:
+		desc->report_size = value;
+		break;
 
-		case HID_ITEM_PHY_MAXI:
-			break;
+	case HID_ITEM_REPORT_ID:
+		if (hidrpt->need_setreport_flag == 0)
+		{
+			hidrpt->need_setreport_flag = 1;
+			hidrpt->input_bitlen += 8;
+		}
+		else
+		{
+			desc->collection = 0;
+			hidrpt->need_ignore = 1;
+		}
+		break;
 
-		case HID_ITEM_UNIT_EXPT:
-			break;
+	case HID_ITEM_REPORT_COUNT:
+		desc->report_count = value;
+		break;
 
-		case HID_ITEM_UNIT:
-			break;
+	case HID_ITEM_PUSH:
+		break;
 
-		case HID_ITEM_REPORT_SIZE:
-			desc->report_size = value;
-			break;
+	case HID_ITEM_POP:
+		break;
 
-		case HID_ITEM_REPORT_ID:
-			if (hidrpt->need_setreport_flag == 0)
-			{
-				hidrpt->need_setreport_flag = 1;
-				hidrpt->input_bitlen += 8;
-			}
-			else
-			{
-				desc->collection = 0;
-				hidrpt->need_ignore = 1;
-			}
-			break;
+	case HID_ITEM_USAGE:
+		desc->usages[desc->usage_num++] = value;
+		break;
 
-		case HID_ITEM_REPORT_COUNT:
-			desc->report_count = value;
-			break;
+	case HID_ITEM_USAGE_MAX:
+		desc->usage_max = value;
+		break;
 
-		case HID_ITEM_PUSH:
-			break;
-
-		case HID_ITEM_POP:
-			break;
-
-		case HID_ITEM_USAGE:
-			desc->usages[desc->usage_num++] = value;
-			break;
-
-		case HID_ITEM_USAGE_MAX:
-			desc->usage_max = value;
-			break;
-
-		case HID_ITEM_USAGE_MIN:
-			desc->usage_min = value;
-			break;
+	case HID_ITEM_USAGE_MIN:
+		desc->usage_min = value;
+		break;
 	}
 
 	return VSFERR_NONE;
@@ -449,9 +449,9 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 				{
 					event.type |= HID_VALUE_TYPE_REL;
 				}
-				
-				usbh_hid_event(&event);
-				
+
+				//usbh_hid_event(&event);
+
 				j++;
 			}
 		}
@@ -460,7 +460,7 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 
 	if (j)
 	{
-		usbh_hid_event_end();
+		//usbh_hid_event_end();
 	}
 }
 
@@ -473,7 +473,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfusbh_urb_t *inturb = hid->inturb;
 
 	vsfsm_pt_begin(pt);
-	
+
 	ctrlurb->sm = &hid->sm;
 	inturb->sm = &hid->sm;
 
@@ -497,16 +497,16 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			ctrlurb->transfer_length);
 	if (err != VSFERR_NONE)
 		goto ctrlurb_fail;
-		
+
 	vsf_bufmgr_free(ctrlurb->transfer_buffer);
 	ctrlurb->transfer_buffer = NULL;
-	
+
 	// unknown set report
 	if (hid->hid_report.need_setreport_flag)
 	{
 		// TODO
 	}
-	
+
 	// submit urb
 	inturb->pipe = usb_rcvintpipe(inturb->vsfdev, hid->intf_desc->ep_desc->bEndpointAddress & 0x7f);
 	inturb->interval = 0;
@@ -514,14 +514,14 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	inturb->transfer_buffer = hid->hid_report.cur_value;
 	if (inturb->transfer_buffer == NULL)
 		return VSFERR_FAIL;
-	
+
 	err = vsfusbh_submit_urb(hid->usbh, inturb);
 	if (err != VSFERR_NONE)
 		return VSFERR_FAIL;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (inturb->status != URB_OK)
 		return VSFERR_FAIL;
-	
+
 	// poll
 	while(1)
 	{
@@ -530,7 +530,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			return VSFERR_FAIL;
 
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-		
+
 		if (inturb->status == URB_OK)
 		{
 			usbh_hid_process_input(&hid->hid_report);
@@ -538,7 +538,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 					hid->hid_report.input_bitlen >> 3);
 		}
 	}
-	
+
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
@@ -580,21 +580,21 @@ static struct vsfsm_state_t *vsfusbh_hid_evt_handler_init(struct vsfsm_t *sm,
 }
 
 void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
-			struct usb_interface_t *interface,
-			const struct vsfusbh_device_id_t *id)
+		struct usb_interface_t *interface,
+		const struct vsfusbh_device_id_t *id)
 {
 	struct usb_interface_desc_t *intf_desc = interface->altsetting +
-			interface->act_altsetting;
+				interface->act_altsetting;
 	struct vsfusbh_hid_t *hid;
 	struct hid_descriptor_t *hid_desc;
 
 	if ((vsfusbh_get_extra_descriptor((uint8_t *)intf_desc->extra,
 			intf_desc->extralen, USB_DT_HID, (void **)&hid_desc) !=
 			VSFERR_NONE) &&
-		((!intf_desc->bNumEndpoints) ||
-		 	vsfusbh_get_extra_descriptor((uint8_t *)intf_desc->ep_desc[0].extra,
-					intf_desc->ep_desc[0].extralen, USB_DT_HID,
-					(void **)&hid_desc) !=
+			((!intf_desc->bNumEndpoints) ||
+					vsfusbh_get_extra_descriptor((uint8_t *)intf_desc->ep_desc[0].extra,
+							intf_desc->ep_desc[0].extralen, USB_DT_HID,
+							(void **)&hid_desc) !=
 					VSFERR_NONE))
 	{
 		return NULL;
@@ -605,18 +605,20 @@ void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
 		return NULL;
 	memset(hid, 0, sizeof(struct vsfusbh_hid_t));
 
-	if (vsfusbh_alloc_urb(usbh, &hid->ctrlurb) != VSFERR_NONE)
+	hid->ctrlurb = usbh->hcd->alloc_urb();
+	if (hid->ctrlurb == NULL)
 	{
 		vsf_bufmgr_free(hid);
 		return NULL;
 	}
-	if (vsfusbh_alloc_urb(usbh, &hid->inturb) != VSFERR_NONE)
+	hid->inturb = usbh->hcd->alloc_urb();
+	if (hid->inturb == NULL)
 	{
-		vsfusbh_free_urb(usbh, &hid->ctrlurb);
+		usbh->hcd->free_urb(usbh->hcd_data, &hid->inturb);
 		vsf_bufmgr_free(hid);
 		return NULL;
 	}
-	
+
 	hid->usbh = usbh;
 	hid->dev = dev;
 	hid->interface = interface;
@@ -633,20 +635,20 @@ void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
 	return hid;
 }
 
-void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh, 
+void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_hid_t *hid = priv;
 	if (hid == NULL)
 		return;
-	
+
 	vsfsm_fini(&hid->sm);
-	
+
 	if (hid->ctrlurb != NULL)
-		vsfusbh_free_urb(usbh, &hid->ctrlurb);
+		usbh->hcd->free_urb(usbh->hcd_data, &hid->ctrlurb);
 	if (hid->inturb != NULL)
-		vsfusbh_free_urb(usbh, &hid->inturb);
-	
+		usbh->hcd->free_urb(usbh->hcd_data, &hid->inturb);
+
 	usbh_hid_free_report(&hid->hid_report);
 
 	vsf_bufmgr_free(hid);

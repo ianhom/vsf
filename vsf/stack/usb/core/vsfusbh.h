@@ -154,9 +154,9 @@ struct vsfusbh_hcddrv_t
 	vsf_err_t (*resume)(void* param);
 	vsf_err_t (*alloc_device)(void *param, struct vsfusbh_device_t *dev);
 	vsf_err_t (*free_device)(void *param, struct vsfusbh_device_t *dev);
+	struct vsfusbh_urb_t * (*alloc_urb)(void);
+	vsf_err_t (*free_urb)(void *param, struct vsfusbh_urb_t **vsfurbp);
 	vsf_err_t (*submit_urb)(void *param, struct vsfusbh_urb_t *vsfurb);
-	vsf_err_t (*unlink_urb)(void *param, struct vsfusbh_urb_t *vsfurb,
-			void *delay_free_buf);
 	vsf_err_t (*relink_urb)(void *param, struct vsfusbh_urb_t *vsfurb);
 	vsf_err_t (*rh_control)(void *param, struct vsfusbh_urb_t *vsfurb);
 };
@@ -168,7 +168,6 @@ struct vsfusbh_t
 
 	// private
 	void *hcd_data; // print to 'struct vsfohci_t *vsfohci'
-	uint32_t priv_urb_length;
 	uint32_t device_bitmap[4];
 	struct vsfusbh_device_t *rh_dev;
 	struct vsfusbh_device_t *new_dev;
@@ -180,9 +179,6 @@ struct vsfusbh_t
 
 	struct vsfusbh_urb_t *probe_urb;
 };
-
-vsf_err_t vsfusbh_alloc_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb);
-vsf_err_t vsfusbh_free_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb);
 
 vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
 vsf_err_t vsfusbh_relink_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);

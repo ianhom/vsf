@@ -173,9 +173,8 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 };
 
 #define URB_OK				VSFERR_NONE
-#define URB_PENDING			VSFERR_NOT_READY
 #define URB_FAIL			VSFERR_FAIL
-#define URB_XDEV			VSFERR_NOT_AVAILABLE
+#define URB_PENDING			VSFERR_NOT_READY
 
 
 /* ----------------------------------------------------------------------- */

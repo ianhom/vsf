@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#define USB_MAX_DEVICE				127
+
 void sllist_append(struct sllist *head, struct sllist *new)
 {
 	struct sllist *next;
@@ -30,6 +32,7 @@ void sllist_append(struct sllist *head, struct sllist *new)
 	next->next = new;
 	new->next = NULL;
 }
+
 void sllist_delete_next(struct sllist *head)
 {
 	struct sllist *next;
@@ -41,27 +44,6 @@ void sllist_delete_next(struct sllist *head)
 	else
 		head->next = NULL;
 }
-
-
-#define USB_MAX_DEVICE				127
-
-#define vsfusbh_check_ret_value()	\
-	do {\
-		if (err != VSFERR_NONE)\
-		{\
-			vsfusbh_free_buffer(usbh);\
-			return err;\
-		}\
-	} while (0)
-
-#define vsfusbh_check_urb_status()	\
-	do {\
-		if (dev->status != VSFERR_NONE)\
-		{\
-			vsfusbh_free_buffer(usbh);\
-			return usbh->vsfurb.status;\
-		}\
-	} while (0)
 
 struct vsfusbh_class_drv_list
 {
@@ -151,39 +133,39 @@ static const struct vsfusbh_device_id_t *vsfusbh_match_id(
 	for (; id->idVendor || id->bDeviceClass || id->bInterfaceClass; id++)
 	{
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_VENDOR) &&
-		    id->idVendor != dev->descriptor.idVendor)
+				id->idVendor != dev->descriptor.idVendor)
 			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_PRODUCT) &&
-		    id->idProduct != dev->descriptor.idProduct)
+				id->idProduct != dev->descriptor.idProduct)
 			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_LO) &&
-		    (id->bcdDevice_lo > dev->descriptor.bcdDevice))
+				(id->bcdDevice_lo > dev->descriptor.bcdDevice))
 			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_HI) &&
-		    (id->bcdDevice_hi < dev->descriptor.bcdDevice))
+				(id->bcdDevice_hi < dev->descriptor.bcdDevice))
 			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_CLASS) &&
-		    (id->bDeviceClass != dev->descriptor.bDeviceClass))
+				(id->bDeviceClass != dev->descriptor.bDeviceClass))
 			continue;
 
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_SUBCLASS) &&
-		    (id->bDeviceSubClass!= dev->descriptor.bDeviceSubClass))
+				(id->bDeviceSubClass!= dev->descriptor.bDeviceSubClass))
 			continue;
 
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_PROTOCOL) &&
-		    (id->bDeviceProtocol != dev->descriptor.bDeviceProtocol))
+				(id->bDeviceProtocol != dev->descriptor.bDeviceProtocol))
 			continue;
 
 		intf = &iface->altsetting[iface->act_altsetting];
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_INT_CLASS) &&
-		    (id->bInterfaceClass != intf->bInterfaceClass))
+				(id->bInterfaceClass != intf->bInterfaceClass))
 			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_INT_SUBCLASS) &&
-		    (id->bInterfaceSubClass != intf->bInterfaceSubClass))
-		    continue;
+				(id->bInterfaceSubClass != intf->bInterfaceSubClass))
+			continue;
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_INT_PROTOCOL) &&
-		    (id->bInterfaceProtocol != intf->bInterfaceProtocol))
-		    continue;
+				(id->bInterfaceProtocol != intf->bInterfaceProtocol))
+			continue;
 		return id;
 	}
 	return NULL;
@@ -283,7 +265,7 @@ vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 			if (dev->config[i].interface != NULL)
 			{
 				struct usb_interface_desc_t *altsetting =
-						dev->config[i].interface->altsetting;
+							dev->config[i].interface->altsetting;
 				if (altsetting != NULL)
 				{
 					for (j = 0; j < dev->config[i].interface->num_altsetting;
@@ -307,7 +289,7 @@ vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 		}
 	}
 
-	
+
 #if 0
 	if (rejected); // unhandled interfaces on device
 #endif
@@ -352,7 +334,8 @@ void vsfusbh_disconnect_device(struct vsfusbh_t *usbh,
 #define KERNEL_VER	0
 
 /* usb 2.0 root hub device descriptor */
-static const uint8_t usb2_rh_dev_descriptor[18] = {
+static const uint8_t usb2_rh_dev_descriptor[18] =
+{
 	0x12,       /*  __u8  bLength; */
 	0x01,       /*  __u8  bDescriptorType; Device */
 	0x00, 0x02, /*  __le16 bcdUSB; v2.0 */
@@ -375,7 +358,8 @@ static const uint8_t usb2_rh_dev_descriptor[18] = {
 /* no usb 2.0 root hub "device qualifier" descriptor: one speed only */
 
 /* usb 1.1 root hub device descriptor */
-static const uint8_t usb11_rh_dev_descriptor[18] = {
+static const uint8_t usb11_rh_dev_descriptor[18] =
+{
 	0x12,       /*  __u8  bLength; */
 	0x01,       /*  __u8  bDescriptorType; Device */
 	0x10, 0x01, /*  __le16 bcdUSB; v1.1 */
@@ -395,7 +379,8 @@ static const uint8_t usb11_rh_dev_descriptor[18] = {
 	0x01        /*  __u8  bNumConfigurations; */
 };
 
-static const uint8_t fs_rh_config_descriptor[] = {
+static const uint8_t fs_rh_config_descriptor[] =
+{
 
 	/* one configuration */
 	0x09,       /*  __u8  bLength; */
@@ -442,7 +427,8 @@ static const uint8_t fs_rh_config_descriptor[] = {
 	0xff        /*  __u8  ep_bInterval; (255ms -- usb 2.0 spec) */
 };
 
-static const uint8_t hs_rh_config_descriptor[] = {
+static const uint8_t hs_rh_config_descriptor[] =
+{
 
 	/* one configuration */
 	0x09,       /*  __u8  bLength; */
@@ -485,8 +471,8 @@ static const uint8_t hs_rh_config_descriptor[] = {
 	0x05,       /*  __u8  ep_bDescriptorType; Endpoint */
 	0x81,       /*  __u8  ep_bEndpointAddress; IN Endpoint 1 */
 	0x03,       /*  __u8  ep_bmAttributes; Interrupt */
-		    /* __le16 ep_wMaxPacketSize; 1 + (MAX_ROOT_PORTS / 8)
-		     * see hub.c:hub_configure() for details. */
+	/* __le16 ep_wMaxPacketSize; 1 + (MAX_ROOT_PORTS / 8)
+	 * see hub.c:hub_configure() for details. */
 	(USB_MAXCHILDREN + 1 + 7) / 8, 0x00,
 	0x0c        /*  __u8  ep_bInterval; (256ms -- usb 2.0 spec) */
 };
@@ -562,7 +548,8 @@ static vsf_err_t vsfusbh_rh_submit_urb(struct vsfusbh_t *usbh,
 				memcpy (data, fs_rh_config_descriptor, len);
 				break;
 			case USB_SPEED_HIGH:
-			case USB_SPEED_VARIABLE:\
+			case USB_SPEED_VARIABLE:
+				\
 				len = sizeof(hs_rh_config_descriptor);
 				memcpy (data, hs_rh_config_descriptor, len);
 				break;
@@ -617,30 +604,6 @@ error:
 	return VSFERR_FAIL;
 }
 
-vsf_err_t vsfusbh_alloc_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb)
-{
-	uint32_t size = sizeof(struct vsfusbh_urb_t) - 4 + usbh->priv_urb_length;
-	*urb = vsf_bufmgr_malloc(size);
-	if (*urb == NULL)
-		return VSFERR_FAIL;
-	memset(*urb, 0, size);
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfusbh_free_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t **urb)
-{
-	vsf_err_t err;
-	if (*urb != NULL)
-	{
-		if (((*urb)->status == URB_PENDING) || ((*urb)->status == URB_FAIL))
-			err = usbh->hcd->unlink_urb(usbh->hcd_data, *urb,
-					(*urb)->transfer_buffer);
-		*urb = NULL;
-		return err;
-	}
-	return VSFERR_NONE;
-}
-
 vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb)
 {
 	if (usb_pipein(vsfurb->pipe))
@@ -682,7 +645,7 @@ static void vsfusbh_set_maxpacket_ep(struct vsfusbh_device_t *dev)
 	{
 		struct usb_interface_t *intf = dev->actconfig->interface + i;
 		struct usb_interface_desc_t *intf_desc = intf->altsetting +
-				intf->act_altsetting;
+					intf->act_altsetting;
 		struct usb_endpoint_desc_t *ep_desc = intf_desc->ep_desc;
 		int e;
 
@@ -690,7 +653,7 @@ static void vsfusbh_set_maxpacket_ep(struct vsfusbh_device_t *dev)
 		{
 			b = ep_desc[e].bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
 			if ((ep_desc[e].bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) ==
-				USB_ENDPOINT_XFER_CONTROL)
+					USB_ENDPOINT_XFER_CONTROL)
 			{
 				dev->epmaxpacketout[b] = ep_desc[e].wMaxPacketSize;
 				dev->epmaxpacketin[b] = ep_desc[e].wMaxPacketSize;
@@ -715,14 +678,14 @@ vsf_err_t vsfusbh_set_address(struct vsfusbh_t *usbh,
 {
 	vsfurb->pipe = usb_snddefctrl(vsfurb->vsfdev);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_OUT, USB_REQ_SET_ADDRESS,
-		vsfurb->vsfdev->devnum, 0);
+			vsfurb->vsfdev->devnum, 0);
 }
 vsf_err_t vsfusbh_get_descriptor(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint8_t type, uint8_t index)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-		(type << 8) + index, index);
+			(type << 8) + index, index);
 }
 vsf_err_t vsfusbh_get_class_descriptor(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint16_t ifnum, uint8_t type, uint8_t id)
@@ -736,19 +699,19 @@ vsf_err_t vsfusbh_set_configuration(struct vsfusbh_t *usbh,
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_OUT,
-		USB_REQ_SET_CONFIGURATION, configuration, 0);
+			USB_REQ_SET_CONFIGURATION, configuration, 0);
 }
 vsf_err_t vsfusbh_set_interface(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint16_t interface, uint16_t alternate)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RECIP_INTERFACE,
-		USB_REQ_SET_INTERFACE, alternate, interface);
+			USB_REQ_SET_INTERFACE, alternate, interface);
 }
 
 
 static int parse_endpoint(struct usb_endpoint_desc_t *endpoint,
-	unsigned char *buffer, int size)
+		unsigned char *buffer, int size)
 {
 	struct usb_descriptor_header_t *header;
 	int parsed = 0, len, numskipped;
@@ -792,9 +755,9 @@ static int parse_endpoint(struct usb_endpoint_desc_t *endpoint,
 
 		/* If we find another "proper" descriptor then we're done */
 		if ((header->bDescriptorType == USB_DT_ENDPOINT) ||
-			(header->bDescriptorType == USB_DT_INTERFACE) ||
-			(header->bDescriptorType == USB_DT_CONFIG) ||
-			(header->bDescriptorType == USB_DT_DEVICE))
+				(header->bDescriptorType == USB_DT_INTERFACE) ||
+				(header->bDescriptorType == USB_DT_CONFIG) ||
+				(header->bDescriptorType == USB_DT_DEVICE))
 			break;
 
 		numskipped++;
@@ -855,7 +818,7 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 			ptr = interface->altsetting;
 			interface->altsetting = vsf_bufmgr_malloc\
 					(sizeof(struct usb_interface_desc_t) *
-					interface->max_altsetting);
+							interface->max_altsetting);
 			if (!interface->altsetting)
 			{
 				interface->altsetting = ptr;
@@ -891,9 +854,9 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 
 			/* If we find another "proper" descriptor then we're done */
 			if ((header->bDescriptorType == USB_DT_INTERFACE) ||
-				(header->bDescriptorType == USB_DT_ENDPOINT) ||
-				(header->bDescriptorType == USB_DT_CONFIG) ||
-				(header->bDescriptorType == USB_DT_DEVICE))
+					(header->bDescriptorType == USB_DT_ENDPOINT) ||
+					(header->bDescriptorType == USB_DT_CONFIG) ||
+					(header->bDescriptorType == USB_DT_DEVICE))
 				break;
 
 			numskipped++;
@@ -918,8 +881,8 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 		/* Did we hit an unexpected descriptor? */
 		header = (struct usb_descriptor_header_t *)buffer;
 		if ((size >= sizeof(struct usb_descriptor_header_t)) &&
-			((header->bDescriptorType == USB_DT_CONFIG) ||
-			(header->bDescriptorType == USB_DT_DEVICE)))
+				((header->bDescriptorType == USB_DT_CONFIG) ||
+						(header->bDescriptorType == USB_DT_DEVICE)))
 			return parsed;
 
 		if (ifp->bNumEndpoints > USB_MAXENDPOINTS)
@@ -961,8 +924,8 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 		/* We check to see if it's an alternate to this one */
 		ifp = (struct usb_interface_desc_t *)buffer;
 		if (size < USB_DT_INTERFACE_SIZE ||
-			ifp->bDescriptorType != USB_DT_INTERFACE ||
-			!ifp->bAlternateSetting)
+				ifp->bDescriptorType != USB_DT_INTERFACE ||
+				!ifp->bAlternateSetting)
 			return parsed;
 	}
 
@@ -982,11 +945,11 @@ static vsf_err_t parse_configuration(struct usb_config_t *config,
 		return VSFERR_FAIL;
 
 	config->interface = vsf_bufmgr_malloc(sizeof(struct usb_interface_t) *
-		config->bNumInterfaces);
+			config->bNumInterfaces);
 	if (config->interface == NULL)
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	memset(config->interface, 0, sizeof(struct usb_interface_t) *
-		config->bNumInterfaces);
+			config->bNumInterfaces);
 
 	buffer += config->bLength;
 	size -= config->bLength;
@@ -1015,9 +978,9 @@ static vsf_err_t parse_configuration(struct usb_config_t *config,
 
 			/* If we find another "proper" descriptor then we're done */
 			if ((header->bDescriptorType == USB_DT_ENDPOINT) ||
-				(header->bDescriptorType == USB_DT_INTERFACE) ||
-				(header->bDescriptorType == USB_DT_CONFIG) ||
-				(header->bDescriptorType == USB_DT_DEVICE))
+					(header->bDescriptorType == USB_DT_INTERFACE) ||
+					(header->bDescriptorType == USB_DT_CONFIG) ||
+					(header->bDescriptorType == USB_DT_DEVICE))
 				break;
 
 			numskipped++;
@@ -1026,21 +989,21 @@ static vsf_err_t parse_configuration(struct usb_config_t *config,
 			size -= header->bLength;
 		}
 
-/*
-		len = (int32_t)(buffer - begin);
-		if (len)
-		{
-			if (config->extralen == 0)
-			{
-				// info
-			}
-			else
-			{
-				config->extra = begin;
-				config->extralen = len;
-			}
-		}
-*/
+		/*
+				len = (int32_t)(buffer - begin);
+				if (len)
+				{
+					if (config->extralen == 0)
+					{
+						// info
+					}
+					else
+					{
+						config->extra = begin;
+						config->extralen = len;
+					}
+				}
+		*/
 
 		retval = parse_interface(config->interface + i, buffer, size);
 		if (retval < 0)
@@ -1227,7 +1190,7 @@ static struct vsfsm_state_t *vsfusbh_probe_evt_handler(struct vsfsm_t *sm,
 }
 
 static struct vsfsm_state_t *vsfusbh_init_evt_handler(struct vsfsm_t *sm,
-	vsfsm_evt_t evt)
+		vsfsm_evt_t evt)
 {
 	vsf_err_t err;
 	struct vsfusbh_t *usbh = (struct vsfusbh_t *)sm->user_data;
@@ -1248,12 +1211,13 @@ static struct vsfsm_state_t *vsfusbh_init_evt_handler(struct vsfsm_t *sm,
 		if (VSFERR_NONE == err)
 		{
 			// alloc probe urb
-			if (vsfusbh_alloc_urb(usbh, &usbh->probe_urb) != VSFERR_NONE)
+			usbh->probe_urb = usbh->hcd->alloc_urb();
+			if (usbh->probe_urb == NULL)
 			{
 				// error
 				usbh->hcd_init_pt.thread = NULL;
 			}
-			
+
 			sm->init_state.evt_handler = vsfusbh_probe_evt_handler;
 			usbh->rh_dev = vsfusbh_alloc_device(usbh);
 			if (NULL == usbh->rh_dev)
@@ -1304,12 +1268,12 @@ vsf_err_t vsfusbh_fini(struct vsfusbh_t *usbh)
 }
 
 vsf_err_t vsfusbh_register_driver(struct vsfusbh_t *usbh,
-	const struct vsfusbh_class_drv_t *drv)
+		const struct vsfusbh_class_drv_t *drv)
 {
 	struct vsfusbh_class_drv_list *drv_list;
 
 	drv_list = (struct vsfusbh_class_drv_list *)\
-		vsf_bufmgr_malloc(sizeof(struct vsfusbh_class_drv_list));
+			vsf_bufmgr_malloc(sizeof(struct vsfusbh_class_drv_list));
 	if (drv_list == NULL)
 	{
 		return VSFERR_FAIL;

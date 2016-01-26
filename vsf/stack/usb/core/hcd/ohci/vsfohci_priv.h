@@ -257,7 +257,8 @@ struct ohci_regs_t
 	uint32_t periodicstart;
 	uint32_t lsthresh;
 	/* Root hub ports */
-	struct ohci_roothub_regs {
+	struct ohci_roothub_regs
+	{
 		uint32_t a;
 		uint32_t b;
 		uint32_t status;
@@ -284,7 +285,7 @@ struct ed_t
 
 #if USBH_CFG_ENABLE_ISO
 	uint16_t last_iso;
-	uint16_t dummy[7];	
+	uint16_t dummy[7];
 #endif // USBH_CFG_ENABLE_ISO
 
 	struct ed_t *prev;

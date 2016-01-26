@@ -21,6 +21,7 @@
 #define __BUFFER_H_INCLUDED__
 
 #include "app_type.h"
+#include "vsf_cfg.h"
 #include "component/list/list.h"
 
 // queue
@@ -91,9 +92,19 @@ vsf_err_t vsf_multibuf_pop(struct vsf_multibuf_t *mbuffer);
 
 // buffer_manager
 void vsf_bufmgr_init(uint8_t *buf, uint32_t size);
-void* vsf_bufmgr_malloc(uint32_t size);
+
+#ifdef VSFCFG_BUFMGR_LOG
+void* vsf_bufmgr_malloc_aligned_do(uint32_t size, uint32_t align,
+		const char *format, ...);
+void vsf_bufmgr_free_do(void *ptr, const char *format, ...);
+#define vsf_bufmgr_malloc(s)			vsf_bufmgr_malloc_aligned_do(s, 4, "%s:%d", __FUNCTION__, __LINE__)
+#define vsf_bufmgr_malloc_aligned(s, a)	vsf_bufmgr_malloc_aligned_do(s, a, "%s:%d", __FUNCTION__, __LINE__)
+#define vsf_bufmgr_free(p)				vsf_bufmgr_free_do(p, "%s:%d", __FUNCTION__, __LINE__)
+#else
 void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align);
 void vsf_bufmgr_free(void *ptr);
+#define vsf_bufmgr_malloc(s) 			vsf_bufmgr_malloc_aligned(s, 4)
+#endif // VSFCFG_BUFMGR_LOG
 
 // pool
 struct vsfpool_t

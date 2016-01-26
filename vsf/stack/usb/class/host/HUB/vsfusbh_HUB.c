@@ -46,28 +46,28 @@ static vsf_err_t hub_set_port_feature(struct vsfusbh_t *usbh,
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_SET_FEATURE,
-		feature, port);
+			feature, port);
 }
 static vsf_err_t hub_get_port_status(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint16_t port)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_PORT,
-		USB_REQ_GET_STATUS, 0, port);
+			USB_REQ_GET_STATUS, 0, port);
 }
 static vsf_err_t hub_clear_port_feature(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, int port, int feature)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_CLEAR_FEATURE,
-		feature, port);
+			feature, port);
 }
 static vsf_err_t hub_get_status(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
-		USB_REQ_GET_STATUS, 0, 0);
+			USB_REQ_GET_STATUS, 0, 0);
 }
 
 
@@ -96,7 +96,7 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 		/* delay 100ms after port reset*/
 		vsfsm_pt_delay(pt, 100);
-		
+
 		// clear reset
 		vsfurb->transfer_buffer = NULL;
 		vsfurb->transfer_length = 0;
@@ -107,10 +107,10 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 		if (vsfurb->status != URB_OK)
 			return VSFERR_FAIL;
-		
+
 		/* delay 100ms after port reset*/
 		vsfsm_pt_delay(pt, 50);
-		
+
 		/* get port status for check */
 		vsfurb->transfer_buffer = &hub->hub_portsts;
 		vsfurb->transfer_length = sizeof(hub->hub_portsts);
@@ -151,7 +151,7 @@ static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfurb->transfer_buffer = NULL;
 	vsfurb->transfer_length = 0;
 	err = hub_clear_port_feature(hub->usbh, vsfurb, hub->counter,
-		USB_PORT_FEAT_C_CONNECTION);
+			USB_PORT_FEAT_C_CONNECTION);
 	if (err != VSFERR_NONE)
 		return err;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -171,7 +171,7 @@ static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			vsfurb->transfer_buffer = NULL;
 			vsfurb->transfer_length = 0;
 			err = hub_clear_port_feature(hub->usbh, vsfurb,
-				hub->counter, USB_PORT_FEAT_ENABLE);
+					hub->counter, USB_PORT_FEAT_ENABLE);
 			if (err != VSFERR_NONE)
 				return err;
 			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -255,7 +255,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
 				err = hub_clear_port_feature(hub->usbh, vsfurb,
-					hub->counter, USB_PORT_FEAT_C_ENABLE);
+						hub->counter, USB_PORT_FEAT_C_ENABLE);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -270,7 +270,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
 				err = hub_clear_port_feature(hub->usbh, vsfurb,
-					hub->counter, USB_PORT_FEAT_C_SUSPEND);
+						hub->counter, USB_PORT_FEAT_C_SUSPEND);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -284,7 +284,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
 				err = hub_clear_port_feature(hub->usbh, vsfurb,
-					hub->counter, USB_PORT_FEAT_C_OVER_CURRENT);
+						hub->counter, USB_PORT_FEAT_C_OVER_CURRENT);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -300,7 +300,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
 				err = hub_clear_port_feature(hub->usbh, vsfurb,
-					hub->counter, USB_PORT_FEAT_C_RESET);
+						hub->counter, USB_PORT_FEAT_C_RESET);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -311,7 +311,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			}
 		} while (hub->counter++ < hub->dev->maxchild);
 
-		// TODO : poll hub status		
+		// TODO : poll hub status
 
 		vsfsm_pt_delay(pt, 500);
 	} while (1);
@@ -332,21 +332,21 @@ static vsf_err_t hub_class_check(struct vsfusbh_hub_t *hub)
 	iface = dev->config->interface->altsetting;
 	ep = iface->ep_desc;
 	if ((iface->bInterfaceClass != USB_CLASS_HUB) ||
-		(iface->bInterfaceSubClass > 1) ||
-		(iface->bNumEndpoints != 1) ||
-		(!(ep->bEndpointAddress & USB_DIR_IN)) ||
-		((ep->bmAttributes & USB_ENDPOINT_XFER_INT) != USB_ENDPOINT_XFER_INT))
+			(iface->bInterfaceSubClass > 1) ||
+			(iface->bNumEndpoints != 1) ||
+			(!(ep->bEndpointAddress & USB_DIR_IN)) ||
+			((ep->bmAttributes & USB_ENDPOINT_XFER_INT) != USB_ENDPOINT_XFER_INT))
 		return VSFERR_FAIL;
 
 	return VSFERR_NONE;
 }
 
 static vsf_err_t hub_get_descriptor(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb)
+		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
-		USB_REQ_GET_DESCRIPTOR, (USB_DT_HUB << 8), 0);
+			USB_REQ_GET_DESCRIPTOR, (USB_DT_HUB << 8), 0);
 }
 
 static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
@@ -406,7 +406,7 @@ static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		hub->vsfurb->transfer_buffer = NULL;
 		hub->vsfurb->transfer_length = 0;
 		err = hub_set_port_feature(hub->usbh, hub->vsfurb, hub->counter,
-			USB_PORT_FEAT_POWER);
+				USB_PORT_FEAT_POWER);
 		if (err != VSFERR_NONE)
 			return err;
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -478,47 +478,48 @@ static struct vsfsm_state_t *vsfusbh_hub_evt_handler_init(struct vsfsm_t *sm,
 	return NULL;
 }
 
-static void *vsfusbh_hub_probe(struct vsfusbh_t *usbh, 
-		struct vsfusbh_device_t *dev, struct usb_interface_t *interface, 
+static void *vsfusbh_hub_probe(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_interface_t *interface,
 		const struct vsfusbh_device_id_t *id)
 {
 	struct usb_interface_desc_t *intf_desc;
 	struct usb_endpoint_desc_t *ep_desc;
 	struct vsfusbh_hub_t *hub;
-	
+
 	intf_desc = interface->altsetting + interface->act_altsetting;
-	
+
 	if ((intf_desc->bInterfaceSubClass != 0) &&
-		(intf_desc->bInterfaceSubClass != 1))
+			(intf_desc->bInterfaceSubClass != 1))
 		return NULL;
-	
+
 	if (intf_desc -> bNumEndpoints != 1)
 		return NULL;
-	
+
 	ep_desc = intf_desc->ep_desc;
 	if ((ep_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) !=
 			USB_ENDPOINT_XFER_INT)
 		return NULL;
-	
+
 	hub = vsf_bufmgr_malloc(sizeof(struct vsfusbh_hub_t));
 	if (NULL == hub)
 		return NULL;
 	memset(hub, 0, sizeof(struct vsfusbh_hub_t));
 
-	if (vsfusbh_alloc_urb(usbh, &hub->vsfurb) != VSFERR_NONE)
+	hub->vsfurb = usbh->hcd->alloc_urb();
+	if (hub->vsfurb == NULL)
 	{
 		vsf_bufmgr_free(hub);
 		return NULL;
 	}
-	
+
 	hub->usbh = usbh;
 	hub->dev = dev;
 	hub->vsfurb->vsfdev = dev;
-	hub->vsfurb->timeout = 200; 
+	hub->vsfurb->timeout = 200;
 	hub->sm.init_state.evt_handler = vsfusbh_hub_evt_handler_init;
 	hub->sm.user_data = hub;
 	vsfsm_init(&hub->sm);
-	
+
 	return hub;
 }
 
@@ -526,16 +527,16 @@ static void vsfusbh_hub_disconnect(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_hub_t *hub = priv;
-	
+
 	vsfsm_fini(&hub->sm);
 
 	if (hub->vsfurb != NULL)
-		vsfusbh_free_urb(usbh, &hub->vsfurb);
-	
+		usbh->hcd->free_urb(usbh->hcd_data, &hub->vsfurb);
+
 	vsf_bufmgr_free(hub);
 }
 
-const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] = 
+const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 {
 	{
 		.match_flags = USB_DEVICE_ID_MATCH_INT_CLASS,
@@ -544,7 +545,7 @@ const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 	{0},
 };
 
-const struct vsfusbh_class_drv_t vsfusbh_hub_drv = 
+const struct vsfusbh_class_drv_t vsfusbh_hub_drv =
 {
 	.name = "hub",
 	.id_table = vsfusbh_hub_id_table,
