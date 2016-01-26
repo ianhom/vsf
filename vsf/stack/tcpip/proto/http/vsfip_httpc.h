@@ -5,17 +5,15 @@
 
 struct vsfip_httpc_op_t
 {
-	vsf_err_t (*on_connect)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
-	vsf_err_t (*on_recv)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+	vsf_err_t (*on_connect)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, void *output);
+	vsf_err_t (*on_recv)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, void *output,
 							uint32_t offset, struct vsfip_buffer_t *buf);
 };
 
 struct vsfip_httpc_param_t
 {
-	uint16_t port;
 	const struct vsfip_httpc_op_t *op;
 
-	void *host_mem;
 	uint32_t resp_length;
 
 	// private
@@ -34,11 +32,13 @@ struct vsfip_httpc_param_t
 	uint32_t resp_curptr;
 	uint8_t *resp_type;
 	uint8_t resp_code;
+	uint16_t port;
+	
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE
-const struct vsfip_httpc_op_t vsfip_httpc_op_stream;
-const struct vsfip_httpc_op_t vsfip_httpc_op_buffer;
+extern const struct vsfip_httpc_op_t vsfip_httpc_op_stream;
+extern const struct vsfip_httpc_op_t vsfip_httpc_op_buffer;
 #endif
 
 vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
