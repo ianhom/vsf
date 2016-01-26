@@ -77,7 +77,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.40.3.8937</state>
+          <state>7.50.2.10499</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -1933,20 +1933,55 @@
   <group>
     <name>vsf</name>
     <group>
-      <name>dal</name>
-      <excluded>
-        <configuration>Debug</configuration>
-        <configuration>Release</configuration>
-      </excluded>
+      <name>component</name>
+      <group>
+        <name>buffer</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\buffer\buffer.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\buffer\buffer.h</name>
+        </file>
+      </group>
+      <group>
+        <name>debug</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\debug\debug.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\debug\debug.h</name>
+        </file>
+      </group>
+      <group>
+        <name>list</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\list\list.h</name>
+        </file>
+      </group>
       <group>
         <name>stream</name>
         <file>
-          <name>$PROJ_DIR$\..\..\..\..\dal\stream\stream.c</name>
+          <name>$PROJ_DIR$\..\..\..\..\component\stream\stream.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\stream\stream.h</name>
         </file>
       </group>
     </group>
     <group>
       <name>framework</name>
+      <group>
+        <name>vsfshell</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\framework\vsfshell\vsfshell.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\framework\vsfshell\vsfshell.h</name>
+        </file>
+      </group>
       <group>
         <name>vsfsm</name>
         <file>
@@ -2005,6 +2040,15 @@
               <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\startup\IAR\startup_NUC505Series.s</name>
             </file>
           </group>
+          <group>
+            <name>usbd</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\usbd\NUC505_USBD.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\usbd\NUC505_USBD.h</name>
+            </file>
+          </group>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\interfaces\cpu\nuc505\core.c</name>
           </file>
@@ -2036,9 +2080,33 @@
             <name>common</name>
           </group>
           <group>
+            <name>device</name>
+            <group>
+              <name>CDC</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDC.c</name>
+              </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDC.h</name>
+              </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDCACM.c</name>
+              </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDCACM.h</name>
+              </file>
+            </group>
+          </group>
+          <group>
             <name>host</name>
             <group>
               <name>HID</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HID\vsfusbh_HID.c</name>
+              </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HID\vsfusbh_HID.h</name>
+              </file>
             </group>
             <group>
               <name>HUB</name>
@@ -2051,6 +2119,9 @@
             </group>
             <group>
               <name>UVC</name>
+              <excluded>
+                <configuration>Debug</configuration>
+              </excluded>
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\UVC\vsfusbh_UVC.c</name>
               </file>
@@ -2099,6 +2170,12 @@
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\hcd.h</name>
           </file>
           <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbd.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbd.h</name>
+          </file>
+          <file>
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbh.c</name>
           </file>
           <file>
@@ -2116,48 +2193,6 @@
         <name>bittool</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\bittool\bittool.c</name>
-        </file>
-      </group>
-      <group>
-        <name>buffer</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\buffer\buffer.c</name>
-        </file>
-      </group>
-      <group>
-        <name>fakefat32</name>
-        <excluded>
-          <configuration>Debug</configuration>
-          <configuration>Release</configuration>
-        </excluded>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\fakefat32\fakefat32.c</name>
-        </file>
-      </group>
-      <group>
-        <name>list</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\list\list.c</name>
-        </file>
-      </group>
-      <group>
-        <name>mal_embflash</name>
-        <excluded>
-          <configuration>Debug</configuration>
-          <configuration>Release</configuration>
-        </excluded>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\mal_embflash\mal_embflash.c</name>
-        </file>
-      </group>
-      <group>
-        <name>mal_in_mal</name>
-        <excluded>
-          <configuration>Debug</configuration>
-          <configuration>Release</configuration>
-        </excluded>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\mal_in_mal\mal_in_mal.c</name>
         </file>
       </group>
     </group>
@@ -2191,6 +2226,9 @@
   </file>
   <file>
     <name>$PROJ_DIR$\..\..\main.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\vsf_cfg.h</name>
   </file>
 </project>
 

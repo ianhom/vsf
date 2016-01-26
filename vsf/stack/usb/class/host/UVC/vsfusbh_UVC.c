@@ -138,10 +138,10 @@ static struct vsfsm_state_t *uvc_evt_handler_init(struct vsfsm_t *sm,
 
 const uint8_t negotiate_temp[26] =
 {
-0x00, 0x00, 0x01, 0x03, 0x15, 0x16, 0x05, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-0x00, 0x00
+	0x00, 0x00, 0x01, 0x03, 0x15, 0x16, 0x05, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00
 };
 
 static vsf_err_t uvc_ctrl_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
@@ -196,10 +196,10 @@ static vsf_err_t uvc_ctrl_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (vsfurb->status != URB_OK)
 			return VSFERR_FAIL;
 	}
-	
+
 	vsf_bufmgr_free(hdata->ctrl_urb_buf);
 	hdata->ctrl_urb_buf = NULL;
-	
+
 	memcpy(&hdata->cur_param, &hdata->set_param,
 			sizeof(struct vsfusbh_uvc_param_t));
 	vsfusbh_uvc_report(hdata, &hdata->cur_param, NULL);
@@ -340,14 +340,14 @@ static void *vsfusbh_uvc_init(struct vsfusbh_t *usbh, struct vsfusbh_device_t *d
 	hdata->init_pt.user_data = hdata;
 	hdata->init_pt.sm = &hdata->init_sm;
 	hdata->init_pt.state = 0;
-	
+
 	hdata->ctrl_sm.init_state.evt_handler = uvc_evt_handler_ctrl;
 	hdata->ctrl_sm.user_data = (void*)hdata;
 	hdata->ctrl_pt.thread = uvc_ctrl_thread;
 	hdata->ctrl_pt.user_data = hdata;
 	hdata->ctrl_pt.sm = &hdata->ctrl_sm;
 	hdata->ctrl_pt.state = 0;
-	
+
 	hdata->ctrl_urb.vsfdev = dev;
 	hdata->ctrl_urb.timeout = 200;
 	hdata->ctrl_urb.sm = &hdata->init_sm;
@@ -368,7 +368,7 @@ static void *vsfusbh_uvc_init(struct vsfusbh_t *usbh, struct vsfusbh_device_t *d
 static vsf_err_t vsfusbh_uvc_match(struct vsfusbh_device_t *dev)
 {
 	if ((dev->descriptor.idVendor == 0x04f2) &&
-		(dev->descriptor.idProduct == 0xb130))
+			(dev->descriptor.idProduct == 0xb130))
 	{
 		return VSFERR_NONE;
 	}
@@ -388,7 +388,8 @@ static void vsfusbh_uvc_free(struct vsfusbh_device_t *dev)
 	vsf_bufmgr_free(cdata);
 }
 
-const struct vsfusbh_class_drv_t vsfusbh_uvc_drv = {
+const struct vsfusbh_class_drv_t vsfusbh_uvc_drv =
+{
 	vsfusbh_uvc_init,
 	vsfusbh_uvc_free,
 	vsfusbh_uvc_match,

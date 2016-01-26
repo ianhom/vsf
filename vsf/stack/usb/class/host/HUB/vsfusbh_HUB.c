@@ -28,8 +28,9 @@ struct vsfusbh_hub_t
 
 	struct vsfusbh_t *usbh;
 	struct vsfusbh_device_t *dev;
+	struct usb_interface_t *interface;
 
-	struct vsfusbh_urb_t vsfurb;
+	struct vsfusbh_urb_t *vsfurb;
 
 	struct usb_hub_descriptor_t hub_desc;
 	struct usb_hub_status_t hub_status;
@@ -45,47 +46,47 @@ static vsf_err_t hub_set_port_feature(struct vsfusbh_t *usbh,
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_SET_FEATURE,
-		feature, port);
+			feature, port);
 }
 static vsf_err_t hub_get_port_status(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint16_t port)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_PORT,
-		USB_REQ_GET_STATUS, 0, port);
+			USB_REQ_GET_STATUS, 0, port);
 }
 static vsf_err_t hub_clear_port_feature(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, int port, int feature)
 {
 	vsfurb->pipe = usb_sndctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_CLEAR_FEATURE,
-		feature, port);
+			feature, port);
 }
 static vsf_err_t hub_get_status(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
-		USB_REQ_GET_STATUS, 0, 0);
+			USB_REQ_GET_STATUS, 0, 0);
 }
 
 
 static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
-	struct vsfusbh_hub_t *hdata = (struct vsfusbh_hub_t *)pt->user_data;
-	struct vsfusbh_urb_t *vsfurb = &hdata->vsfurb;
+	struct vsfusbh_hub_t *hub = (struct vsfusbh_hub_t *)pt->user_data;
+	struct vsfusbh_urb_t *vsfurb = hub->vsfurb;
 	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
 
-	hdata->retry = 0;
+	hub->retry = 0;
 
 	do
 	{
 		/* send command to reset port */
 		vsfurb->transfer_buffer = NULL;
 		vsfurb->transfer_length = 0;
-		err = hub_set_port_feature(hdata->usbh, vsfurb, hdata->counter,
+		err = hub_set_port_feature(hub->usbh, vsfurb, hub->counter,
 				USB_PORT_FEAT_RESET);
 		if (err != VSFERR_NONE)
 			return err;
@@ -95,25 +96,25 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 		/* delay 100ms after port reset*/
 		vsfsm_pt_delay(pt, 100);
-		
+
 		// clear reset
 		vsfurb->transfer_buffer = NULL;
 		vsfurb->transfer_length = 0;
-		err = hub_clear_port_feature(hdata->usbh, vsfurb,
-				hdata->counter, USB_PORT_FEAT_C_RESET);
+		err = hub_clear_port_feature(hub->usbh, vsfurb,
+				hub->counter, USB_PORT_FEAT_C_RESET);
 		if (err != VSFERR_NONE)
 			return err;
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 		if (vsfurb->status != URB_OK)
 			return VSFERR_FAIL;
-		
+
 		/* delay 100ms after port reset*/
 		vsfsm_pt_delay(pt, 50);
-		
+
 		/* get port status for check */
-		vsfurb->transfer_buffer = &hdata->hub_portsts;
-		vsfurb->transfer_length = sizeof(hdata->hub_portsts);
-		err = hub_get_port_status(hdata->usbh, vsfurb, hdata->counter);
+		vsfurb->transfer_buffer = &hub->hub_portsts;
+		vsfurb->transfer_length = sizeof(hub->hub_portsts);
+		err = hub_get_port_status(hub->usbh, vsfurb, hub->counter);
 		if (err != VSFERR_NONE)
 			return err;
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -121,7 +122,7 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			return VSFERR_FAIL;
 
 		/* check port status after reset */
-		if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_ENABLE)
+		if (hub->hub_portsts.wPortStatus & USB_PORT_STAT_ENABLE)
 		{
 			return VSFERR_NONE;
 		}
@@ -131,7 +132,7 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			vsfsm_pt_delay(pt, 200);
 		}
 
-	} while (hdata->retry++ <= 3);
+	} while (hub->retry++ <= 3);
 
 	vsfsm_pt_end(pt);
 	return VSFERR_FAIL;
@@ -140,38 +141,37 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
-	struct vsfusbh_hub_t *hdata = (struct vsfusbh_hub_t *)pt->user_data;
-	struct vsfusbh_urb_t *vsfurb = &hdata->vsfurb;
-	struct vsfusbh_device_t *usb;
+	struct vsfusbh_hub_t *hub = (struct vsfusbh_hub_t *)pt->user_data;
+	struct vsfusbh_urb_t *vsfurb = hub->vsfurb;
+	struct vsfusbh_device_t *dev;
 
 	vsfsm_pt_begin(pt);
 
 	/* clear the cnnection change state */
 	vsfurb->transfer_buffer = NULL;
 	vsfurb->transfer_length = 0;
-	err = hub_clear_port_feature(hdata->usbh, vsfurb, hdata->counter,
-		USB_PORT_FEAT_C_CONNECTION);
+	err = hub_clear_port_feature(hub->usbh, vsfurb, hub->counter,
+			USB_PORT_FEAT_C_CONNECTION);
 	if (err != VSFERR_NONE)
 		return err;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (vsfurb->status != URB_OK)
 		return VSFERR_FAIL;
 
-	usb = hdata->dev->children[hdata->counter - 1];
-	if (usb)
+	if (hub->dev->children[hub->counter - 1] != NULL)
 	{
-		vsfusbh_remove_device(hdata->usbh, usb);
-		hdata->dev->children[hdata->counter - 1] = NULL;
+		vsfusbh_disconnect_device(hub->usbh,
+				&hub->dev->children[hub->counter - 1]);
 	}
 
-	if (!(hdata->hub_portsts.wPortStatus & USB_PORT_STAT_CONNECTION))
+	if (!(hub->hub_portsts.wPortStatus & USB_PORT_STAT_CONNECTION))
 	{
-		if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_ENABLE)
+		if (hub->hub_portsts.wPortStatus & USB_PORT_STAT_ENABLE)
 		{
 			vsfurb->transfer_buffer = NULL;
 			vsfurb->transfer_length = 0;
-			err = hub_clear_port_feature(hdata->usbh, vsfurb,
-				hdata->counter, USB_PORT_FEAT_ENABLE);
+			err = hub_clear_port_feature(hub->usbh, vsfurb,
+					hub->counter, USB_PORT_FEAT_ENABLE);
 			if (err != VSFERR_NONE)
 				return err;
 			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
@@ -182,37 +182,40 @@ static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		return VSFERR_NONE;
 	}
 
-	if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_LOW_SPEED)
+	if (hub->hub_portsts.wPortStatus & USB_PORT_STAT_LOW_SPEED)
 	{
 		vsfsm_pt_delay(pt, 200);
 	}
 
-	vsfsm_pt_wfpt(pt, &hdata->drv_reset_pt);
+	vsfsm_pt_wfpt(pt, &hub->drv_reset_pt);
 
 	vsfsm_pt_delay(pt, 200);
 
 	// wait for new_dev free
-	while (hdata->usbh->new_dev != NULL)
+	while (hub->usbh->new_dev != NULL)
 	{
 		vsfsm_pt_delay(pt, 200);
 	}
 
-	usb = vsfusbh_alloc_device(hdata->usbh);
-	if (NULL == usb)
+	dev = vsfusbh_alloc_device(hub->usbh);
+	if (NULL == dev)
 		return VSFERR_FAIL;
 
-	if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_LOW_SPEED)
-		usb->speed = USB_SPEED_LOW;
-	else if (hdata->hub_portsts.wPortStatus & USB_PORT_STAT_HIGH_SPEED)
-		usb->speed = USB_SPEED_HIGH;
+	if (hub->hub_portsts.wPortStatus & USB_PORT_STAT_LOW_SPEED)
+	{
+		dev->speed = USB_SPEED_LOW;
+		dev->slow = 1;
+	}
+	else if (hub->hub_portsts.wPortStatus & USB_PORT_STAT_HIGH_SPEED)
+		dev->speed = USB_SPEED_HIGH;
 	else
-		usb->speed = USB_SPEED_FULL;
+		dev->speed = USB_SPEED_FULL;
 
-	hdata->dev->children[hdata->counter - 1] = usb;
-	usb->parent = hdata->dev;
+	hub->dev->children[hub->counter - 1] = dev;
+	dev->parent = hub->dev;
 
-	hdata->usbh->new_dev = usb;
-	vsfsm_post_evt_pending(&hdata->usbh->sm, VSFSM_EVT_INIT);
+	hub->usbh->new_dev = dev;
+	vsfsm_post_evt_pending(&hub->usbh->sm, VSFSM_EVT_NEW_DEVICE);
 
 	vsfsm_pt_end(pt);
 
@@ -222,93 +225,93 @@ static vsf_err_t hub_connect_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
-	struct vsfusbh_hub_t *hdata = (struct vsfusbh_hub_t *)pt->user_data;
-	struct vsfusbh_urb_t *vsfurb = &hdata->vsfurb;
+	struct vsfusbh_hub_t *hub = (struct vsfusbh_hub_t *)pt->user_data;
+	struct vsfusbh_urb_t *vsfurb = hub->vsfurb;
 
 	vsfsm_pt_begin(pt);
 
 	do
 	{
-		hdata->counter = 1;
+		hub->counter = 1;
 		do
 		{
 			// get port status
-			vsfurb->transfer_buffer = &hdata->hub_portsts;
-			vsfurb->transfer_length = sizeof(hdata->hub_portsts);
-			err = hub_get_port_status(hdata->usbh, vsfurb, hdata->counter);
+			vsfurb->transfer_buffer = &hub->hub_portsts;
+			vsfurb->transfer_length = sizeof(hub->hub_portsts);
+			err = hub_get_port_status(hub->usbh, vsfurb, hub->counter);
 			if (err != VSFERR_NONE)
 				return err;
 			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 			if (vsfurb->status != URB_OK)
 				return VSFERR_FAIL;
 
-			if (hdata->hub_portsts.wPortChange & USB_PORT_STAT_C_CONNECTION)
+			if (hub->hub_portsts.wPortChange & USB_PORT_STAT_C_CONNECTION)
 			{
 				// try to connect
-				vsfsm_pt_wfpt(pt, &hdata->drv_connect_pt);
+				vsfsm_pt_wfpt(pt, &hub->drv_connect_pt);
 			}
-			else if (hdata->hub_portsts.wPortChange & USB_PORT_STAT_C_ENABLE)
+			else if (hub->hub_portsts.wPortChange & USB_PORT_STAT_C_ENABLE)
 			{
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
-				err = hub_clear_port_feature(hdata->usbh, vsfurb,
-					hdata->counter, USB_PORT_FEAT_C_ENABLE);
+				err = hub_clear_port_feature(hub->usbh, vsfurb,
+						hub->counter, USB_PORT_FEAT_C_ENABLE);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 				if (vsfurb->status != URB_OK)
 					return VSFERR_FAIL;
 
-				hdata->hub_portsts.wPortChange &= ~USB_PORT_STAT_C_ENABLE;
+				hub->hub_portsts.wPortChange &= ~USB_PORT_STAT_C_ENABLE;
 			}
 
-			if (hdata->hub_portsts.wPortChange & USB_PORT_STAT_C_SUSPEND)
+			if (hub->hub_portsts.wPortChange & USB_PORT_STAT_C_SUSPEND)
 			{
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
-				err = hub_clear_port_feature(hdata->usbh, vsfurb,
-					hdata->counter, USB_PORT_FEAT_C_SUSPEND);
+				err = hub_clear_port_feature(hub->usbh, vsfurb,
+						hub->counter, USB_PORT_FEAT_C_SUSPEND);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 				if (vsfurb->status != URB_OK)
 					return VSFERR_FAIL;
 
-				hdata->hub_portsts.wPortChange &= ~USB_PORT_STAT_C_SUSPEND;
+				hub->hub_portsts.wPortChange &= ~USB_PORT_STAT_C_SUSPEND;
 			}
-			if (hdata->hub_portsts.wPortChange & USB_PORT_STAT_C_OVERCURRENT)
+			if (hub->hub_portsts.wPortChange & USB_PORT_STAT_C_OVERCURRENT)
 			{
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
-				err = hub_clear_port_feature(hdata->usbh, vsfurb,
-					hdata->counter, USB_PORT_FEAT_C_OVER_CURRENT);
+				err = hub_clear_port_feature(hub->usbh, vsfurb,
+						hub->counter, USB_PORT_FEAT_C_OVER_CURRENT);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 				if (vsfurb->status != URB_OK)
 					return VSFERR_FAIL;
 
-				hdata->hub_portsts.wPortChange &= ~USB_PORT_FEAT_C_OVER_CURRENT;
+				hub->hub_portsts.wPortChange &= ~USB_PORT_FEAT_C_OVER_CURRENT;
 
 				// TODO : power every port
 			}
-			if (hdata->hub_portsts.wPortChange & USB_PORT_STAT_C_RESET)
+			if (hub->hub_portsts.wPortChange & USB_PORT_STAT_C_RESET)
 			{
 				vsfurb->transfer_buffer = NULL;
 				vsfurb->transfer_length = 0;
-				err = hub_clear_port_feature(hdata->usbh, vsfurb,
-					hdata->counter, USB_PORT_FEAT_C_RESET);
+				err = hub_clear_port_feature(hub->usbh, vsfurb,
+						hub->counter, USB_PORT_FEAT_C_RESET);
 				if (err != VSFERR_NONE)
 					return err;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 				if (vsfurb->status != URB_OK)
 					return VSFERR_FAIL;
 
-				hdata->hub_portsts.wPortChange &= ~USB_PORT_FEAT_C_RESET;
+				hub->hub_portsts.wPortChange &= ~USB_PORT_FEAT_C_RESET;
 			}
-		} while (hdata->counter++ < hdata->dev->maxchild);
+		} while (hub->counter++ < hub->dev->maxchild);
 
-		// TODO : poll hub status		
+		// TODO : poll hub status
 
 		vsfsm_pt_delay(pt, 500);
 	} while (1);
@@ -317,100 +320,100 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t hub_class_check(struct vsfusbh_hub_t *hdata)
+static vsf_err_t hub_class_check(struct vsfusbh_hub_t *hub)
 {
-	struct vsfusbh_device_t *dev = hdata->dev;
+	struct vsfusbh_device_t *dev = hub->dev;
 	struct usb_interface_desc_t *iface;
-	struct usb_endpoint_descriptor_t *ep;
+	struct usb_endpoint_desc_t *ep;
 
 	if (dev == NULL)
 		return VSFERR_FAIL;
 
-	iface = dev->config->interface->interface_desc;
+	iface = dev->config->interface->altsetting;
 	ep = iface->ep_desc;
 	if ((iface->bInterfaceClass != USB_CLASS_HUB) ||
-		(iface->bInterfaceSubClass > 1) ||
-		(iface->bNumEndpoints != 1) ||
-		(!(ep->bEndpointAddress & USB_DIR_IN)) ||
-		((ep->bmAttributes & USB_ENDPOINT_XFER_INT) != USB_ENDPOINT_XFER_INT))
+			(iface->bInterfaceSubClass > 1) ||
+			(iface->bNumEndpoints != 1) ||
+			(!(ep->bEndpointAddress & USB_DIR_IN)) ||
+			((ep->bmAttributes & USB_ENDPOINT_XFER_INT) != USB_ENDPOINT_XFER_INT))
 		return VSFERR_FAIL;
 
 	return VSFERR_NONE;
 }
 
 static vsf_err_t hub_get_descriptor(struct vsfusbh_t *usbh,
-struct vsfusbh_urb_t *vsfurb)
+		struct vsfusbh_urb_t *vsfurb)
 {
 	vsfurb->pipe = usb_rcvctrlpipe(vsfurb->vsfdev, 0);
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
-		USB_REQ_GET_DESCRIPTOR, (USB_DT_HUB << 8), 0);
+			USB_REQ_GET_DESCRIPTOR, (USB_DT_HUB << 8), 0);
 }
 
 static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
-	struct vsfusbh_hub_t *hdata = (struct vsfusbh_hub_t *)pt->user_data;
-	struct vsfusbh_urb_t *vsfurb = &hdata->vsfurb;
+	struct vsfusbh_hub_t *hub = (struct vsfusbh_hub_t *)pt->user_data;
+	struct vsfusbh_urb_t *vsfurb = hub->vsfurb;
 
 	vsfsm_pt_begin(pt);
 
-	vsfurb->sm = &hdata->sm;
+	vsfurb->sm = &hub->sm;
 
 	// init hub
-	err = hub_class_check(hdata);
+	err = hub_class_check(hub);
 	if (err != VSFERR_NONE)
 		return err;
 
-	vsfurb->transfer_buffer = &hdata->hub_desc;
+	vsfurb->transfer_buffer = &hub->hub_desc;
 	vsfurb->transfer_length = 4;
-	err = hub_get_descriptor(hdata->usbh, vsfurb);
+	err = hub_get_descriptor(hub->usbh, vsfurb);
 	if (err != VSFERR_NONE)
 		return err;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (vsfurb->status != URB_OK)
 		return VSFERR_FAIL;
 
-	if (hdata->hub_desc.bDescLength > sizeof(hdata->hub_desc))
+	if (hub->hub_desc.bDescLength > sizeof(hub->hub_desc))
 	{
 		return VSFERR_FAIL;
 	}
 
-	vsfurb->transfer_buffer = &hdata->hub_desc;
-	vsfurb->transfer_length = hdata->hub_desc.bDescLength;
-	err = hub_get_descriptor(hdata->usbh, vsfurb);
+	vsfurb->transfer_buffer = &hub->hub_desc;
+	vsfurb->transfer_length = hub->hub_desc.bDescLength;
+	err = hub_get_descriptor(hub->usbh, vsfurb);
 	if (err != VSFERR_NONE)
 		return err;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (vsfurb->status != URB_OK)
 		return VSFERR_FAIL;
 
-	hdata->dev->maxchild = min(hdata->hub_desc.bNbrPorts, USB_MAXCHILDREN);
+	hub->dev->maxchild = min(hub->hub_desc.bNbrPorts, USB_MAXCHILDREN);
 
-	vsfurb->transfer_buffer = &hdata->hub_status;
-	vsfurb->transfer_length = sizeof(hdata->hub_status);
-	err = hub_get_status(hdata->usbh, vsfurb);
+	vsfurb->transfer_buffer = &hub->hub_status;
+	vsfurb->transfer_length = sizeof(hub->hub_status);
+	err = hub_get_status(hub->usbh, vsfurb);
 	if (err != VSFERR_NONE)
 		return err;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (vsfurb->status != URB_OK)
 		return VSFERR_FAIL;
 
-	hdata->counter = 0;
+	hub->counter = 0;
 
 	do
 	{
-		hdata->counter++;
-		hdata->vsfurb.transfer_buffer = NULL;
-		hdata->vsfurb.transfer_length = 0;
-		err = hub_set_port_feature(hdata->usbh, &hdata->vsfurb, hdata->counter,
-			USB_PORT_FEAT_POWER);
+		hub->counter++;
+		hub->vsfurb->transfer_buffer = NULL;
+		hub->vsfurb->transfer_length = 0;
+		err = hub_set_port_feature(hub->usbh, hub->vsfurb, hub->counter,
+				USB_PORT_FEAT_POWER);
 		if (err != VSFERR_NONE)
 			return err;
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 		if (vsfurb->status != URB_OK)
 			return VSFERR_FAIL;
-		vsfsm_pt_delay(pt, hdata->hub_desc.bPwrOn2PwrGood * 2);
-	} while (hdata->counter < hdata->dev->maxchild);
+		vsfsm_pt_delay(pt, hub->hub_desc.bPwrOn2PwrGood * 2);
+	} while (hub->counter < hub->dev->maxchild);
 
 	vsfsm_pt_end(pt);
 
@@ -418,53 +421,53 @@ static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 }
 
 static struct vsfsm_state_t *vsfusbh_hub_evt_handler_init(struct vsfsm_t *sm,
-	vsfsm_evt_t evt)
+		vsfsm_evt_t evt)
 {
 	vsf_err_t err;
-	struct vsfusbh_hub_t *hdata = (struct vsfusbh_hub_t *)sm->user_data;
+	struct vsfusbh_hub_t *hub = (struct vsfusbh_hub_t *)sm->user_data;
 
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
-		hdata->drv_init_pt.thread = hub_init_thread;
-		hdata->drv_init_pt.user_data = hdata;
-		hdata->drv_init_pt.sm = sm;
-		hdata->drv_init_pt.state = 0;
-		hdata->drv_scan_pt.thread = hub_scan_thread;
-		hdata->drv_scan_pt.user_data = hdata;
-		hdata->drv_scan_pt.sm = sm;
-		hdata->drv_scan_pt.state = 0;
-		hdata->drv_connect_pt.thread = hub_connect_thread;
-		hdata->drv_connect_pt.user_data = hdata;
-		hdata->drv_connect_pt.sm = &hdata->sm;
-		hdata->drv_connect_pt.state = 0;
-		hdata->drv_reset_pt.thread = hub_reset_thread;
-		hdata->drv_reset_pt.user_data = hdata;
-		hdata->drv_reset_pt.sm = &hdata->sm;
-		hdata->drv_reset_pt.state = 0;
-		hdata->inited = 0;
+		hub->drv_init_pt.thread = hub_init_thread;
+		hub->drv_init_pt.user_data = hub;
+		hub->drv_init_pt.sm = sm;
+		hub->drv_init_pt.state = 0;
+		hub->drv_scan_pt.thread = hub_scan_thread;
+		hub->drv_scan_pt.user_data = hub;
+		hub->drv_scan_pt.sm = sm;
+		hub->drv_scan_pt.state = 0;
+		hub->drv_connect_pt.thread = hub_connect_thread;
+		hub->drv_connect_pt.user_data = hub;
+		hub->drv_connect_pt.sm = &hub->sm;
+		hub->drv_connect_pt.state = 0;
+		hub->drv_reset_pt.thread = hub_reset_thread;
+		hub->drv_reset_pt.user_data = hub;
+		hub->drv_reset_pt.sm = &hub->sm;
+		hub->drv_reset_pt.state = 0;
+		hub->inited = 0;
 
 	case VSFSM_EVT_URB_COMPLETE:
 	case VSFSM_EVT_DELAY_DONE:
-		if (hdata->inited == 0)
+		if (hub->inited == 0)
 		{
-			err = hdata->drv_init_pt.thread(&hdata->drv_init_pt, evt);
+			err = hub->drv_init_pt.thread(&hub->drv_init_pt, evt);
 			if (err == 0)
 			{
-				hdata->inited = 1;
+				hub->inited = 1;
 				vsfsm_post_evt_pending(sm, VSFSM_EVT_DELAY_DONE);
 			}
 			if (err < 0)
 			{
-				vsfusbh_free_device(hdata->usbh, hdata->dev);
+				vsfusbh_remove_intrface(hub->usbh, hub->dev, hub->interface);
 			}
 		}
 		else
 		{
-			err = hdata->drv_scan_pt.thread(&hdata->drv_scan_pt, evt);
+			err = hub->drv_scan_pt.thread(&hub->drv_scan_pt, evt);
 			if (err < 0)
 			{
-				hdata->drv_scan_pt.state = 0;
+				hub->drv_scan_pt.state = 0;
 				vsfsm_post_evt_pending(sm, VSFSM_EVT_DELAY_DONE);
 			}
 		}
@@ -475,60 +478,79 @@ static struct vsfsm_state_t *vsfusbh_hub_evt_handler_init(struct vsfsm_t *sm,
 	return NULL;
 }
 
-void *vsfusbh_hub_init(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev)
+static void *vsfusbh_hub_probe(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_interface_t *interface,
+		const struct vsfusbh_device_id_t *id)
 {
-	struct vsfusbh_class_data_t *cdata;
-	struct vsfusbh_hub_t *hdata;
+	struct usb_interface_desc_t *intf_desc;
+	struct usb_endpoint_desc_t *ep_desc;
+	struct vsfusbh_hub_t *hub;
 
-	cdata = vsf_bufmgr_malloc(sizeof(struct vsfusbh_class_data_t));
-	if (NULL == cdata)
+	intf_desc = interface->altsetting + interface->act_altsetting;
+
+	if ((intf_desc->bInterfaceSubClass != 0) &&
+			(intf_desc->bInterfaceSubClass != 1))
 		return NULL;
 
-	hdata = vsf_bufmgr_malloc(sizeof(struct vsfusbh_hub_t));
-	if (NULL == hdata)
+	if (intf_desc -> bNumEndpoints != 1)
+		return NULL;
+
+	ep_desc = intf_desc->ep_desc;
+	if ((ep_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) !=
+			USB_ENDPOINT_XFER_INT)
+		return NULL;
+
+	hub = vsf_bufmgr_malloc(sizeof(struct vsfusbh_hub_t));
+	if (NULL == hub)
+		return NULL;
+	memset(hub, 0, sizeof(struct vsfusbh_hub_t));
+
+	hub->vsfurb = usbh->hcd->alloc_urb();
+	if (hub->vsfurb == NULL)
 	{
-		vsf_bufmgr_free(cdata);
+		vsf_bufmgr_free(hub);
 		return NULL;
 	}
 
-	memset(cdata, 0, sizeof(struct vsfusbh_class_data_t));
-	memset(hdata, 0, sizeof(struct vsfusbh_hub_t));
+	hub->usbh = usbh;
+	hub->dev = dev;
+	hub->vsfurb->vsfdev = dev;
+	hub->vsfurb->timeout = 200;
+	hub->sm.init_state.evt_handler = vsfusbh_hub_evt_handler_init;
+	hub->sm.user_data = hub;
+	vsfsm_init(&hub->sm);
 
-	cdata->dev = dev;
-	hdata->dev = dev;
-	hdata->vsfurb.vsfdev = dev;
-	hdata->vsfurb.timeout = 200; 	/* default timeout 200ms */
-	hdata->usbh = usbh;
-	cdata->param = hdata;
-
-	hdata->sm.init_state.evt_handler = vsfusbh_hub_evt_handler_init;
-	hdata->sm.user_data = (void*)hdata;
-	vsfsm_init(&hdata->sm);
-
-	return cdata;
+	return hub;
 }
 
-void vsfusbh_hub_free(struct vsfusbh_device_t *dev)
+static void vsfusbh_hub_disconnect(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, void *priv)
 {
-	struct vsfusbh_class_data_t *cdata = (struct vsfusbh_class_data_t *)(dev->priv);
+	struct vsfusbh_hub_t *hub = priv;
 
-	vsf_bufmgr_free(cdata->param);
-	vsf_bufmgr_free(cdata);
+	vsfsm_fini(&hub->sm);
+
+	if (hub->vsfurb != NULL)
+		usbh->hcd->free_urb(usbh->hcd_data, &hub->vsfurb);
+
+	vsf_bufmgr_free(hub);
 }
 
-vsf_err_t vsfusbh_hub_match(struct vsfusbh_device_t *dev)
+const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 {
-	if (dev->descriptor.bDeviceClass == USB_CLASS_HUB)
-		return VSFERR_NONE;
+	{
+		.match_flags = USB_DEVICE_ID_MATCH_INT_CLASS,
+		.bInterfaceClass = USB_CLASS_HUB,
+	},
+	{0},
+};
 
-	return VSFERR_FAIL;
-}
-
-#ifndef VSFCFG_STANDALONE_MODULE
 const struct vsfusbh_class_drv_t vsfusbh_hub_drv =
 {
-	vsfusbh_hub_init,
-	vsfusbh_hub_free,
-	vsfusbh_hub_match,
+	.name = "hub",
+	.id_table = vsfusbh_hub_id_table,
+	.probe = vsfusbh_hub_probe,
+	.disconnect = vsfusbh_hub_disconnect,
+	.ioctl = NULL,
 };
-#endif
+

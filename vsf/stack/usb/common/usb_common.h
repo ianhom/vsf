@@ -6,6 +6,11 @@
 
 #include "usb_ch9.h"
 
+#define USB_DT_HID          (USB_TYPE_CLASS | 0x01)
+#define USB_DT_REPORT       (USB_TYPE_CLASS | 0x02)
+#define USB_DT_PHYSICAL     (USB_TYPE_CLASS | 0x03)
+#define USB_DT_HUB          (USB_TYPE_CLASS | 0x09)
+
 /*
  * USB Packet IDs (PIDs)
  */
@@ -97,7 +102,22 @@
 #define HS_USECS(bytes)		NS_TO_US(HS_NSECS(bytes))
 #define HS_USECS_ISO(bytes)	NS_TO_US(HS_NSECS_ISO(bytes))
 
-
+/* Endpoint descriptor */
+PACKED_HEAD struct PACKED_MID usb_endpoint_desc_t {
+	unsigned char	bLength;
+	unsigned char	bDescriptorType;
+	unsigned char	bEndpointAddress;
+	unsigned char	bmAttributes;
+	unsigned short	wMaxPacketSize;
+	unsigned char	bInterval;
+	unsigned char	bRefresh;
+	unsigned char	bSynchAddress;
+	
+	unsigned char	dummy;
+	
+	unsigned short	extralen;
+	const unsigned char	*extra;
+}; PACKED_TAIL
 
 /* Interface descriptor */
 PACKED_HEAD struct PACKED_MID usb_interface_desc_t
@@ -111,20 +131,25 @@ PACKED_HEAD struct PACKED_MID usb_interface_desc_t
 	unsigned char	bInterfaceSubClass;
 	unsigned char	bInterfaceProtocol;
 	unsigned char	iInterface;
-
-	struct usb_endpoint_descriptor_t *ep_desc;
-};
+	
+	unsigned char	dummy;
+	
+	unsigned short	extralen;
+	const unsigned char	*extra;
+	
+	struct usb_endpoint_desc_t *ep_desc;
+}; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID usb_interface_t
 {
-	struct usb_interface_desc_t *interface_desc;
+	struct usb_interface_desc_t *altsetting;
 	unsigned char act_altsetting;			/* active alternate setting */
 	unsigned char num_altsetting;			/* number of alternate settings */
 	unsigned char max_altsetting;			/* total memory allocated */
 	unsigned char dummy;
-	struct usb_driver *driver;				/* driver */
+	const struct vsfusbh_class_drv_t *driver;				/* driver */
 	void *private_data;
-};
+}; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID usb_config_t
 {
@@ -136,17 +161,20 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 	unsigned char	iConfiguration;
 	unsigned char	bmAttributes;
 	unsigned char	MaxPower;
-	unsigned char	dummy1;
-	unsigned char	dummy2;
-	unsigned char	dummy3;
+	
+	unsigned char	dummy;
+	
+	//unsigned short	extralen;
+	//const unsigned char	*extra;
 
 	struct usb_interface_t *interface;
+	
+	uint8_t *config_buffer;
 };
 
 #define URB_OK				VSFERR_NONE
-#define URB_PENDING			VSFERR_NOT_READY
 #define URB_FAIL			VSFERR_FAIL
-#define URB_XDEV			VSFERR_NOT_AVAILABLE
+#define URB_PENDING			VSFERR_NOT_READY
 
 
 /* ----------------------------------------------------------------------- */
@@ -190,25 +218,25 @@ PACKED_HEAD struct PACKED_MID usb_config_t
 #define usb_pipespeed(pipe)	(((pipe) >> 26) & 3)
 #define usb_pipeslow(pipe)	(usb_pipespeed(pipe) == USB_SPEED_LOW)
 
-#define __create_pipe(dev, endpoint) ((dev->devnum << 8) | (endpoint << 15))
+#define __create_pipe(dev, endpoint) (((dev)->devnum << 8) | ((endpoint) << 15) | (((uint32_t)(dev)->slow) << 26))
 
 /* Create various pipes... */
 #define usb_sndctrlpipe(dev, endpoint)	\
-		((PIPE_CONTROL << 30) | __create_pipe(dev, endpoint))
+		((PIPE_CONTROL << 30) | __create_pipe((dev), (endpoint)))
 #define usb_rcvctrlpipe(dev, endpoint)	\
-		((PIPE_CONTROL << 30) | __create_pipe(dev, endpoint) | USB_DIR_IN)
+		((PIPE_CONTROL << 30) | __create_pipe((dev), (endpoint)) | USB_DIR_IN)
 #define usb_sndisocpipe(dev, endpoint)	\
-		((PIPE_ISOCHRONOUS << 30) | __create_pipe(dev, endpoint))
+		((PIPE_ISOCHRONOUS << 30) | __create_pipe((dev), (endpoint)))
 #define usb_rcvisocpipe(dev, endpoint)	\
-		((PIPE_ISOCHRONOUS << 30) | __create_pipe(dev, endpoint) | USB_DIR_IN)
+		((PIPE_ISOCHRONOUS << 30) | __create_pipe((dev), (endpoint)) | USB_DIR_IN)
 #define usb_sndbulkpipe(dev, endpoint)	\
-		((PIPE_BULK << 30) | __create_pipe(dev, endpoint))
+		((PIPE_BULK << 30) | __create_pipe((dev), (endpoint)))
 #define usb_rcvbulkpipe(dev, endpoint)	\
-		((PIPE_BULK << 30) | __create_pipe(dev, endpoint) | USB_DIR_IN)
+		((PIPE_BULK << 30) | __create_pipe((dev), (endpoint)) | USB_DIR_IN)
 #define usb_sndintpipe(dev, endpoint)	\
-		((PIPE_INTERRUPT << 30) | __create_pipe(dev, endpoint))
+		((PIPE_INTERRUPT << 30) | __create_pipe((dev), (endpoint)))
 #define usb_rcvintpipe(dev, endpoint)	\
-		((PIPE_INTERRUPT << 30) | __create_pipe(dev, endpoint) | USB_DIR_IN)
+		((PIPE_INTERRUPT << 30) | __create_pipe((dev), (endpoint)) | USB_DIR_IN)
 
 #define default_pipe(dev)				((dev)->speed << 26)
 #define usb_snddefctrl(dev)				\

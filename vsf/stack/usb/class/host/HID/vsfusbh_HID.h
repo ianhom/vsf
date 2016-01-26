@@ -20,6 +20,24 @@
 #ifndef __VSFUSBH_HID_H_INCLUDED__
 #define __VSFUSBH_HID_H_INCLUDED__
 
+#define HID_VALUE_TYPE_UNKNOWN			0
+#define HID_VALUE_TYPE_SIGN_8BIT		0x01
+#define HID_VALUE_TYPE_UNSIGN_8BIT		0x02
+#define HID_VALUE_TYPE_SIGN_16BIT		0x03
+#define HID_VALUE_TYPE_UNSIGN_16BIT		0x04
+#define HID_VALUE_TYPE_ABS				0x0000
+#define HID_VALUE_TYPE_REL				0x0100
+
+PACKED_HEAD struct PACKED_MID usbh_hid_event_t
+{
+	uint16_t usage_page;
+	uint16_t usage_id;
+	int32_t pre_value;
+	int32_t cur_value;
+	uint32_t type;
+};
+PACKED_TAIL
+
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 #define HID_ITEM_SIZE(x)			((((x)&0x03) == 3)?4:(x)&0x03)
 
@@ -50,16 +68,24 @@
 #define HID_ITEM_USAGE_MIN			0x18
 #define HID_ITEM_USAGE_MAX			0x28
 
-PACKED_HEAD struct PACKED_MID PACKED_MID hid_descriptor_t
+PACKED_HEAD struct PACKED_MID hid_cleass_descriptor_t
+{
+	uint8_t bDescriptorType;
+	uint16_t wDescriptorLength;
+};
+PACKED_TAIL
+
+PACKED_HEAD struct PACKED_MID hid_descriptor_t
 {
 	uint8_t bLength;
 	uint8_t bDescriptorType;
 	uint16_t bcdHID;
 	uint8_t bCountryCode;
 	uint8_t bNumDescriptors;
-	uint8_t bDescriptorType2;
-	uint16_t wDescriptorLength;
-}; PACKED_TAIL
+
+	struct hid_cleass_descriptor_t desc[1];
+};
+PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID hid_desc_t
 {
@@ -75,7 +101,8 @@ PACKED_HEAD struct PACKED_MID hid_desc_t
 	int usage_min;
 	int usage_max;
 	int usages[16];
-}; PACKED_TAIL
+};
+PACKED_TAIL
 
 struct hid_usage_t
 {
@@ -103,32 +130,25 @@ struct hid_report_t
 
 	uint8_t need_setreport_flag;
 	uint8_t need_ignore;
+
+	uint16_t generic_usage;
 };
 
 struct vsfusbh_hid_t
 {
-	/* hub timer */
-	struct vsftimer_t timer;
-
-	/* statemachine */
 	struct vsfsm_t sm;
-	struct vsfsm_pt_t hid_pt;
+	struct vsfsm_pt_t pt;
 
 	struct vsfusbh_t *usbh;
 	struct vsfusbh_device_t *dev;
 
-	// interface 1
-	struct vsfusbh_urb_t vsfurb_1;
-	struct usb_endpoint_descriptor_t *int_ep_1;
-	struct hid_report_t report_1;
-	struct hid_descriptor_t hid_descriptor_1;
+	struct vsfusbh_urb_t *ctrlurb;
+	struct vsfusbh_urb_t *inturb;
 
-	// interface 2
-	struct vsfusbh_urb_t vsfurb_2;
-	struct usb_endpoint_descriptor_t *int_ep_2;
-	struct hid_report_t report_2;
-	struct hid_descriptor_t hid_descriptor_2;
-
+	struct usb_interface_t *interface;
+	const struct usb_interface_desc_t *intf_desc;
+	struct hid_descriptor_t hid_desc;
+	struct hid_report_t hid_report;
 };
 
 extern const struct vsfusbh_class_drv_t vsfusbh_hid_drv;
