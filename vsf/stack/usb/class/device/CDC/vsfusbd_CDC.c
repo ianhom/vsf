@@ -109,28 +109,28 @@ static vsf_err_t vsfusbd_CDCData_IN_hanlder(struct vsfusbd_device_t *device,
 	return VSFERR_NONE;
 }
 
-static void vsfusbd_CDCData_streamtx_callback_on_in_int(void *p)
+static void vsfusbd_CDCData_streamtx_on_in(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 
 	vsfsm_post_evt_pending(&param->iface->sm, VSFUSBD_CDC_EVT_STREAMTX_ONIN);
 }
 
-static void vsfusbd_CDCData_streamrx_callback_on_out_int(void *p)
+static void vsfusbd_CDCData_streamrx_on_out(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 
 	vsfsm_post_evt_pending(&param->iface->sm, VSFUSBD_CDC_EVT_STREAMRX_ONOUT);
 }
 
-static void vsfusbd_CDCData_streamtx_callback_on_txconn(void *p)
+static void vsfusbd_CDCData_streamtx_on_txconn(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 
 	vsfsm_post_evt_pending(&param->iface->sm, VSFUSBD_CDC_EVT_STREAMTX_ONCONN);
 }
 
-static void vsfusbd_CDCData_streamrx_callback_on_rxconn(void *p)
+static void vsfusbd_CDCData_streamrx_on_rxconn(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 
@@ -148,15 +148,15 @@ vsfusbd_CDCData_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	{
 	case VSFSM_EVT_INIT:
 		param->stream_tx->callback_rx.param = param;
-		param->stream_tx->callback_rx.on_in_int =
-							vsfusbd_CDCData_streamtx_callback_on_in_int;
-		param->stream_tx->callback_rx.on_connect_tx =
-							vsfusbd_CDCData_streamtx_callback_on_txconn;
+		param->stream_tx->callback_rx.on_inout =
+							vsfusbd_CDCData_streamtx_on_in;
+		param->stream_tx->callback_rx.on_connect =
+							vsfusbd_CDCData_streamtx_on_txconn;
 		param->stream_rx->callback_tx.param = param;
-		param->stream_rx->callback_tx.on_out_int =
-							vsfusbd_CDCData_streamrx_callback_on_out_int;
-		param->stream_rx->callback_tx.on_connect_rx =
-							vsfusbd_CDCData_streamrx_callback_on_rxconn;
+		param->stream_rx->callback_tx.on_inout =
+							vsfusbd_CDCData_streamrx_on_out;
+		param->stream_rx->callback_tx.on_connect =
+							vsfusbd_CDCData_streamrx_on_rxconn;
 
 		param->out_enable = false;
 		param->in_enable = false;

@@ -33,6 +33,14 @@ struct vsf_stream_op_t
 	uint32_t (*get_avail_length)(struct vsf_stream_t *stream);
 };
 
+struct vsf_stream_cb_t
+{
+	void *param;
+	void (*on_inout)(void *param);
+	void (*on_connect)(void *param);
+	void (*on_disconnect)(void *param);
+};
+
 struct vsf_stream_t
 {
 	// user_mem points to user structure, eg queue/fifo
@@ -41,22 +49,10 @@ struct vsf_stream_t
 
 	// callback_tx is notification for tx end of the stream
 	// when rx end read the data out, will notify the tx end
-	struct
-	{
-		void *param;
-		void (*on_out_int)(void *param);
-		void (*on_connect_rx)(void *param);
-		void (*on_disconnect_rx)(void *param);
-	} callback_tx;
+	struct vsf_stream_cb_t callback_tx;
 	// callback_rx is notification for rx end of the stream
 	// when tx end write the data in, will notify the rx end
-	struct
-	{
-		void *param;
-		void (*on_in_int)(void *param);
-		void (*on_connect_tx)(void *param);
-		void (*on_disconnect_tx)(void *param);
-	} callback_rx;
+	struct vsf_stream_cb_t callback_rx;
 	bool tx_ready;
 	bool rx_ready;
 	bool overflow;

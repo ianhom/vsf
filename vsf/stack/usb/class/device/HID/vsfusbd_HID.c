@@ -172,9 +172,9 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		param->bufstream.read = true;
 		param->stream.user_mem = &param->bufstream;
 		param->stream.op = &buffer_stream_op;
-		param->stream.callback_tx.on_connect_rx = NULL;
-		param->stream.callback_tx.on_disconnect_rx = NULL;
-		param->stream.callback_tx.on_out_int = NULL;
+		param->stream.callback_tx.on_connect = NULL;
+		param->stream.callback_tx.on_disconnect = NULL;
+		param->stream.callback_tx.on_inout = NULL;
 
 		param->output_state = HID_OUTPUT_STATE_WAIT;
 		param->busy = false;

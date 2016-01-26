@@ -180,7 +180,11 @@ vsf_err_t vsfusbd_device_init(struct vsfusbd_device_t *device);
 vsf_err_t vsfusbd_device_fini(struct vsfusbd_device_t *device);
 vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 								struct vsfusbd_transact_t *transact);
+void vsfusbd_ep_cancel_recv(struct vsfusbd_device_t *device,
+								struct vsfusbd_transact_t *transact);
 vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
+								struct vsfusbd_transact_t *transact);
+void vsfusbd_ep_cancel_send(struct vsfusbd_device_t *device,
 								struct vsfusbd_transact_t *transact);
 
 vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep);

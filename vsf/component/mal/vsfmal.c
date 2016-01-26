@@ -197,11 +197,11 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (malstream->offset >= malstream->size)
 		{
 			// fix before callback
-			stream->callback_tx.on_out_int = NULL;
+			stream->callback_tx.on_inout = NULL;
 		}
-		if (stream->rx_ready && (stream->callback_rx.on_in_int != NULL))
+		if (stream->rx_ready && (stream->callback_rx.on_inout != NULL))
 		{
-			stream->callback_rx.on_in_int(stream->callback_rx.param);
+			stream->callback_rx.on_inout(stream->callback_rx.param);
 		}
 	}
 
@@ -222,9 +222,9 @@ vsf_err_t vsf_malstream_read(struct vsf_malstream_t *malstream, uint64_t addr,
 	malstream->size = size;
 
 	malstream->stream.callback_tx.param = malstream;
-	malstream->stream.callback_tx.on_out_int = vsf_malstream_on_inout;
-	malstream->stream.callback_tx.on_connect_rx = NULL;
-	malstream->stream.callback_tx.on_disconnect_rx = NULL;
+	malstream->stream.callback_tx.on_inout = vsf_malstream_on_inout;
+	malstream->stream.callback_tx.on_connect = NULL;
+	malstream->stream.callback_tx.on_disconnect = NULL;
 	stream_connect_tx(&malstream->stream);
 
 	malstream->pt.thread = vsf_malstream_read_thread;
@@ -270,11 +270,11 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (malstream->offset >= malstream->size)
 		{
 			// fix before callback
-			stream->callback_tx.on_out_int = NULL;
+			stream->callback_tx.on_inout = NULL;
 		}
-		if (stream->tx_ready && (stream->callback_tx.on_out_int != NULL))
+		if (stream->tx_ready && (stream->callback_tx.on_inout != NULL))
 		{
-			stream->callback_tx.on_out_int(stream->callback_tx.param);
+			stream->callback_tx.on_inout(stream->callback_tx.param);
 		}
 	}
 
@@ -295,9 +295,9 @@ vsf_err_t vsf_malstream_write(struct vsf_malstream_t *malstream, uint64_t addr,
 	malstream->size = size;
 
 	malstream->stream.callback_rx.param = malstream;
-	malstream->stream.callback_rx.on_in_int = vsf_malstream_on_inout;
-	malstream->stream.callback_rx.on_connect_tx = NULL;
-	malstream->stream.callback_rx.on_disconnect_tx = NULL;
+	malstream->stream.callback_rx.on_inout = vsf_malstream_on_inout;
+	malstream->stream.callback_rx.on_connect = NULL;
+	malstream->stream.callback_rx.on_disconnect = NULL;
 	stream_connect_rx(&malstream->stream);
 
 	malstream->pt.thread = vsf_malstream_write_thread;

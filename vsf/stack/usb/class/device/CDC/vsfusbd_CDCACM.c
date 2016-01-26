@@ -79,7 +79,6 @@ vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 		{
 			return VSFERR_FAIL;
 		}
-
 		param->control_line = (uint8_t)request->wValue;
 		if ((param->callback.set_control_line != NULL) &&
 			(param->callback.set_control_line(param->control_line)))

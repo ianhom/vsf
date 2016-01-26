@@ -35,28 +35,28 @@ enum vsfshell_EVT_t
 	VSFSHELL_EVT_USER = VSFSM_EVT_USER_LOCAL_INSTANT + 1,
 };
 
-static void vsfshell_streamrx_callback_on_in_int(void *p)
+static void vsfshell_streamrx_on_in(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
 	
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMRX_ONIN);
 }
 
-static void vsfshell_streamtx_callback_on_out_int(void *p)
+static void vsfshell_streamtx_on_out(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
 	
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMTX_ONOUT);
 }
 
-static void vsfshell_streamrx_callback_on_txconn(void *p)
+static void vsfshell_streamrx_on_txconn(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
 	
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMRX_ONCONN);
 }
 
-static void vsfshell_streamtx_callback_on_rxconn(void *p)
+static void vsfshell_streamtx_on_rxconn(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
 	
@@ -441,15 +441,11 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfsm_crit_init(&shell->output_crit, VSFSHELL_EVT_OUTPUT_CRIT_AVAIL);
 		
 		shell->stream_rx->callback_rx.param = shell;
-		shell->stream_rx->callback_rx.on_in_int =
-							vsfshell_streamrx_callback_on_in_int;
-		shell->stream_rx->callback_rx.on_connect_tx =
-							vsfshell_streamrx_callback_on_txconn;
+		shell->stream_rx->callback_rx.on_inout = vsfshell_streamrx_on_in;
+		shell->stream_rx->callback_rx.on_connect = vsfshell_streamrx_on_txconn;
 		shell->stream_tx->callback_tx.param = shell;
-		shell->stream_tx->callback_tx.on_out_int =
-							vsfshell_streamtx_callback_on_out_int;
-		shell->stream_tx->callback_tx.on_connect_rx =
-							vsfshell_streamtx_callback_on_rxconn;
+		shell->stream_tx->callback_tx.on_inout = vsfshell_streamtx_on_out;
+		shell->stream_tx->callback_tx.on_connect = vsfshell_streamtx_on_rxconn;
 		
 		// shell->output_pt is only called by shell->input_pt
 		shell->output_pt.thread = (vsfsm_pt_thread_t)vsfshell_output_thread;

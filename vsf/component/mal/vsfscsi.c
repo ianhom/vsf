@@ -108,9 +108,9 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		stream->user_mem = bufstream;
 		stream->op = &buffer_stream_op;
 		stream->callback_tx.param = lun;
-		stream->callback_tx.on_out_int = vsf_mal2scsi_bufstream_on_out;
-		stream->callback_tx.on_connect_rx = NULL;
-		stream->callback_tx.on_disconnect_rx = NULL;
+		stream->callback_tx.on_inout = vsf_mal2scsi_bufstream_on_out;
+		stream->callback_tx.on_connect = NULL;
+		stream->callback_tx.on_disconnect = NULL;
 		stream_init(stream);
 		transact->stream = stream;
 	}

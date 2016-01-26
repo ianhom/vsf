@@ -315,7 +315,7 @@ close:
 }
 
 // op_stream
-static void vsfip_httpc_outstream_onout_int(void *p)
+static void vsfip_httpc_outstream_on_out(void *p)
 {
 	struct vsfsm_t *sm = (struct vsfsm_t *)p;
 
@@ -328,7 +328,7 @@ vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	//config on connect rx
 	output->callback_tx.param = pt->sm;
-	output->callback_tx.on_out_int = vsfip_httpc_outstream_onout_int;
+	output->callback_tx.on_inout = vsfip_httpc_outstream_on_out;
 	stream_connect_tx(output);
 
 	return VSFERR_NONE;
