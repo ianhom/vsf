@@ -363,4 +363,8 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);
 
+// for proto
+vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain);
+
+
 #endif		// __VSFIP_H_INCLUDED__

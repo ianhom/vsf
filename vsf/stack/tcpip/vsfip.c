@@ -2079,3 +2079,28 @@ static void vsfip_icmp_input(struct vsfip_buffer_t *buf)
 	// TODO:
 	vsfip_buffer_release(buf);
 }
+
+//pton
+vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain)
+{
+	uint8_t i;
+	char *str = domain;
+	
+	//may not head by zero
+	i = atoi(str);
+	if (i == 0)
+		return VSFERR_FAIL;
+	//is vaild num
+	domainip->addr.s_addr_buf[0] = i;
+
+	for (i = 1;i < 4;i++)
+	{
+		str = strchr(str, '.');
+		if (str == NULL)
+			return VSFERR_FAIL;
+		str++;
+		domainip->addr.s_addr_buf[i] = atoi(str);
+	}
+	domainip->size = 4;
+	return VSFERR_NONE;
+}
