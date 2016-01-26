@@ -19,6 +19,62 @@
 
 #include "vsf.h"
 
+#ifdef VSFUSBD_CDCCFG_TRANSACT
+static void vsfusbd_CDCData_on_OUT_finish(void *p);
+static void vsfusbd_CDCData_on_rxconn(void *p)
+{
+	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
+
+	param->OUT_transact.stream = param->stream_rx;
+	param->OUT_transact.data_size = 0xFFFFFFFF;
+	vsfusbd_ep_recv(param->device, &param->OUT_transact);
+}
+
+static void vsfusbd_CDCData_on_OUT_finish(void *p)
+{
+	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
+	struct vsf_stream_t *stream = param->stream_rx;
+
+	if (!stream->rx_ready)
+	{
+		stream->callback_tx.param = param;
+		stream->callback_tx.on_connect = vsfusbd_CDCData_on_rxconn;
+		stream->callback_tx.on_disconnect = NULL;
+		stream->callback_tx.on_inout = NULL;
+	}
+	else
+	{
+		vsfusbd_CDCData_on_rxconn(param);
+	}
+}
+
+static void vsfusbd_CDCData_on_in(void *p)
+{
+	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
+	struct vsf_stream_t *stream = param->stream_tx;
+	uint32_t size;
+
+	size = stream_get_data_size(stream);
+	if (size > 0)
+	{
+		param->IN_transact.data_size = size;
+		param->IN_transact.stream = param->stream_tx;
+		vsfusbd_ep_send(param->device, &param->IN_transact);
+	}
+}
+
+void vsfusbd_CDCData_on_IN_finish(void *p)
+{
+	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
+	struct vsf_stream_t *stream = param->stream_tx;
+
+	stream->callback_rx.param = param;
+	stream->callback_rx.on_connect = NULL;
+	stream->callback_rx.on_disconnect = NULL;
+	stream->callback_rx.on_inout = vsfusbd_CDCData_on_in;
+	vsfusbd_CDCData_on_in(param);
+}
+#else
 enum vsfusbd_CDC_EVT_t
 {
 	VSFUSBD_CDC_EVT_STREAMTX_ONIN = VSFSM_EVT_USER_LOCAL + 0,
@@ -190,6 +246,7 @@ vsfusbd_CDCData_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 	return NULL;
 }
+#endif		// VSFUSBD_CDCCFG_TRANSACT
 
 vsf_err_t
 vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
@@ -205,12 +262,26 @@ vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 		return VSFERR_INVALID_PARAMETER;
 	}
 
-	// state machine init
+	param->device = device;
+#ifdef VSFUSBD_CDCCFG_TRANSACT
+	param->IN_transact.ep = param->ep_in;
+	param->IN_transact.cb.on_finish = vsfusbd_CDCData_on_IN_finish;
+	param->IN_transact.cb.param = param;
+	param->IN_transact.zlp = false;
+	param->OUT_transact.ep = param->ep_out;
+	param->OUT_transact.cb.on_finish = vsfusbd_CDCData_on_OUT_finish;
+	param->OUT_transact.cb.param = param;
+	param->OUT_transact.zlp = false;
+
+	vsfusbd_CDCData_on_IN_finish(param);
+	vsfusbd_CDCData_on_OUT_finish(param);
+	return VSFERR_NONE;
+#else
 	ifs->sm.init_state.evt_handler = vsfusbd_CDCData_evt_handler;
 	param->iface = ifs;
-	param->device = device;
 	ifs->sm.user_data = (void*)param;
 	return vsfsm_init(&ifs->sm);
+#endif
 }
 
 void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)

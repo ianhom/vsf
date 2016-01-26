@@ -23,6 +23,8 @@
 #include "component/buffer/buffer.h"
 #include "component/stream/stream.h"
 
+//#define VSFUSBD_CDCCFG_TRANSACT
+
 enum usb_CDC_req_t
 {
 	USB_CDCREQ_SEND_ENCAPSULATED_COMMAND	= 0x00,
@@ -57,11 +59,15 @@ struct vsfusbd_CDC_param_t
 	struct vsf_buffer_t encapsulated_response_buffer;
 	
 	// no need to initialize below by user
+	struct vsfusbd_device_t *device;
+#ifdef VSFUSBD_CDCCFG_TRANSACT
+	struct vsfusbd_transact_t IN_transact;
+	struct vsfusbd_transact_t OUT_transact;
+#else
+	struct vsfusbd_iface_t *iface;
 	bool out_enable;
 	bool in_enable;
-	
-	struct vsfusbd_device_t *device;
-	struct vsfusbd_iface_t *iface;
+#endif
 };
 
 // helper functions
