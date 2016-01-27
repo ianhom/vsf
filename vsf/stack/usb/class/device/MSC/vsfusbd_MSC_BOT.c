@@ -97,10 +97,11 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 	struct vsfusbd_device_t *device = param->device;
 	struct vsfscsi_lun_t *lun;
 
-	if ((param->CBW.dCBWSignature != USBMSC_CBW_SIGNATURE) ||
+	if (param->transact.data_size ||
+		(param->CBW.dCBWSignature != USBMSC_CBW_SIGNATURE) ||
 		(param->CBW.bCBWCBLength < 1) || (param->CBW.bCBWCBLength > 16))
 	{
-		// TODO: invalid CBW, how to process this error?
+		vsfusbd_MSCBOT_on_idle(param);
 		return;
 	}
 
