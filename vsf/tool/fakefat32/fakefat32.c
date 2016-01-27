@@ -18,15 +18,12 @@
  ***************************************************************************/
 
 #include <ctype.h>
-#include "compiler.h"
-
-#include "app_type.h"
+#include "vsf.h"
 #include "fakefat32.h"
 
-#define FAKEFAT32_FILEATTR_LONGNAME			(FAKEFAT32_FILEATTR_READONLY | \
-												FAKEFAT32_FILEATTR_HIDDEN | \
-												FAKEFAT32_FILEATTR_SYSTEM | \
-												FKAEFAT32_FILEATTR_VOLUMEID)
+#define FAKEFAT32_FILEATTR_LONGNAME			\
+				(VSFILE_ATTR_READONLY | VSFILE_ATTR_HIDDEN |\
+				VSFILE_ATTR_SYSTEM | VSFILE_ATTR_VOLUMID)
 
 #define FAKEFAT32_NAMEATTR_NAMELOWERCASE	0x08
 #define FAKEFAT32_NAMEATTR_EXTLOWERCASE		0x10
@@ -78,9 +75,12 @@ static uint8_t fat32_mbr[512] =
 	0x72,0x74,0x0D,0x0A,0x00,0x00,0x00,0x00,0x00,0xAC,0xCB,0xD8,0x00,0x00,0x55,0xAA
 };
 
-
-#include "component/mal/mal.h"
-#include "component/mal/mal_driver.h"
+static vsf_err_t fakefat32_dir_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct fakefat32_file_t *file, uint64_t addr, uint8_t *buff,
+			uint32_t page_size);
+static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct fakefat32_file_t *file, uint64_t addr, uint8_t *buff,
+			uint32_t page_size);
 
 // helper functions
 static char find_first_alphabet(const char *str)
@@ -89,7 +89,7 @@ static char find_first_alphabet(const char *str)
 	{
 		return 0;
 	}
-	
+
 	while ((*str != '\0') && !isalpha(*str))
 	{
 		str++;
@@ -103,13 +103,13 @@ static char* strncpy_fill(char *dst, const char *src, char fill, uint32_t n)
 	{
 		char *d = dst;
 		const char *s = src;
-		
+
 		if (NULL == s)
 		{
 			memset(dst, fill, n);
 			return (dst);
 		}
-		
+
 		do
 		{
 			if ((*d++ = *s++) == 0)
@@ -127,29 +127,22 @@ static char* strncpy_fill(char *dst, const char *src, char fill, uint32_t n)
 	return (dst);
 }
 
-static char* strncpy_toupper_fill(char *dst, const char *src, char fill, uint32_t n)
+static char* memncpy_toupper(char *dst, const char *src, uint32_t n)
 {
 	if (n != 0)
 	{
 		char *d = dst;
 		const char *s = src;
-		
+
 		if (NULL == s)
 		{
-			memset(dst, fill, n);
 			return (dst);
 		}
-		
+
 		do
 		{
 			if ((*d++ = (char)toupper(*s++)) == 0)
 			{
-				d--;
-				n++;
-				while (--n != 0)
-				{
-					*d++ = fill;
-				}
 				break;
 			}
 		} while (--n != 0);
@@ -167,28 +160,31 @@ static struct fakefat32_file_t* fakefat32_get_file_by_cluster(
 			struct fakefat32_param_t *param, struct fakefat32_file_t *cur_file,
 			uint32_t cluster)
 {
+	struct vsfile_t *rawfile = &cur_file->memfile.file;
 	struct fakefat32_file_t *result = NULL;
 	uint32_t cluster_size = param->sector_size * param->sectors_per_cluster;
 	uint32_t cluster_start, cluster_end, clusters;
-	
-	clusters = ((uint64_t)cur_file->size + cluster_size - 1) / cluster_size;
+
+	clusters = ((uint64_t)rawfile->size + cluster_size - 1) / cluster_size;
 	cluster_start = cur_file->first_cluster;
 	cluster_end = cluster_start + clusters;
 	if ((cluster >= cluster_start) && (cluster < cluster_end))
 	{
 		return cur_file;
 	}
-	
-	if (cur_file->filelist != NULL)
+
+	if ((cur_file->memfile.ptr != NULL) && (rawfile->attr & VSFILE_ATTR_DIRECTORY))
 	{
-		result = fakefat32_get_file_by_cluster(param, cur_file->filelist, cluster);
+		result = fakefat32_get_file_by_cluster(param, cur_file->memfile.ptr,
+												cluster);
 		if (result != NULL)
 		{
 			return result;
 		}
 	}
 	cur_file++;
-	if (cur_file->name != NULL)
+	rawfile = &cur_file->memfile.file;
+	if (rawfile->name != NULL)
 	{
 		result = fakefat32_get_file_by_cluster(param, cur_file, cluster);
 		if (result != NULL)
@@ -201,83 +197,75 @@ static struct fakefat32_file_t* fakefat32_get_file_by_cluster(
 
 static bool fakefat32_file_is_longname(struct fakefat32_file_t *file)
 {
-	bool name_has_lower = false, name_has_upper = false,
-		ext_has_lower = false, ext_has_upper = false;
+	char *name = file->memfile.file.name, *ext = NULL;
+	bool has_lower = false, has_upper = false;
 	uint32_t i, name_len = 0, ext_len = 0;
-	
-	if (file->name != NULL)
+
+	if (name != NULL)
 	{
-		name_len = strlen(file->name);
+		name_len = strlen(name);
+		ext = vsfile_getfileext(name);
 	}
-	if (file->ext != NULL)
+	if (ext != NULL)
 	{
-		ext_len = strlen(file->ext);
+		ext_len = strlen(ext);
+		name_len -= ext_len + 1;	// 1 more byte for dot
 	}
 	if ((name_len > 8) || (ext_len > 3))
 	{
 		return true;
 	}
-	
-	for (i = 0; i < name_len; i++)
+
+	for (i = 0; name[i] != '\0'; i++)
 	{
-		int ch = (int)file->name[i];
-		if (islower(ch))
+		if (islower((int)name[i]))
 		{
-			name_has_lower = true;
+			has_lower = true;
 		}
-		if (isupper(ch))
+		if (isupper((int)name[i]))
 		{
-			name_has_upper = true;
+			has_upper = true;
 		}
 	}
-	for (i = 0; i < ext_len; i++)
-	{
-		int ch = (int)file->ext[i];
-		if (islower(ch))
-		{
-			ext_has_lower = true;
-		}
-		if (isupper(ch))
-		{
-			ext_has_upper = true;
-		}
-	}
-	return (name_has_lower && name_has_upper) || (ext_has_lower && ext_has_upper);
+	return has_lower && has_upper;
 }
 
 static uint32_t fakefat32_calc_longname_len(struct fakefat32_file_t *file)
 {
-	if (file->name != NULL)
-	{
-		return strlen(file->name) +
-			(((file->ext == NULL) || (strlen(file->ext) == 0)) ? 0 : 1 + strlen(file->ext));
-	}
-	return 0;
+	struct vsfile_t *rawfile = &file->memfile.file;
+	return rawfile->name ? strlen(rawfile->name) : 0;
 }
 
 static uint32_t fakefat32_calc_dir_clusters(struct fakefat32_param_t *param,
 							struct fakefat32_file_t *file)
 {
+	struct vsfile_t *rawfile;
 	uint32_t cluster_size = param->sector_size * param->sectors_per_cluster;
 	uint32_t size = 0;
-	
-	if ((NULL == file) || !(file->attr & FAKEFAT32_FILEATTR_DIRECTORY) ||
-		(NULL == file->filelist))
+
+	if (NULL == file)
 	{
 		return 0;
 	}
-	
-	file = file->filelist;
-	while (file->name != NULL)
+	rawfile = &file->memfile.file;
+	if (!(rawfile->attr & VSFILE_ATTR_DIRECTORY) || (NULL == file->memfile.ptr))
 	{
-		if ((file->attr != FKAEFAT32_FILEATTR_VOLUMEID) &&
-			(fakefat32_file_is_longname(file)))
+		return 0;
+	}
+
+	file = (struct fakefat32_file_t *)file->memfile.ptr;
+	rawfile = &file->memfile.file;
+	while (rawfile->name != NULL)
+	{
+		if ((rawfile->attr != VSFILE_ATTR_VOLUMID) &&
+			fakefat32_file_is_longname(file))
 		{
 			// one long name can contain 13 unicode max
 			size += 0x20 * ((fakefat32_calc_longname_len(file) + 12) / 13);
 		}
 		size += 0x20;
 		file++;
+		rawfile = &file->memfile.file;
 	}
 	return (size + cluster_size - 1) / cluster_size;
 }
@@ -285,24 +273,28 @@ static uint32_t fakefat32_calc_dir_clusters(struct fakefat32_param_t *param,
 static vsf_err_t fakefat32_init(struct fakefat32_param_t *param,
 						struct fakefat32_file_t *file, uint32_t *cur_cluster)
 {
+	struct vsfile_t *rawfile;
 	uint32_t cluster_size = param->sector_size * param->sectors_per_cluster;
 	uint32_t clusters;
-	
+
 	if (NULL == file)
 	{
 		return VSFERR_FAIL;
 	}
-	
-	if (file->attr & FAKEFAT32_FILEATTR_DIRECTORY)
+	rawfile = &file->memfile.file;
+
+	if (rawfile->attr & VSFILE_ATTR_DIRECTORY)
 	{
 		clusters = fakefat32_calc_dir_clusters(param, file);
-		file->size = clusters * param->sectors_per_cluster * param->sector_size;
+		rawfile->size = clusters * param->sectors_per_cluster * param->sector_size;
+		file->cb.read = fakefat32_dir_read;
+		file->cb.write = fakefat32_dir_write;
 	}
 	else
 	{
-		clusters = ((uint64_t)file->size + cluster_size - 1) / cluster_size;
+		clusters = ((uint64_t)rawfile->size + cluster_size - 1) / cluster_size;
 	}
-	
+
 	if (clusters)
 	{
 		file->first_cluster = *cur_cluster;
@@ -310,19 +302,21 @@ static vsf_err_t fakefat32_init(struct fakefat32_param_t *param,
 		file->record.FstClusLO = (file->first_cluster >>  0) & 0xFFFF;
 		*cur_cluster += clusters;
 	}
-	
-	if (file->filelist != NULL)
+
+	if ((file->memfile.ptr != NULL) && (rawfile->attr & VSFILE_ATTR_DIRECTORY))
 	{
 		struct fakefat32_file_t *parent = file;
-		
-		file = file->filelist;
-		while (file->name != NULL)
+
+		file = (struct fakefat32_file_t *)file->memfile.ptr;
+		rawfile = &file->memfile.file;
+		while (rawfile->name != NULL)
 		{
-			file->parent = parent;
+			rawfile->parent = (struct vsfile_t *)parent;
 			if (fakefat32_init(param, file++, cur_cluster))
 			{
 				return VSFERR_FAIL;
 			}
+			rawfile = &file->memfile.file;
 		}
 	}
 	return VSFERR_NONE;
@@ -331,48 +325,81 @@ static vsf_err_t fakefat32_init(struct fakefat32_param_t *param,
 static void fakefat32_get_shortname(struct fakefat32_file_t* file,
 											char shortname[11])
 {
+	struct vsfile_t *rawfile = &file->memfile.file;
+	char *ext = vsfile_getfileext(rawfile->name);
+	uint32_t extlen = ext ? strlen(ext) : 0;
+
+	memset(shortname, ' ', 11);
+	if (!strcmp(rawfile->name, "."))
+	{
+		shortname[0] = '.';
+		return;
+	}
+	else if (!strcmp(rawfile->name, ".."))
+	{
+		shortname[0] = shortname[1] = '.';
+		return;
+	}
+
 	if (!fakefat32_file_is_longname(file))
 	{
-		strncpy_toupper_fill((char *)&shortname[0], file->name, ' ', 8);
+		uint32_t file_name_len = strlen(rawfile->name);
+		if (ext)
+		{
+			file_name_len -= extlen + 1;
+		}
+		memncpy_toupper(shortname, rawfile->name, file_name_len);
 	}
 	else
 	{
-		uint32_t n = min(strlen(file->name), 6);
-		
-		strncpy_toupper_fill((char *)&shortname[0], file->name, ' ', 8);
+		uint32_t n = strlen(rawfile->name);
+		n = min(n, 6);
+
+		memncpy_toupper(shortname, rawfile->name, n);
 		shortname[n] = '~';
 		// TODO: fix file index here, now use 1
 		// BUG here if multiple same short names under one directory
 		shortname[n + 1] = '1';
 	}
-	strncpy_toupper_fill((char *)&shortname[8], file->ext, ' ', 3);
+	if (ext)
+	{
+		extlen = min(extlen, 3);
+		memncpy_toupper((char *)&shortname[8], ext, extlen);
+	}
 }
 
-vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
-								uint8_t *buff, uint32_t page_size)
+static vsf_err_t fakefat32_dir_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct fakefat32_file_t *file, uint64_t addr, uint8_t *buff,
+			uint32_t page_size)
 {
+	struct vsfile_t *rawfile = &file->memfile.file;
 	struct fakefat32_file_t* file_dir = file;
 	uint8_t longname_index_offset = 0;
-	
+
 	memset(buff, 0, page_size);
-	if (!(file->attr & FAKEFAT32_FILEATTR_DIRECTORY))
+	if (!(rawfile->attr & VSFILE_ATTR_DIRECTORY))
 	{
 		return VSFERR_FAIL;
 	}
-	
-	file = file->filelist;
-	
+
+	file = (struct fakefat32_file_t *)file->memfile.ptr;
+	if (NULL == file)
+	{
+		return VSFERR_NONE;
+	}
+
 	while (addr)
 	{
 		uint32_t current_entry_size;
-		
+
 		// no file record here, return
-		if ((NULL == file) || (NULL == file->name))
+		rawfile = &file->memfile.file;
+		if (!rawfile->name)
 		{
 			return VSFERR_NONE;
 		}
-		
-		if ((file->attr != FKAEFAT32_FILEATTR_VOLUMEID) &&
+
+		if ((rawfile->attr != VSFILE_ATTR_VOLUMID) &&
 			fakefat32_file_is_longname(file))
 		{
 			uint32_t longname_len = fakefat32_calc_longname_len(file);
@@ -390,25 +417,30 @@ vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
 		addr -= current_entry_size;
 		file++;
 	}
-	
-	while (page_size && (file != NULL) && (file->name != NULL))
+
+	while (page_size && (file != NULL))
 	{
 		char short_filename[11];
 		bool longname = false;
-		
-		if (FKAEFAT32_FILEATTR_VOLUMEID == file->attr)
+
+		rawfile = &file->memfile.file;
+		if (!rawfile->name)
+		{
+			break;
+		}
+		if (VSFILE_ATTR_VOLUMID == rawfile->attr)
 		{
 			// ONLY file->name is valid for volume_id
 			// volume_id is 11 characters max
-			strncpy_fill((char *)buff, file->name, ' ', 11);
-			buff[11] = file->attr;
+			strncpy_fill((char *)buff, rawfile->name, ' ', 11);
+			buff[11] = rawfile->attr;
 			memset(&buff[12], 0, 20);
 			goto fakefat32_dir_read_next;
 		}
-		
+
 		// generate short 8.3 filename
 		fakefat32_get_shortname(file, short_filename);
-		
+
 		if (fakefat32_file_is_longname(file))
 		{
 			// process entries for long file name
@@ -416,9 +448,9 @@ vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
 			uint8_t longname_entry_num = (uint8_t)((longname_len + 12) / 13);
 			uint8_t longname_index;
 			uint32_t i, j;
-			
+
 			longname = true;
-			
+
 			longname_index = longname_entry_num;
 			if (longname_index >= 0x40)
 			{
@@ -433,37 +465,28 @@ vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
 				longname_index -= longname_index_offset;
 				longname_index_offset = 0;
 			}
-			
+
 			while (page_size && longname_index)
 			{
 				uint8_t checksum = 0;
-				
+
 				memset(buff, 0xFF, 0x20);
 				buff[0x0B] = FAKEFAT32_FILEATTR_LONGNAME;
 				buff[0x0C] = buff[0x1A] = buff[0x1B] = 0;
-			
+
 				for (i = 0; i < 11; i++)
 				{
 					checksum = ((checksum << 7) | (checksum >> 1)) +
 									short_filename[i];
 				}
 				buff[0x0D] = checksum;
-				
+
 				buff[0] = longname_index;
 				j = 1;
 				i = 13 * ((longname_index & ~0x40) - 1);
 				while ((i < longname_len) && (j < 32))
 				{
-					if (i < strlen(file->name))
-					{
-						buff[j] = file->name[i];
-					} else if (i == strlen(file->name))
-					{
-						buff[j] = '.';
-					} else
-					{
-						buff[j] = file->ext[i - 1 - strlen(file->name)];
-					}
+					buff[j] = rawfile->name[i];
 					buff[j + 1] = 0;
 					j += 2;
 					if (0x0B == j)
@@ -475,73 +498,75 @@ vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
 					}
 					i++;
 				}
-				
+
 				if (j < 32)
 				{
 					buff[j] = buff[j + 1] = 0;
 				}
-				
+
 				longname_index &= ~0x40;
 				longname_index--;
 				buff += 0x20;
 				page_size -= 0x20;
 			}
-			
+
 			if (!page_size)
 			{
 				break;
 			}
 		}
-		
+
 		// 8.3 file name
 		memcpy(&buff[0], short_filename, 11);
-		
+
 		// File Attribute
-		buff[11] = file->attr;
-		
+		buff[11] = rawfile->attr;
+
 		// File Nt Attribute
 		buff[12] = 0;
 		if (!longname)
 		{
-			if (islower(find_first_alphabet(file->name)))
+			char *ext = vsfile_getfileext(rawfile->name);
+			if (islower(find_first_alphabet(rawfile->name)))
 			{
 				buff[12] |= FAKEFAT32_NAMEATTR_NAMELOWERCASE;
 			}
-			if (islower(find_first_alphabet(file->ext)))
+			if (islower(find_first_alphabet(ext)))
 			{
 				buff[12] |= FAKEFAT32_NAMEATTR_EXTLOWERCASE;
 			}
 		}
-		
+
 		// File Size
-		if (file->attr & FAKEFAT32_FILEATTR_DIRECTORY)
+		if (rawfile->attr & VSFILE_ATTR_DIRECTORY)
 		{
 			// File Size for directory SHOULD be 0
 			SET_LE_U32(&buff[28], 0);
 		}
 		else
 		{
-			SET_LE_U32(&buff[28], file->size);
+			SET_LE_U32(&buff[28], rawfile->size);
 		}
-		
+
 		// fix for current directory
-		if (!strcmp(file->name, "."))
+		if (!strcmp(rawfile->name, "."))
 		{
 			file->record.FstClusHI = (file_dir->first_cluster >> 16) & 0xFFFF;
 			file->record.FstClusLO = (file_dir->first_cluster >>  0) & 0xFFFF;
 		}
 		// fix for parent directory
-		else if (!strcmp(file->name, "..") && (file_dir->parent != NULL) &&
-				// if file_dir->parent->parent is NULL, file_dir->parent is root dir
-				(file_dir->parent->parent != NULL))
+		else if (!strcmp(rawfile->name, "..") &&
+				(file_dir->memfile.file.parent != NULL) &&
+				// if parent->parent is NULL, parent is root dir
+				(file_dir->memfile.file.parent->parent != NULL))
 		{
-			file->record.FstClusHI = (file_dir->parent->first_cluster >> 16) & 0xFFFF;
-			file->record.FstClusLO = (file_dir->parent->first_cluster >>  0) & 0xFFFF;
+			file->record.FstClusHI = (((struct fakefat32_file_t *)(file_dir->memfile.file.parent))->first_cluster >> 16) & 0xFFFF;
+			file->record.FstClusLO = (((struct fakefat32_file_t *)(file_dir->memfile.file.parent))->first_cluster >>  0) & 0xFFFF;
 		}
-		
+
 		// record
 		memcpy(&buff[13], &file->record, sizeof(file->record));
-		
+
 	fakefat32_dir_read_next:
 		buff += 0x20;
 		page_size -= 0x20;
@@ -550,17 +575,19 @@ vsf_err_t fakefat32_dir_read(struct fakefat32_file_t* file, uint32_t addr,
 	return VSFERR_NONE;
 }
 
-vsf_err_t fakefat32_dir_write(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size)
+static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			struct fakefat32_file_t *file, uint64_t addr, uint8_t *buff,
+			uint32_t page_size)
 {
+	struct vsfile_t *rawfile;
 	struct fakefat32_file_t *file_temp, *file_match;
 	uint32_t want_size;
 	uint16_t want_first_cluster;
 	char short_filename[11];
-	
+
 	REFERENCE_PARAMETER(addr);
-	
-	file = file->filelist;
+
+	file = (struct fakefat32_file_t *)file->memfile.ptr;
 	while (page_size)
 	{
 		if ('\0' == buff[0])
@@ -572,59 +599,61 @@ vsf_err_t fakefat32_dir_write(struct fakefat32_file_t*file, uint32_t addr,
 			// longname file entry
 			goto fakefat32_dir_write_next;
 		}
-		
+
 		file_temp = file;
+		rawfile = &file_temp->memfile.file;
 		file_match = NULL;
-		while (file_temp->name != NULL)
+		while (rawfile->name != NULL)
 		{
 			// generate short 8.3 filename
-			if (file_temp->attr != FKAEFAT32_FILEATTR_VOLUMEID)
+			if (rawfile->attr != VSFILE_ATTR_VOLUMID)
 			{
 				fakefat32_get_shortname(file_temp, short_filename);
 			}
 			else
 			{
-				strncpy_fill(short_filename, file_temp->name, ' ', 11);
+				strncpy_fill(short_filename, rawfile->name, ' ', 11);
 			}
-			
+
 			if (!memcmp((const char *)buff, short_filename, 11))
 			{
 				file_match = file_temp;
 				break;
 			}
 			file_temp++;
+			rawfile = &file_temp->memfile.file;
 		}
 		// CANNOT add/delete file
 		if (NULL == file_match)
 		{
 			return VSFERR_FAIL;
 		}
-		
+
 		want_size = GET_LE_U32(&buff[28]);
 		want_first_cluster =
 				GET_LE_U16(&buff[26]) + (GET_LE_U16(&buff[20]) << 16);
-		
+
 		// CANNOT change file attribute
-		if (file_match->attr != buff[11])
+		if (rawfile->attr != buff[11])
 		{
 			return VSFERR_FAIL;
 		}
-		
+
 		// host can change the size and first_cluster
 		// ONLY one limitation: host MUST guarantee that the space is continuous
-		if (!(file_match->attr & FAKEFAT32_FILEATTR_DIRECTORY) &&
-			(file_match->size != want_size))
+		if (!(rawfile->attr & VSFILE_ATTR_DIRECTORY) &&
+			(rawfile->size != want_size))
 		{
-			if ((file_match->callback.change_size != NULL) &&
+/*			if ((file_match->callback.change_size != NULL) &&
 				file_match->callback.change_size(file_match, want_size))
 			{
 				return VSFERR_FAIL;
 			}
-			file_match->size = want_size;
+*/			rawfile->size = want_size;
 		}
 		file_match->first_cluster = want_first_cluster;
 		memcpy(&file_match->record, &buff[13], sizeof(file_match->record));
-		
+
 	fakefat32_dir_write_next:
 		buff += 0x20;
 		page_size -= 0x20;
@@ -632,63 +661,58 @@ vsf_err_t fakefat32_dir_write(struct fakefat32_file_t*file, uint32_t addr,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_drv_init_nb(struct dal_info_t *info)
+static uint32_t fakefat32_blocksize(struct vsfmal_t *mal, uint64_t addr,
+									uint32_t size, enum vsfmal_op_t op)
 {
-	struct fakefat32_param_t *param = (struct fakefat32_param_t *)info->param;
-	struct mal_info_t *mal_info = (struct mal_info_t *)info->extra;
+	return mal->cap.block_size;
+}
+
+static vsf_err_t fakefat32_drv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfmal_t *mal = (struct vsfmal_t*)pt->user_data;
+	struct fakefat32_param_t *param = (struct fakefat32_param_t *)mal->param;
 	uint32_t cur_cluster = FAT32_ROOT_CLUSTER;
-	
-	mal_info->capacity.block_size = param->sector_size;
-	mal_info->capacity.block_number = param->sector_number + FAT32_HIDDEN_SECTORS;
-	param->root[0].attr = FAKEFAT32_FILEATTR_DIRECTORY;
-	param->root[0].parent = NULL;
-	param->root[1].name = NULL;
-	
+
+	mal->cap.block_size = param->sector_size;
+	mal->cap.block_num = param->sector_number + FAT32_HIDDEN_SECTORS;
+	param->root[0].memfile.file.attr = VSFILE_ATTR_DIRECTORY;
+	param->root[0].memfile.file.parent = NULL;
+	param->root[1].memfile.file.name = NULL;
+
 	// set directory size and first_cluster of every file
 	return fakefat32_init(param, param->root, &cur_cluster);
 }
 
-static vsf_err_t fakefat32_drv_fini(struct dal_info_t *info)
+static vsf_err_t fakefat32_drv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
-	REFERENCE_PARAMETER(info);
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_drv_readblock_nb_start(struct dal_info_t *info, 
-								uint64_t address, uint64_t count, uint8_t *buff)
+static vsf_err_t fakefat32_drv_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+									uint64_t addr, uint8_t *buff, uint32_t size)
 {
-	REFERENCE_PARAMETER(info);
-	REFERENCE_PARAMETER(address);
-	REFERENCE_PARAMETER(count);
-	REFERENCE_PARAMETER(buff);
-	return VSFERR_NONE;
-}
-
-static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info, 
-											uint64_t address, uint8_t *buff)
-{
-	struct mal_info_t *mal_info = (struct mal_info_t *)info->extra;
-	uint32_t page_size = (uint32_t)mal_info->capacity.block_size;
-	uint32_t block_addr = (uint32_t)address / page_size;
-	struct fakefat32_param_t *param = (struct fakefat32_param_t *)info->param;
+	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
+	uint32_t page_size = (uint32_t)mal->cap.block_size;
+	uint32_t block_addr = (uint32_t)addr / page_size;
+	struct fakefat32_param_t *param = (struct fakefat32_param_t *)mal->param;
 	uint32_t fat_sectors = fakefat32_calc_fat_sectors(param);
 	uint32_t cluster_size = param->sectors_per_cluster * param->sector_size;
 	uint32_t root_cluster = FAT32_ROOT_CLUSTER;
-	
+
 	if (block_addr < (FAT32_HIDDEN_SECTORS + FAT32_RES_SECTORS + FAT32_FAT_NUM * fat_sectors))
 	{
 		memset(buff, 0, page_size);
 	}
-	
+
 	// first sector and first backup copy of boot sector
 	if ((FAT32_HIDDEN_SECTORS > 0) && (0 == block_addr))
 	{
 		// DPT
 		// Only PTE1 is valid
-		
+
 		// Disk ID
 		SET_LE_U32(&buff[0x1B8], param->disk_id);
-		
+
 		// PTE1
 		// Status: Active
 		buff[0x1BE] = 0x80;
@@ -706,7 +730,7 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 		SET_LE_U32(&buff[0x1C6], FAT32_HIDDEN_SECTORS);
 		// Number of sectors in partition
 		SET_LE_U32(&buff[0x1CA], param->sector_number);
-		
+
 		// Boot signature
 		SET_LE_U16(&buff[510], 0xAA55);
 	}
@@ -719,7 +743,7 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 	{
 		// MBR
 		memcpy(buff, fat32_mbr, sizeof(fat32_mbr));
-		
+
 		// Sector size in bytes
 		SET_LE_U16(&buff[0x0B], param->sector_size);
 		// Number of sectors per cluster
@@ -737,23 +761,23 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 	{
 		// FSInfo
 		// refer to FAT32 FSInfo sector Structure in FAT32 white paper
-		
-		// The lead signature is used to validate that this is in fact an 
+
+		// The lead signature is used to validate that this is in fact an
 		// FSInfo sector.
 		SET_LE_U32(&buff[0], 0x41615252);
-		// Another signature that is more localized in the sector to the 
+		// Another signature that is more localized in the sector to the
 		// location of the fields that are used.
 		SET_LE_U32(&buff[484], 0x61417272);
 		// Contains the last known free cluster count on the volume.
-		// If the value is 0xFFFFFFFF, then the free count is unknown and 
+		// If the value is 0xFFFFFFFF, then the free count is unknown and
 		// must be computed.
 		// Any other value can be used, but is not necessarily correct.
-		// Is should be range checked at least to make sure it is <= volume 
+		// Is should be range checked at least to make sure it is <= volume
 		// cluser count.
 		SET_LE_U32(&buff[488], 0xFFFFFFFF);
-		// This trail signature is used to validate that this is in fact 
+		// This trail signature is used to validate that this is in fact
 		// an FSInfo sector.
-		// Note that the high 2 bytes of this value match the signature 
+		// Note that the high 2 bytes of this value match the signature
 		// bytes used at the same offsets in sector 0.
 		SET_LE_U16(&buff[510], 0xAA55);
 	}
@@ -776,7 +800,7 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 		uint32_t remain_size = page_size;
 		uint32_t cluster_index = fat_sector * max_cluster;
 		uint32_t *buff32 = (uint32_t *)buff;
-		
+
 		while (remain_size && (cluster_index < root_cluster))
 		{
 			*buff32++ =
@@ -784,14 +808,14 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 			remain_size -= 4;
 			cluster_index++;
 		}
-		
+
 		while (remain_size)
 		{
 			struct fakefat32_file_t *file = NULL;
-			
+
 			file = fakefat32_get_file_by_cluster(param, param->root,
 													cluster_index);
-			
+
 			if (NULL == file)
 			{
 				// file not found
@@ -802,10 +826,11 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 			else
 			{
 				// file found
+				struct vsfile_t *rawfile = &file->memfile.file;
 				uint32_t cluster_offset = cluster_index - file->first_cluster;
-				uint32_t file_clusters = ((uint64_t)file->size + cluster_size - 1) / 
+				uint32_t file_clusters = ((uint64_t)rawfile->size + cluster_size - 1) /
 											cluster_size;
-				
+
 				while (remain_size && (cluster_offset < file_clusters))
 				{
 					if (cluster_offset == (file_clusters - 1))
@@ -817,7 +842,7 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 					{
 						*buff32++ = cluster_index + 1;
 					}
-					
+
 					remain_size -= 4;
 					cluster_offset++;
 					cluster_index++;
@@ -830,98 +855,50 @@ static vsf_err_t fakefat32_drv_readblock_nb(struct dal_info_t *info,
 		// Clusters
 		uint32_t sectors_to_root = block_addr - FAT32_HIDDEN_SECTORS -
 							FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors;
-		uint32_t cluster_index = root_cluster + 
+		uint32_t cluster_index = root_cluster +
 							sectors_to_root / param->sectors_per_cluster;
 		struct fakefat32_file_t *file = NULL;
-		
+
 		file = fakefat32_get_file_by_cluster(param, param->root, cluster_index);
-		
-		if (file != NULL)
+		if ((file != NULL) && !(file->memfile.file.attr & VSFILE_ATTR_WRITEONLY))
 		{
-			if (file->callback.read != NULL)
-			{
-				uint32_t addr_offset = param->sector_size * 
-					(sectors_to_root - param->sectors_per_cluster * 
+			struct vsfile_t *rawfile = &file->memfile.file;
+			uint32_t addr_offset = param->sector_size *
+					(sectors_to_root - param->sectors_per_cluster *
 									(file->first_cluster - root_cluster));
-				
-				return file->callback.read(file, addr_offset, buff, page_size);
+			uint32_t rsize;
+
+			if ((file->memfile.ptr != NULL) && !(rawfile->attr & VSFILE_ATTR_DIRECTORY))
+			{
+				return vsf_memfs_op.f_op.read(pt, evt, (struct vsfile_t *)file,
+										addr_offset, page_size, buff, &rsize);
+			}
+			else if (file->cb.read != NULL)
+			{
+				return file->cb.read(pt, evt, file, addr_offset, buff, page_size);
 			}
 		}
 	}
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_drv_readblock_nb_isready(struct dal_info_t *info, 
-												uint64_t address, uint8_t *buff)
+static vsf_err_t fakefat32_drv_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+									uint64_t addr, uint8_t *buff, uint32_t size)
 {
-	struct mal_info_t *mal_info = (struct mal_info_t *)info->extra;
-	uint32_t page_size = (uint32_t)mal_info->capacity.block_size;
-	uint32_t block_addr = (uint32_t)address / page_size;
-	struct fakefat32_param_t *param = (struct fakefat32_param_t *)info->param;
-	uint32_t fat_sectors = fakefat32_calc_fat_sectors(param);
-	uint32_t sectors_to_root = block_addr - FAT32_HIDDEN_SECTORS -
-							FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors;
-	uint32_t root_cluster = FAT32_ROOT_CLUSTER;
-	
-	uint32_t cluster_index = FAT32_ROOT_CLUSTER + 
-			(block_addr - FAT32_HIDDEN_SECTORS - FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors) / 
-				param->sectors_per_cluster;
-	struct fakefat32_file_t *file = NULL;
-	
-	// Hidden sectors, Reserved sectors, FAT are ready
-	if (block_addr < (FAT32_HIDDEN_SECTORS + FAT32_RES_SECTORS + FAT32_FAT_NUM * fat_sectors))
-	{
-		return VSFERR_NONE;
-	}
-	
-	file = fakefat32_get_file_by_cluster(param, param->root, cluster_index);
-	if (file != NULL)
-	{
-		if (file->callback.read_isready != NULL)
-		{
-			uint32_t addr_offset = param->sector_size * 
-					(sectors_to_root - param->sectors_per_cluster * 
-									(file->first_cluster - root_cluster));
-			return file->callback.read_isready(file, addr_offset, buff,
-												page_size);
-		}
-	}
-	return VSFERR_NONE;
-}
-
-static vsf_err_t fakefat32_drv_readblock_nb_end(struct dal_info_t *info)
-{
-	REFERENCE_PARAMETER(info);
-	return VSFERR_NONE;
-}
-
-static vsf_err_t fakefat32_drv_writeblock_nb_start(struct dal_info_t *info, 
-								uint64_t address, uint64_t count, uint8_t *buff)
-{
-	REFERENCE_PARAMETER(info);
-	REFERENCE_PARAMETER(address);
-	REFERENCE_PARAMETER(count);
-	REFERENCE_PARAMETER(buff);
-	return VSFERR_NONE;
-}
-
-static vsf_err_t fakefat32_drv_writeblock_nb(struct dal_info_t *info, 
-											uint64_t address, uint8_t *buff)
-{
-	struct mal_info_t *mal_info = (struct mal_info_t *)info->extra;
-	uint32_t page_size = (uint32_t)mal_info->capacity.block_size;
-	uint32_t block_addr = (uint32_t)address / page_size;
-	struct fakefat32_param_t *param = (struct fakefat32_param_t *)info->param;
+	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
+	uint32_t page_size = (uint32_t)mal->cap.block_size;
+	uint32_t block_addr = (uint32_t)addr / page_size;
+	struct fakefat32_param_t *param = (struct fakefat32_param_t *)mal->param;
 	uint32_t fat_sectors = fakefat32_calc_fat_sectors(param);
 	uint32_t sectors_to_root = block_addr - FAT32_HIDDEN_SECTORS -
 								FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors;
 	uint32_t root_cluster = FAT32_ROOT_CLUSTER;
-	
-	uint32_t cluster_index = FAT32_ROOT_CLUSTER + 
-			(block_addr - FAT32_HIDDEN_SECTORS - FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors) / 
+
+	uint32_t cluster_index = FAT32_ROOT_CLUSTER +
+			(block_addr - FAT32_HIDDEN_SECTORS - FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors) /
 				param->sectors_per_cluster;
 	struct fakefat32_file_t *file = NULL;
-	
+
 	// Hidden sectors, Reserved sectors, FAT can not be written
 	if (block_addr < (FAT32_HIDDEN_SECTORS + FAT32_RES_SECTORS + FAT32_FAT_NUM * fat_sectors))
 	{
@@ -933,109 +910,38 @@ static vsf_err_t fakefat32_drv_writeblock_nb(struct dal_info_t *info,
 		}
 		return VSFERR_NONE;
 	}
-	
+
 	file = fakefat32_get_file_by_cluster(param, param->root, cluster_index);
-	if (file != NULL)
+	if ((file != NULL) && !(file->memfile.file.attr & VSFILE_ATTR_READONLY))
 	{
-		if (file->callback.write != NULL)
-		{
-			uint32_t addr_offset = param->sector_size * 
-					(sectors_to_root - param->sectors_per_cluster * 
+		struct vsfile_t *rawfile = &file->memfile.file;
+		uint32_t addr_offset = param->sector_size *
+					(sectors_to_root - param->sectors_per_cluster *
 									(file->first_cluster - root_cluster));
-			return file->callback.write(file, addr_offset, buff, page_size);
+		uint32_t wsize;
+
+		if ((file->memfile.ptr != NULL) && !(rawfile->attr & VSFILE_ATTR_DIRECTORY))
+		{
+			return vsf_memfs_op.f_op.write(pt, evt, (struct vsfile_t *)file,
+										addr_offset, page_size, buff, &wsize);
+		}
+		else if (file->cb.write != NULL)
+		{
+//			return file->cb.write(pt, evt, file, addr_offset, buff, page_size);
 		}
 	}
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_drv_writeblock_nb_isready(struct dal_info_t *info, 
-												uint64_t address, uint8_t *buff)
+#ifndef VSFCFG_STANDALONE_MODULE
+struct vsfmal_drv_t fakefat32_drv =
 {
-	struct mal_info_t *mal_info = (struct mal_info_t *)info->extra;
-	uint32_t page_size = (uint32_t)mal_info->capacity.block_size;
-	uint32_t block_addr = (uint32_t)address / page_size;
-	struct fakefat32_param_t *param = (struct fakefat32_param_t *)info->param;
-	uint32_t fat_sectors = fakefat32_calc_fat_sectors(param);
-	uint32_t sectors_to_root = block_addr - FAT32_HIDDEN_SECTORS -
-								FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors;
-	uint32_t root_cluster = FAT32_ROOT_CLUSTER;
-	
-	uint32_t cluster_index = FAT32_ROOT_CLUSTER + 
-			(block_addr - FAT32_HIDDEN_SECTORS - FAT32_RES_SECTORS - FAT32_FAT_NUM * fat_sectors) / 
-				param->sectors_per_cluster;
-	struct fakefat32_file_t *file = NULL;
-	
-	file = fakefat32_get_file_by_cluster(param, param->root, cluster_index);
-	
-	// Hidden sectors, Reserved sectors, FAT are ready
-	if (block_addr < (FAT32_HIDDEN_SECTORS + FAT32_RES_SECTORS + FAT32_FAT_NUM * fat_sectors))
-	{
-		return VSFERR_NONE;
-	}
-	
-	if (file != NULL)
-	{
-		if (file->callback.write_isready != NULL)
-		{
-			uint32_t addr_offset = param->sector_size * 
-					(sectors_to_root - param->sectors_per_cluster * 
-									(file->first_cluster - root_cluster));
-			return file->callback.write_isready(file, addr_offset, buff,
-												page_size);
-		}
-	}
-	return VSFERR_NONE;
-}
-
-static vsf_err_t fakefat32_drv_writeblock_nb_end(struct dal_info_t *info)
-{
-	REFERENCE_PARAMETER(info);
-	return VSFERR_NONE;
-}
-
-#if DAL_INTERFACE_PARSER_EN
-static vsf_err_t fakefat32_drv_parse_interface(struct dal_info_t *info, 
-												uint8_t *buff)
-{
-	REFERENCE_PARAMETER(info);
-	REFERENCE_PARAMETER(buff);
-	return VSFERR_NONE;
-}
-#endif
-
-struct mal_driver_t fakefat32_drv = 
-{
-	{
-		"fakefat32",
-#if DAL_INTERFACE_PARSER_EN
-		"",
-		fakefat32_drv_parse_interface,
-#endif
-	},
-	
-	MAL_SUPPORT_WRITEBLOCK | MAL_SUPPORT_READBLOCK,
-	
-	fakefat32_drv_init_nb,
-	NULL,
-	fakefat32_drv_fini,
-	NULL,
-	NULL,
-	
-	NULL, NULL, NULL, NULL,
-	
-	NULL, NULL, NULL, NULL,
-	
-	NULL, NULL, NULL, NULL, NULL,
-	
-	fakefat32_drv_readblock_nb_start,
-	fakefat32_drv_readblock_nb,
-	fakefat32_drv_readblock_nb_isready,
-	NULL,
-	fakefat32_drv_readblock_nb_end,
-	
-	fakefat32_drv_writeblock_nb_start,
-	fakefat32_drv_writeblock_nb,
-	fakefat32_drv_writeblock_nb_isready,
-	NULL,
-	fakefat32_drv_writeblock_nb_end
+	.block_size = fakefat32_blocksize,
+	.init = fakefat32_drv_init,
+	.fini = fakefat32_drv_fini,
+	.erase_all = NULL,
+	.erase = NULL,
+	.read = fakefat32_drv_read,
+	.write = fakefat32_drv_write,
 };
+#endif

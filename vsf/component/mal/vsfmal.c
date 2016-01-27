@@ -45,7 +45,7 @@ vsf_err_t vsfmal_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	mal->op_block_size = mal->drv->block_size(addr, size, VSFMAL_OP_ERASE);
+	mal->op_block_size = mal->drv->block_size(mal, addr, size, VSFMAL_OP_ERASE);
 	mal->offset = 0;
 
 	while (mal->offset < size)
@@ -71,7 +71,7 @@ vsf_err_t vsfmal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	mal->op_block_size = mal->drv->block_size(addr, size, VSFMAL_OP_READ);
+	mal->op_block_size = mal->drv->block_size(mal, addr, size, VSFMAL_OP_READ);
 	mal->offset = 0;
 
 	while (mal->offset < size)
@@ -98,7 +98,7 @@ vsf_err_t vsfmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	mal->op_block_size = mal->drv->block_size(addr, size, VSFMAL_OP_WRITE);
+	mal->op_block_size = mal->drv->block_size(mal, addr, size, VSFMAL_OP_WRITE);
 	mal->offset = 0;
 
 	while (mal->offset < size)
@@ -170,7 +170,8 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	mal->op_block_size = mal->drv->block_size(malstream->addr, 0, VSFMAL_OP_READ);
+	mal->op_block_size = mal->drv->block_size(mal, malstream->addr, 0,
+												VSFMAL_OP_READ);
 	if (mal->op_block_size != malstream->multibuf_stream.multibuf.size)
 	{
 		return VSFERR_BUG;
@@ -243,7 +244,8 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	mal->op_block_size = mal->drv->block_size(malstream->addr, 0, VSFMAL_OP_WRITE);
+	mal->op_block_size = mal->drv->block_size(mal, malstream->addr, 0,
+												VSFMAL_OP_WRITE);
 	if (mal->op_block_size != malstream->multibuf_stream.multibuf.size)
 	{
 		return VSFERR_BUG;

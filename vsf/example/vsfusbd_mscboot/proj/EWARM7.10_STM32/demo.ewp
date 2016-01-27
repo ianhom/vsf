@@ -1919,6 +1919,12 @@
         </file>
       </group>
       <group>
+        <name>file</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
+        </file>
+      </group>
+      <group>
         <name>list</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
@@ -2119,7 +2125,6 @@
       <group>
         <name>fakefat32</name>
         <excluded>
-          <configuration>Debug</configuration>
           <configuration>Release</configuration>
         </excluded>
         <file>

@@ -72,7 +72,7 @@ struct vsfile_t
 	uint64_t size;
 	enum vsfile_attr_t attr;
 	struct vsfile_fsop_t *op;
-	void *priv;
+	struct vsfile_t *parent;
 };
 
 vsf_err_t vsfile_init(void);
@@ -113,8 +113,13 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 #define vsfile_dummy_write		vsfile_dummy_rw
 
 // memfile:
-// priv of file points to a buffer
-// priv of directory point to an array of file
+// ptr of file points to a buffer
+// ptr of directory point to an array of children files
+struct vsfile_memfile_t
+{
+	struct vsfile_t file;
+	void *ptr;
+};
 extern struct vsfile_fsop_t vsf_memfs_op;
 
 #endif		// __VSFILE_H_INCLUDED__

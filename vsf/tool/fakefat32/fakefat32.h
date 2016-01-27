@@ -20,39 +20,23 @@
 #ifndef __FAKEFAT32_H_INCLUDED__
 #define __FAKEFAT32_H_INCLUDED__
 
-#define FAKEFAT32_FILEATTR_READONLY			(1 << 0)
-#define FAKEFAT32_FILEATTR_HIDDEN			(1 << 1)
-#define FAKEFAT32_FILEATTR_SYSTEM			(1 << 2)
-#define FKAEFAT32_FILEATTR_VOLUMEID			(1 << 3)
-#define FAKEFAT32_FILEATTR_DIRECTORY		(1 << 4)
-#define FAKEFAT32_FILEATTR_ARCHIVE			(1 << 5)
+struct fakefat32_file_t;
+struct fakefat32_cb_t
+{
+	vsf_err_t (*read)(struct vsfsm_pt_t*, vsfsm_evt_t,
+						struct fakefat32_file_t*, uint64_t, uint8_t*, uint32_t);
+	vsf_err_t (*write)(struct vsfsm_pt_t*, vsfsm_evt_t,
+						struct fakefat32_file_t*, uint64_t, uint8_t*, uint32_t);
+};
 
 struct fakefat32_file_t
 {
-	char *name;
-	char *ext;
-	uint8_t attr;
-	uint32_t size;
-	
-	struct fakefat32_file_callback_t
-	{
-//		vsf_err_t (*init)(struct fakefat32_file_t*file);
-//		vsf_err_t (*fini)(struct fakefat32_file_t*file);
-		vsf_err_t (*read)(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-		vsf_err_t (*read_isready)(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-		vsf_err_t (*write)(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-		vsf_err_t (*write_isready)(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-		vsf_err_t (*change_size)(struct fakefat32_file_t*file, uint32_t size);
-	} callback;
-	
-	// filelist under directory
-	struct fakefat32_file_t *filelist;
-	
-	// can be private
+	struct vsfile_memfile_t memfile;
+
+	struct vsfmal_t mal;
+
+	struct fakefat32_cb_t cb;
+	uint32_t first_cluster;
 	PACKED_HEAD struct PACKED_MID
 	{
 		uint8_t CrtTimeTenth;
@@ -64,10 +48,6 @@ struct fakefat32_file_t
 		uint16_t WrtData;
 		uint16_t FstClusLO;
 	} record; PACKED_TAIL
-	
-	// private
-	uint32_t first_cluster;
-	struct fakefat32_file_t *parent;
 };
 
 struct fakefat32_param_t
@@ -75,16 +55,14 @@ struct fakefat32_param_t
 	uint16_t sector_size;
 	uint32_t sector_number;
 	uint8_t sectors_per_cluster;
-	
+
 	uint32_t volume_id;
 	uint32_t disk_id;
 	struct fakefat32_file_t root[2];
 };
 
-vsf_err_t fakefat32_dir_read(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-vsf_err_t fakefat32_dir_write(struct fakefat32_file_t*file, uint32_t addr,
-									uint8_t *buff, uint32_t page_size);
-extern struct mal_driver_t fakefat32_drv;
+#ifndef VSFCFG_STANDALONE_MODULE
+extern struct vsfmal_drv_t fakefat32_drv;
+#endif
 
 #endif	// __FAKEFAT32_H_INCLUDED__

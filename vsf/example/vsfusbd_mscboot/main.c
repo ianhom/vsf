@@ -1,4 +1,5 @@
 #include "vsf.h"
+#include "tool/fakefat32/fakefat32.h"
 
 #define APPCFG_VSFTIMER_NUM				16
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
@@ -116,12 +117,107 @@ static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 	VSFUSBD_DESC_NULL
 };
 
+// fakefs
+static struct fakefat32_file_t fakefat32_lost_dir[] =
+{
+	{
+		.memfile.file.name = ".",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = "..",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = NULL,
+	},
+};
+static uint8_t Win_recycle_DESKTOP_INI[] =
+"[.ShellClassInfo]\r\n\
+CLSID={645FF040-5081-101B-9F08-00AA002F954E}\r\n\
+LocalizedResourceName=@%SystemRoot%\\system32\\shell32.dll,-8964\r\n";
+static struct fakefat32_file_t fakefat32_recycle_dir[] =
+{
+	{
+		.memfile.file.name = ".",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = "..",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = "DESKTOP.INI",
+		.memfile.file.size = sizeof(Win_recycle_DESKTOP_INI) - 1,
+		.memfile.file.attr = VSFILE_ATTR_ARCHIVE,
+		.memfile.ptr = Win_recycle_DESKTOP_INI,
+	},
+	{
+		.memfile.file.name = NULL,
+	},
+};
+static uint8_t Win10_IndexerVolumeGuid[] =
+{
+	0x7B,0x00,0x45,0x00,0x34,0x00,0x42,0x00,0x38,0x00,0x37,0x00,0x41,0x00,0x39,0x00,
+	0x34,0x00,0x2D,0x00,0x39,0x00,0x32,0x00,0x32,0x00,0x39,0x00,0x2D,0x00,0x34,0x00,
+	0x38,0x00,0x32,0x00,0x34,0x00,0x2D,0x00,0x41,0x00,0x44,0x00,0x39,0x00,0x31,0x00,
+	0x2D,0x00,0x41,0x00,0x42,0x00,0x44,0x00,0x41,0x00,0x44,0x00,0x39,0x00,0x45,0x00,
+	0x30,0x00,0x43,0x00,0x34,0x00,0x30,0x00,0x34,0x00,0x7D,0x00
+};
+static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
+{
+	{
+		.memfile.file.name = ".",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = "..",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+	},
+	{
+		.memfile.file.name = "IndexerVolumeGuid",
+		.memfile.file.size = sizeof(Win10_IndexerVolumeGuid),
+		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+		.memfile.ptr = Win10_IndexerVolumeGuid,
+	},
+	{
+		.memfile.file.name = NULL,
+	},
+};
+static struct fakefat32_file_t fakefat32_root_dir[] =
+{
+	{
+		.memfile.file.name = "MSCBoot",
+		.memfile.file.attr = VSFILE_ATTR_VOLUMID,
+	},
+	// "LOST.DIR is nesessary to make Android happy"
+	{
+		.memfile.file.name = "LOST.DIR",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+		.memfile.ptr = fakefat32_lost_dir,
+	},
+	// "$RECYCLE.BIN" is necessary to make Windows happy
+	{
+		.memfile.file.name = "$RECYCLE.BIN",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+		.memfile.ptr = fakefat32_recycle_dir,
+	},
+	// "System Voumne Information" is necessary to make Win10 happy
+	{
+		.memfile.file.name = "System Volume Information",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+		.memfile.ptr = fakefat32_systemvolumeinformation_dir,
+	},
+	{
+		.memfile.file.name = NULL,
+	},
+};
+
 // app state machine events
 #define APP_EVT_USBPU_TO				VSFSM_EVT_USER_LOCAL_INSTANT + 0
 
 static struct vsfsm_state_t* app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt);
 static void app_pendsv_activate(struct vsfsm_evtq_t *q);
-const struct vsfmal_drv_t memmal_op;
 
 struct vsfapp_t
 {
@@ -135,12 +231,11 @@ struct vsfapp_t
 	// mal
 	struct
 	{
-		struct vsfmal_t mal;
 		struct vsf_mal2scsi_t mal2scsi;
+		struct vsfmal_t mal;
+		struct fakefat32_param_t fakefat32;
 		uint8_t *pbuffer[2];
 		uint8_t buffer[2][512];
-
-		uint8_t mal_mem[64 * 1024];
 	} mal;
 
 	// usb
@@ -170,10 +265,16 @@ struct vsfapp_t
 	.usb_pullup.port						= USB_PULLUP_PORT,
 	.usb_pullup.pin							= USB_PULLUP_PIN,
 
-	.mal.mal.drv							= &memmal_op,
-	.mal.mal.param							= &app,
-	.mal.mal.cap.block_size					= 512,
-	.mal.mal.cap.block_num					= sizeof(app.mal.mal_mem) / 512,
+	.mal.fakefat32.sector_size				= 512,
+	.mal.fakefat32.sector_number			= 0x00760000,
+	.mal.fakefat32.sectors_per_cluster		= 8,
+	.mal.fakefat32.volume_id				= 0x0CA93E47,
+	.mal.fakefat32.disk_id					= 0x12345678,
+	.mal.fakefat32.root[0].memfile.file.name= "ROOT",
+	.mal.fakefat32.root[0].memfile.ptr		= fakefat32_root_dir,
+
+	.mal.mal.drv							= &fakefat32_drv,
+	.mal.mal.param							= &app.mal.fakefat32,
 	.mal.pbuffer[0]							= app.mal.buffer[0],
 	.mal.pbuffer[1]							= app.mal.buffer[1],
 
@@ -211,47 +312,6 @@ struct vsfapp_t
 	.pendsvq.size							= dimof(app.pendsvq_ele),
 	.pendsvq.queue							= app.pendsvq_ele,
 	.pendsvq.activate						= app_pendsv_activate,
-};
-
-// mem mal
-static uint32_t
-memmal_block_size(uint64_t addr, uint32_t size, enum vsfmal_op_t op)
-{
-	return 512;
-}
-
-static vsf_err_t memmal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-								uint64_t addr, uint8_t *buff, uint32_t size)
-{
-	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
-	struct vsfapp_t *app = (struct vsfapp_t *)mal->param;
-
-	if ((addr + size) >= sizeof(app->mal.mal_mem))
-	{
-		return VSFERR_FAIL;
-	}
-	memcpy(buff, &app->mal.mal_mem[addr], size);
-	return VSFERR_NONE;
-}
-
-static vsf_err_t memmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-								uint64_t addr, uint8_t *buff, uint32_t size)
-{
-	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
-	struct vsfapp_t *app = (struct vsfapp_t *)mal->param;
-
-	if ((addr + size) >= sizeof(app->mal.mal_mem))
-	{
-		return VSFERR_FAIL;
-	}
-	memcpy(&app->mal.mal_mem[addr], buff, size);
-	return VSFERR_NONE;
-}
-
-const struct vsfmal_drv_t memmal_op =
-{
-	memmal_block_size, NULL, NULL, NULL,
-	NULL, memmal_read, memmal_write
 };
 
 // tickclk interrupt, simply call vsftimer_callback_int

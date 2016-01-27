@@ -33,9 +33,11 @@ enum vsfmal_op_t
 	VSFMAL_OP_WRITE,
 };
 
+struct vsfmal_t;
 struct vsfmal_drv_t
 {
-	uint32_t (*block_size)(uint64_t addr, uint32_t size, enum vsfmal_op_t op);
+	uint32_t (*block_size)(struct vsfmal_t *mal, uint64_t addr, uint32_t size,
+					enum vsfmal_op_t op);
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*fini)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*erase_all)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);

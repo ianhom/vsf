@@ -168,8 +168,8 @@ char* vsfile_getfileext(char* fname)
 	ext = tmp = fname;
 	while (1)
 	{
-        tmp = strchr(tmp, '.');
-        if (tmp != NULL)
+		tmp = strchr(ext, '.');
+		if (tmp != NULL)
 			ext = tmp + 1;
 		else
 			break;
@@ -194,7 +194,8 @@ static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
-	struct vsfile_t *child = dir->priv;
+	struct vsfile_t *child =
+				(struct vsfile_t *)((struct vsfile_memfile_t *)dir)->ptr;
 
 	while (child != NULL)
 	{
@@ -211,7 +212,8 @@ static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
-	struct vsfile_t *child = dir->priv;
+	struct vsfile_t *child =
+				(struct vsfile_t *)((struct vsfile_memfile_t *)dir)->ptr;
 	uint32_t i;
 
 	for (i = 0; i < idx; i++, child++)
@@ -230,7 +232,7 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
-	uint8_t *pbuff = (uint8_t *)file->priv;
+	uint8_t *pbuff = ((struct vsfile_memfile_t *)file)->ptr;
 
 	if (offset >= file->size)
 	{
@@ -247,7 +249,7 @@ static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {
-	uint8_t *pbuff = (uint8_t *)file->priv;
+	uint8_t *pbuff = ((struct vsfile_memfile_t *)file)->ptr;
 
 	if (offset >= file->size)
 	{
