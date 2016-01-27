@@ -927,7 +927,7 @@ static vsf_err_t fakefat32_drv_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		}
 		else if (file->cb.write != NULL)
 		{
-//			return file->cb.write(pt, evt, file, addr_offset, buff, page_size);
+			return file->cb.write(pt, evt, file, addr_offset, buff, page_size);
 		}
 	}
 	return VSFERR_NONE;

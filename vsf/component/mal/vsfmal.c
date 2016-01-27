@@ -230,7 +230,7 @@ vsf_err_t vsf_malstream_read(struct vsf_malstream_t *malstream, uint64_t addr,
 	stream->callback_tx.on_inout = vsf_malstream_on_inout;
 	stream->callback_tx.on_connect = NULL;
 	stream->callback_tx.on_disconnect = NULL;
-	stream_connec_tx(stream);
+	stream_connect_tx(stream);
 
 	malstream->pt.thread = vsf_malstream_read_thread;
 	malstream->pt.user_data = malstream;
