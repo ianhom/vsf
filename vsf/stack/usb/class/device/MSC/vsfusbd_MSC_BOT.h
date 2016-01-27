@@ -74,7 +74,6 @@ struct vsfusbd_MSCBOT_param_t
 	struct USBMSC_CSW_t CSW;
 	struct vsfusbd_transact_t transact;
 	struct vsf_bufstream_t bufstream;
-	struct vsf_stream_t stream;
 	struct vsfusbd_device_t *device;
 };
 

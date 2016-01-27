@@ -293,7 +293,7 @@ void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
 	uint8_t iface = request->wIndex;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
@@ -328,7 +328,7 @@ vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
 	uint8_t iface = request->wIndex;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];

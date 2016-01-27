@@ -169,12 +169,11 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			device->drv->ep.enable_OUT(param->ep_out);
 		}
 
-		param->bufstream.read = true;
-		param->stream.user_mem = &param->bufstream;
-		param->stream.op = &buffer_stream_op;
-		param->stream.callback_tx.on_connect = NULL;
-		param->stream.callback_tx.on_disconnect = NULL;
-		param->stream.callback_tx.on_inout = NULL;
+		param->bufstream.mem.read = true;
+		param->bufstream.stream.op = &bufstream_op;
+		param->bufstream.stream.callback_tx.on_connect = NULL;
+		param->bufstream.stream.callback_tx.on_disconnect = NULL;
+		param->bufstream.stream.callback_tx.on_inout = NULL;
 
 		param->output_state = HID_OUTPUT_STATE_WAIT;
 		param->busy = false;
@@ -227,7 +226,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					(report->changed || ((report->idle != 0) &&
 							(report->idle_cnt >= report->idle))))
 				{
-					param->bufstream.buffer = report->buffer;
+					param->bufstream.mem.buffer = report->buffer;
 					stream_init(&param->stream);
 					stream_connect_tx(&param->stream);
 
@@ -288,7 +287,7 @@ vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
 vsf_err_t vsfusbd_HID_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
 	uint8_t iface = request->wIndex;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];

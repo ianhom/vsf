@@ -141,14 +141,32 @@ struct vsf_mal2scsi_cparam_t
 	enum SCSI_PDT_t type;
 };
 
+struct vsf_scsistream_t
+{
+	struct vsf_stream_t stream;
+	union
+	{
+		struct vsf_mbufstream_mem_t mbufstream_mem;
+		struct vsf_bufstream_mem_t bufstream_mem;
+	};
+};
 struct vsf_mal2scsi_t
 {
-	struct vsf_mal2scsi_cparam_t const cparam;
+	// for multibuf
+	struct
+	{
+		uint32_t size;
+		uint8_t **buffer_list;
+		uint16_t count;
+	} multibuf;
+
 	struct vsfscsi_handler_t *vendor_handlers;
+	struct vsf_mal2scsi_cparam_t const cparam;
 	void *param;
 
 	struct vsf_malstream_t malstream;
-	struct vsf_bufstream_t bufstream;
+	// scsistream can be bufstream or mbufstream
+	struct vsf_scsistream_t scsistream;
 };
 extern const struct vsfscsi_lun_op_t vsf_mal2scsi_op;
 

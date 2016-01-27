@@ -279,9 +279,9 @@ struct vsfapp_t
 	.mal.pbuffer[1]							= app.mal.buffer[1],
 
 	.mal.mal2scsi.malstream.mal				= &app.mal.mal,
-	.mal.mal2scsi.malstream.multibuf_stream.multibuf.count = dimof(app.mal.buffer),
-	.mal.mal2scsi.malstream.multibuf_stream.multibuf.size = sizeof(app.mal.buffer[0]),
-	.mal.mal2scsi.malstream.multibuf_stream.multibuf.buffer_list = app.mal.pbuffer,
+	.mal.mal2scsi.multibuf.count			= dimof(app.mal.buffer),
+	.mal.mal2scsi.multibuf.size				= sizeof(app.mal.buffer[0]),
+	.mal.mal2scsi.multibuf.buffer_list		= app.mal.pbuffer,
 	.mal.mal2scsi.cparam.block_size			= 512,
 	.mal.mal2scsi.cparam.removable			= false,
 	.mal.mal2scsi.cparam.vendor				= "Simon   ",

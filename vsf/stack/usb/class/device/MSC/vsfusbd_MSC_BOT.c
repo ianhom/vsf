@@ -37,16 +37,15 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 	}
 	CSW->dCSWDataResidue = SYS_TO_LE_U32(remain_size);
 
-	param->bufstream.buffer.buffer = (uint8_t *)&param->CSW;
-	param->bufstream.buffer.size = sizeof(param->CSW);
-	param->bufstream.read = true;
-	param->stream.user_mem = &param->bufstream;
-	param->stream.op = &buffer_stream_op;
-	stream_init(&param->stream);
+	param->bufstream.mem.buffer.buffer = (uint8_t *)&param->CSW;
+	param->bufstream.mem.buffer.size = sizeof(param->CSW);
+	param->bufstream.mem.read = true;
+	param->bufstream.stream.op = &bufstream_op;
+	STREAM_INIT(&param->bufstream);
 
 	param->transact.ep = param->ep_in;
 	param->transact.data_size = sizeof(param->CSW);
-	param->transact.stream = &param->stream;
+	param->transact.stream = (struct vsf_stream_t *)&param->bufstream;
 	param->transact.cb.on_finish = vsfusbd_MSCBOT_on_idle;
 	param->transact.cb.param = param;
 	return vsfusbd_ep_send(param->device, &param->transact);
@@ -160,16 +159,15 @@ static void vsfusbd_MSCBOT_on_idle(void *p)
 {
 	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
 
-	param->bufstream.buffer.buffer = (uint8_t *)&param->CBW;
-	param->bufstream.buffer.size = sizeof(param->CBW);
-	param->bufstream.read = false;
-	param->stream.user_mem = &param->bufstream;
-	param->stream.op = &buffer_stream_op;
-	stream_init(&param->stream);
+	param->bufstream.mem.buffer.buffer = (uint8_t *)&param->CBW;
+	param->bufstream.mem.buffer.size = sizeof(param->CBW);
+	param->bufstream.mem.read = false;
+	param->bufstream.stream.op = &bufstream_op;
+	STREAM_INIT(&param->bufstream);
 
 	param->transact.ep = param->ep_out;
 	param->transact.data_size = sizeof(param->CBW);
-	param->transact.stream = &param->stream;
+	param->transact.stream = (struct vsf_stream_t *)&param->bufstream;
 	param->transact.cb.on_finish = vsfusbd_MSCBOT_on_cbw;
 	param->transact.cb.param = param;
 	vsfusbd_ep_recv(param->device, &param->transact);
@@ -193,7 +191,7 @@ vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct interface_usbd_t *drv = device->drv;
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
-	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
 	uint8_t iface = request->wIndex;
 	struct vsfusbd_config_t *config = &device->config[device->configuration];

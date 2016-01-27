@@ -75,9 +75,9 @@ uint32_t vsf_fifo_get_avail_length(struct vsf_fifo_t *fifo);
 // multi_buffer
 struct vsf_multibuf_t
 {
-	uint16_t count;
 	uint32_t size;
 	uint8_t **buffer_list;
+	uint16_t count;
 
 	uint16_t head;
 	uint16_t tail;

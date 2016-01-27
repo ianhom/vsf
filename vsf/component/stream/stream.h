@@ -44,7 +44,6 @@ struct vsf_stream_cb_t
 struct vsf_stream_t
 {
 	// user_mem points to user structure, eg queue/fifo
-	void *user_mem;
 	struct vsf_stream_op_t const *op;
 
 	// callback_tx is notification for tx end of the stream
@@ -58,6 +57,17 @@ struct vsf_stream_t
 	bool overflow;
 };
 
+#define STREAM_INIT(s)			stream_init((struct vsf_stream_t *)(s))
+#define STREAM_FINI(s)			stream_fini((struct vsf_stream_t *)(s))
+#define STREAM_WRITE(s, b)		stream_write(((struct vsf_stream_t *)(s), (b))
+#define STREAM_READ(s, b)		stream_read(((struct vsf_stream_t *)(s), (b))
+#define STREAM_GET_DATA_SIZE(s)	stream_get_data_size((struct vsf_stream_t *)(s))
+#define STREAM_GET_FREE_SIZE(s)	stream_get_free_size((struct vsf_stream_t *)(s))
+#define STREAM_CONNECT_RX(s)	stream_connect_rx((struct vsf_stream_t *)(s))
+#define STREAM_CONNECT_TX(s)	stream_connect_tx((struct vsf_stream_t *)(s))
+#define STREAM_DISCONNECT_RX(s)	stream_disconnect_rx((struct vsf_stream_t *)(s))
+#define STREAM_DISCONNECT_TX(s)	stream_disconnect_tx((struct vsf_stream_t *)(s))
+
 vsf_err_t stream_init(struct vsf_stream_t *stream);
 vsf_err_t stream_fini(struct vsf_stream_t *stream);
 uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
@@ -70,23 +80,38 @@ void stream_disconnect_rx(struct vsf_stream_t *stream);
 void stream_disconnect_tx(struct vsf_stream_t *stream);
 
 // fifo stream, user_mem is vsf_fifo_t: available in interrupt
-extern const struct vsf_stream_op_t fifo_stream_op;
+struct vsf_fifostream_t
+{
+	struct vsf_stream_t stream;
+	struct vsf_fifo_t mem;
+};
+extern const struct vsf_stream_op_t fifostream_op;
 // multibuf stream, user_mem is vsf_multibuf_stream_t: unavailable in interrupt
-struct vsf_multibuf_stream_t
+struct vsf_mbufstream_mem_t
 {
 	struct vsf_multibuf_t multibuf;
 	// private
 	uint32_t rpos, wpos;
 };
-extern const struct vsf_stream_op_t multibuf_stream_op;
+struct vsf_mbufstream_t
+{
+	struct vsf_stream_t stream;
+	struct vsf_mbufstream_mem_t mem;
+};
+extern const struct vsf_stream_op_t mbufstream_op;
 // buffer stream, user_mem is vsf_buffer_stream_t: unavailable in interrupt
-struct vsf_bufstream_t
+struct vsf_bufstream_mem_t
 {
 	struct vsf_buffer_t buffer;
 	bool read;
 	// private
 	uint32_t pos;
 };
-extern const struct vsf_stream_op_t buffer_stream_op;
+struct vsf_bufstream_t
+{
+	struct vsf_stream_t stream;
+	struct vsf_bufstream_mem_t mem;
+};
+extern const struct vsf_stream_op_t bufstream_op;
 
 #endif	// __STREAM_H_INCLUDED__

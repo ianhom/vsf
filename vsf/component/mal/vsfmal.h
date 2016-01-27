@@ -72,7 +72,7 @@ vsf_err_t vsfmal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 vsf_err_t vsfmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 					uint8_t *buff, uint32_t size);
 
-struct vsf_malstream_callback_t
+struct vsf_malstream_cb_t
 {
 	void (*on_finish)(void *param);
 	void *param;
@@ -82,11 +82,10 @@ struct vsf_malstream_callback_t
 struct vsf_malstream_t
 {
 	struct vsfmal_t *mal;
-	struct vsf_multibuf_stream_t multibuf_stream;
-	struct vsf_malstream_callback_t cb;
+	struct vsf_mbufstream_t *mbufstream;
+	struct vsf_malstream_cb_t cb;
 
 	// read only for user
-	struct vsf_stream_t stream;
 	uint32_t offset;
 
 	// private

@@ -372,7 +372,7 @@ static vsf_err_t vsfusbd_stdctrl_prepare(struct vsfusbd_device_t *device)
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;
-	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.buffer;
+	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
 	uint8_t *reply_buffer = ctrl_handler->reply_buffer;
 	uint8_t recip = request->bRequestType & USB_RECIP_MASK;
 
@@ -639,12 +639,12 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 	vsf_err_t err = VSFERR_FAIL;
 
 	// set default stream
-	ctrl_handler->stream.user_mem = &ctrl_handler->bufstream;
-	ctrl_handler->stream.op = &buffer_stream_op;
-	ctrl_handler->bufstream.buffer.buffer = ctrl_handler->reply_buffer;
-	ctrl_handler->bufstream.buffer.size = 0;
-	ctrl_handler->bufstream.read =
-			(request->bRequestType & USB_DIR_MASK) == USB_DIR_IN;
+	ctrl_handler->stream = (struct vsf_stream_t *)&ctrl_handler->bufstream;
+	ctrl_handler->bufstream.stream.op = &bufstream_op;
+	ctrl_handler->bufstream.mem.buffer.buffer = ctrl_handler->reply_buffer;
+	ctrl_handler->bufstream.mem.buffer.size = 0;
+	ctrl_handler->bufstream.mem.read =
+						(request->bRequestType & USB_DIR_MASK) == USB_DIR_IN;
 
 	if (USB_TYPE_STANDARD == type)
 	{
@@ -670,7 +670,7 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 		}
 	}
 	return err ? err : !ctrl_handler->data_size ? VSFERR_NONE :
-										stream_init(&ctrl_handler->stream);
+										stream_init(ctrl_handler->stream);
 }
 
 static void vsfusbd_ctrl_process(struct vsfusbd_device_t *device)
@@ -1136,7 +1136,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					transact = &ctrl_handler->OUT_transact;
 					transact->data_size = ctrl_handler->data_size;
-					transact->stream = &ctrl_handler->stream;
+					transact->stream = ctrl_handler->stream;
 					transact->cb.param = device;
 					transact->cb.on_finish = vsfusbd_setup_status_callback;
 					err = vsfusbd_ep_recv(device, transact);
@@ -1146,7 +1146,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			{
 				transact = &ctrl_handler->IN_transact;
 				transact->data_size = ctrl_handler->data_size;
-				transact->stream = &ctrl_handler->stream;
+				transact->stream = ctrl_handler->stream;
 				transact->cb.param = device;
 				transact->cb.on_finish = NULL;
 				transact->zlp = ctrl_handler->data_size < request->wLength;

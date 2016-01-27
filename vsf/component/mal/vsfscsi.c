@@ -87,14 +87,15 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 {
 	struct vsf_mal2scsi_t *mal2scsi = (struct vsf_mal2scsi_t *)lun->param;
 	struct vsfscsi_transact_t *transact = &lun->transact;
-	struct vsf_stream_t *stream = &mal2scsi->malstream.stream;
+	struct vsf_stream_t *stream = (struct vsf_stream_t *)&mal2scsi->scsistream;
 	uint8_t *buffer;
 
 	if (bufstream)
 	{
-		struct vsf_bufstream_t *bufstream = &mal2scsi->bufstream;
+		struct vsf_bufstream_t *bufstream =
+							(struct vsf_bufstream_t *)&mal2scsi->scsistream;
 
-		buffer = vsf_multibuf_get_empty(&mal2scsi->malstream.multibuf_stream.multibuf);
+		buffer = mal2scsi->multibuf.buffer_list[0];
 		if (NULL == buffer)
 		{
 			return NULL;
@@ -102,11 +103,10 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		memset(buffer, 0, size);
 
 		// setup bufstream
-		bufstream->buffer.buffer = buffer;
-		bufstream->buffer.size = size;
-		bufstream->read = true;
-		stream->user_mem = bufstream;
-		stream->op = &buffer_stream_op;
+		bufstream->mem.buffer.buffer = buffer;
+		bufstream->mem.buffer.size = size;
+		bufstream->mem.read = true;
+		stream->op = &bufstream_op;
 		stream->callback_tx.param = lun;
 		stream->callback_tx.on_inout = vsf_mal2scsi_bufstream_on_out;
 		stream->callback_tx.on_connect = NULL;
@@ -116,14 +116,17 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 	}
 	else
 	{
-		struct vsf_malstream_t *malstream = &mal2scsi->malstream;
+		struct vsf_mbufstream_t *mbufstream =
+							(struct vsf_mbufstream_t *)&mal2scsi->scsistream;
 
 		// setup malstream
+		mbufstream->mem.multibuf.size = mal2scsi->multibuf.size;
+		mbufstream->mem.multibuf.buffer_list = mal2scsi->multibuf.buffer_list;
+		mbufstream->mem.multibuf.count = mal2scsi->multibuf.count;
 		mal2scsi->malstream.cb.param = lun;
 		mal2scsi->malstream.cb.on_finish = write ?
 							vsf_mal2scsi_malstream_on_write_finish : NULL;
-		stream->user_mem = &malstream->multibuf_stream;
-		stream->op = &multibuf_stream_op;
+		stream->op = &mbufstream_op;
 		stream_init(stream);
 		transact->stream = stream;
 	}
@@ -376,7 +379,7 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB)
 	lun->asc = SCSI_ASC_NONE;
 	if (transact->stream != NULL)
 	{
-		if (transact->stream->op == &buffer_stream_op)
+		if (transact->stream->op == &bufstream_op)
 		{
 			stream_connect_tx(transact->stream);
 		}
@@ -399,6 +402,8 @@ exit_not_ready:
 vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
 {
 	struct vsf_mal2scsi_t *mal2scsi = (struct vsf_mal2scsi_t *)lun->param;
+	mal2scsi->malstream.mbufstream =
+							(struct vsf_mbufstream_t *)&mal2scsi->scsistream;
 	return vsf_malstream_init(&mal2scsi->malstream);
 }
 
