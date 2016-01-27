@@ -386,9 +386,8 @@ struct vsf_t
 
 			struct
 			{
-				void* (*malloc)(uint32_t);
-				void* (*malloc_aligned)(uint32_t, uint32_t);
-				void (*free)(void*);
+				void* (*malloc_aligned_do)(uint32_t, uint32_t);
+				void (*free_do)(void*);
 			} bufmgr;
 
 			struct
@@ -694,9 +693,8 @@ struct vsf_t
 #define vsf_fifo_get_data_length		vsf.component.buffer.fifo.get_data_length
 #define vsf_fifo_get_avail_length		vsf.component.buffer.fifo.get_avail_length
 
-#define vsf_bufmgr_malloc				vsf.component.buffer.bufmgr.malloc
-#define vsf_bufmgr_malloc_aligned		vsf.component.buffer.bufmgr.malloc_aligned
-#define vsf_bufmgr_free					vsf.component.buffer.bufmgr.free
+#define vsf_bufmgr_malloc_aligned_do	vsf.component.buffer.bufmgr.malloc_aligned_do
+#define vsf_bufmgr_free_do				vsf.component.buffer.bufmgr.free_do
 
 #define vsfpool_init					vsf.component.buffer.pool.init
 #define vsfpool_alloc					vsf.component.buffer.pool.alloc

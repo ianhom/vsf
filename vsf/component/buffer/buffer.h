@@ -101,9 +101,11 @@ void vsf_bufmgr_free_do(void *ptr, const char *format, ...);
 #define vsf_bufmgr_malloc_aligned(s, a)	vsf_bufmgr_malloc_aligned_do(s, a, "%s:%d", __FUNCTION__, __LINE__)
 #define vsf_bufmgr_free(p)				vsf_bufmgr_free_do(p, "%s:%d", __FUNCTION__, __LINE__)
 #else
-void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align);
-void vsf_bufmgr_free(void *ptr);
+void* vsf_bufmgr_malloc_aligned_do(uint32_t size, uint32_t align);
+void vsf_bufmgr_free_do(void *ptr);
 #define vsf_bufmgr_malloc(s) 			vsf_bufmgr_malloc_aligned(s, 4)
+#define vsf_bufmgr_malloc_aligned(s, a)	vsf_bufmgr_malloc_aligned_do(s, a)
+#define vsf_bufmgr_free(p)				vsf_bufmgr_free_do(p)
 #endif // VSFCFG_BUFMGR_LOG
 
 // pool

@@ -677,7 +677,7 @@ void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align)
 			}
 			else
 			{
-				vsf_debug("MalcOK 0x%x:%d %s", (uint32_t)(mcb_align->buffer.buffer + offset, mcb_align->buffer.size));
+				vsf_debug("MalcOK 0x%x:%d", (uint32_t)(mcb_align->buffer.buffer + offset), mcb_align->buffer.size);
 			}
 #endif
 			
