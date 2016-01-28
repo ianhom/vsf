@@ -33,7 +33,6 @@ struct vsfip_httpc_param_t
 	uint8_t *resp_type;
 	uint8_t resp_code;
 	uint16_t port;
-	
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE

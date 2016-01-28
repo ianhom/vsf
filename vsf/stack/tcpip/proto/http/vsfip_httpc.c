@@ -117,7 +117,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	vsf_err_t err = VSFERR_NONE, tcp_close_err = VSFERR_NONE;
 
 	vsfsm_pt_begin(pt);
-	
+
 #ifdef HTTPC_DEBUG
 	httpc->debug_pt.sm = pt->sm;
 #endif
@@ -125,12 +125,13 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 
 	err = vsfip_httpc_prasewww(httpc, wwwaddr);
 	if (err) return err;
-	
+
 	err = vsfip_ip4_pton(&httpc->hostip.sin_addr, httpc->host);
 	if (err != VSFERR_NONE)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt, "->DNS %s" VSFSHELL_LINEEND, httpc->host);
+		vsfshell_printf(&httpc->debug_pt,
+						"->DNS %s" VSFSHELL_LINEEND, httpc->host);
 #endif	
 		httpc->local_pt.state = 0;
 		vsfsm_pt_entry(pt);
@@ -147,14 +148,13 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 						httpc->hostip.sin_addr.addr.s_addr_buf[3]);
 #endif
 
-
 	httpc->so = vsfip_socket(AF_INET, IPPROTO_TCP);
 	if (httpc->so == NULL)
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 
 	httpc->so->rx_timeout_ms = VSFIP_HTTPC_SOCKET_TIMEOUT;
 	httpc->so->tx_timeout_ms = VSFIP_HTTPC_SOCKET_TIMEOUT;
-	
+
 	httpc->hostip.sin_port = httpc->port;
 	httpc->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
@@ -188,7 +188,8 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 
 	httpc->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_send(&httpc->local_pt, evt, httpc->so, NULL, httpc->buf, true);
+	err = vsfip_tcp_send(&httpc->local_pt, evt, httpc->so, NULL,
+							httpc->buf, true);
 	if (err > 0) return err; else if (err < 0)
 	{
 #ifdef HTTPC_DEBUG
@@ -233,15 +234,16 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 			else if (err < 0)
 			{
 #ifdef HTTPC_DEBUG
-				vsfshell_printf(&httpc->debug_pt, "->ERR HEAD FAIL" VSFSHELL_LINEEND);
+				vsfshell_printf(&httpc->debug_pt,
+								"->ERR HEAD FAIL" VSFSHELL_LINEEND);
 #endif
 				goto tcp_close;
 			}
 
-            if (0 == httpc->resp_length)
+			if (0 == httpc->resp_length)
 			{
 				// no data
-                goto tcp_close;
+				goto tcp_close;
 			}
 
 			if (httpc->op->on_connect != NULL)
@@ -252,14 +254,16 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 				if (err > 0) return err; else if (err < 0)
 				{
 #ifdef HTTPC_DEBUG
-					vsfshell_printf(&httpc->debug_pt, "->CONNECT PROCESS FAIL" VSFSHELL_LINEEND);
+					vsfshell_printf(&httpc->debug_pt,
+									"->CONNECT PROCESS FAIL" VSFSHELL_LINEEND);
 #endif
 					goto tcp_close;
 				}
 			}
 
 #ifdef HTTPC_DEBUG
-			vsfshell_printf(&httpc->debug_pt, "->DATA RECV START" VSFSHELL_LINEEND);
+			vsfshell_printf(&httpc->debug_pt,
+							"->DATA RECV START" VSFSHELL_LINEEND);
 #endif
 		}
 
@@ -274,7 +278,8 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 				if (err > 0) return err; else if (err < 0)
 				{
 #ifdef HTTPC_DEBUG
-					vsfshell_printf(&httpc->debug_pt, "->DAT RECV PROCESS FAIL" VSFSHELL_LINEEND);
+					vsfshell_printf(&httpc->debug_pt,
+									"->DAT RECV PROCESS FAIL" VSFSHELL_LINEEND);
 #endif
 					goto tcp_close;
 				}
@@ -298,7 +303,8 @@ tcp_close:
 		if (tcp_close_err > 0) return tcp_close_err; else if (tcp_close_err < 0)
 		{
 #ifdef HTTPC_DEBUG
-			vsfshell_printf(&httpc->debug_pt, "->CONNECT FAIL" VSFSHELL_LINEEND);
+			vsfshell_printf(&httpc->debug_pt,
+							"->CONNECT FAIL" VSFSHELL_LINEEND);
 #endif
 			if (!err)
 			{
@@ -328,7 +334,8 @@ static void vsfip_httpc_outstream_onout_int(void *p)
 	vsfsm_post_evt_pending(sm, VSFSM_EVT_HTTPC_STREAM_OUT);
 }
 
-vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, void *output)
+vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+										void *output)
 {
 	struct vsf_stream_t *outstream = (struct vsf_stream_t *)output;
 
@@ -340,8 +347,8 @@ vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, 
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
-				vsfsm_evt_t evt, void *output, uint32_t offset, struct vsfip_buffer_t *buf)
+vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					void *output, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_stream_t *outstream = (struct vsf_stream_t *)output;
 
@@ -349,7 +356,6 @@ vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
 
 	while (stream_get_free_size(outstream) < buf->app.size)
 	{
-		
 		vsfsm_pt_wfe(pt, VSFSM_EVT_HTTPC_STREAM_OUT);
 	}
 
@@ -367,8 +373,8 @@ const struct vsfip_httpc_op_t vsfip_httpc_op_stream =
 #endif
 
 // op_buffer
-vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
-				vsfsm_evt_t evt, void *output, uint32_t offset, struct vsfip_buffer_t *buf)
+vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					void *output, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_buffer_t *outbuf = (struct vsf_buffer_t *)output;
 
