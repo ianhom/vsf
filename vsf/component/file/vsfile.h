@@ -118,7 +118,13 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 struct vsfile_memfile_t
 {
 	struct vsfile_t file;
-	void *ptr;
+	union
+	{
+		// for file
+		uint8_t *buff;
+		// for directory
+		struct vsfile_t *child;
+	};
 
 	// protected: initialized by derived class
 	uint32_t child_file_size;

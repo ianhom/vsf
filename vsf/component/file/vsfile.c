@@ -195,7 +195,7 @@ static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					struct vsfile_t **file)
 {
 	struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)dir;
-	struct vsfile_t *child = (struct vsfile_t *)memfile->ptr;
+	struct vsfile_t *child = memfile->child;
 
 	while (child != NULL)
 	{
@@ -214,7 +214,7 @@ static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 					struct vsfile_t **file)
 {
 	struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)dir;
-	struct vsfile_t *child = (struct vsfile_t *)memfile->ptr;
+	struct vsfile_t *child = memfile->child;
 	uint32_t i;
 
 	for (i = 0; i < idx; i++)
@@ -234,7 +234,7 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
-	uint8_t *pbuff = ((struct vsfile_memfile_t *)file)->ptr;
+	struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)file;
 
 	if (offset >= file->size)
 	{
@@ -243,7 +243,7 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 
 	*rsize = min(size, file->size - offset);
-	memcpy(buff, &pbuff[offset], *rsize);
+	memcpy(buff, &memfile->buff[offset], *rsize);
 	return VSFERR_NONE;
 }
 
@@ -251,7 +251,7 @@ static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {
-	uint8_t *pbuff = ((struct vsfile_memfile_t *)file)->ptr;
+	struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)file;
 
 	if (offset >= file->size)
 	{
@@ -260,7 +260,7 @@ static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 
 	*wsize = min(size, file->size - offset);
-	memcpy(&pbuff[offset], buff, *wsize);
+	memcpy(&memfile->buff[offset], buff, *wsize);
 	return VSFERR_NONE;
 }
 

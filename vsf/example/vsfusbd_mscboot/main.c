@@ -150,7 +150,7 @@ static struct fakefat32_file_t fakefat32_recycle_dir[] =
 		.memfile.file.name = "DESKTOP.INI",
 		.memfile.file.size = sizeof(Win_recycle_DESKTOP_INI) - 1,
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE,
-		.memfile.ptr = Win_recycle_DESKTOP_INI,
+		.memfile.buff = Win_recycle_DESKTOP_INI,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -178,7 +178,7 @@ static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
 		.memfile.file.name = "IndexerVolumeGuid",
 		.memfile.file.size = sizeof(Win10_IndexerVolumeGuid),
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.ptr = Win10_IndexerVolumeGuid,
+		.memfile.buff = Win10_IndexerVolumeGuid,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -194,19 +194,19 @@ static struct fakefat32_file_t fakefat32_root_dir[] =
 	{
 		.memfile.file.name = "LOST.DIR",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.ptr = fakefat32_lost_dir,
+		.memfile.child = (struct vsfile_t *)fakefat32_lost_dir,
 	},
 	// "$RECYCLE.BIN" is necessary to make Windows happy
 	{
 		.memfile.file.name = "$RECYCLE.BIN",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.ptr = fakefat32_recycle_dir,
+		.memfile.child = (struct vsfile_t *)fakefat32_recycle_dir,
 	},
 	// "System Voumne Information" is necessary to make Win10 happy
 	{
 		.memfile.file.name = "System Volume Information",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.ptr = fakefat32_systemvolumeinformation_dir,
+		.memfile.child = (struct vsfile_t *)fakefat32_systemvolumeinformation_dir,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -271,7 +271,7 @@ struct vsfapp_t
 	.mal.fakefat32.volume_id				= 0x0CA93E47,
 	.mal.fakefat32.disk_id					= 0x12345678,
 	.mal.fakefat32.root[0].memfile.file.name= "ROOT",
-	.mal.fakefat32.root[0].memfile.ptr		= fakefat32_root_dir,
+	.mal.fakefat32.root[0].memfile.child	= (struct vsfile_t *)fakefat32_root_dir,
 
 	.mal.mal.drv							= &fakefat32_drv,
 	.mal.mal.param							= &app.mal.fakefat32,
