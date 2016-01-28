@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
+#include <stdlib.h>
 
 #define VSFIP_TCP_RETRY			3
 #define VSFIP_TCP_ATO			10
@@ -2080,12 +2081,13 @@ static void vsfip_icmp_input(struct vsfip_buffer_t *buf)
 	vsfip_buffer_release(buf);
 }
 
-//pton
+// helper
+// pton
 vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain)
 {
 	uint8_t i;
 	char *str = domain;
-	
+
 	//may not head by zero
 	i = atoi(str);
 	if (i == 0)
