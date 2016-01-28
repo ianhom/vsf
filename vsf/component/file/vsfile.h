@@ -119,6 +119,9 @@ struct vsfile_memfile_t
 {
 	struct vsfile_t file;
 	void *ptr;
+
+	// protected: initialized by derived class
+	uint32_t child_file_size;
 };
 extern struct vsfile_fsop_t vsf_memfs_op;
 
