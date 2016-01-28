@@ -411,9 +411,9 @@ struct vsf_t
 			void (*disconnect_rx)(struct vsf_stream_t*);
 			void (*disconnect_tx)(struct vsf_stream_t*);
 
-			const struct vsf_stream_op_t *fifo_stream_op;
-			const struct vsf_stream_op_t *multibuf_stream_op;
-			const struct vsf_stream_op_t *buffer_stream_op;
+			const struct vsf_stream_op_t *fifostream_op;
+			const struct vsf_stream_op_t *mbufstream_op;
+			const struct vsf_stream_op_t *bufstream_op;
 		} stream;
 
 		struct
@@ -659,9 +659,9 @@ struct vsf_t
 #define stream_connect_tx				vsf.component.stream.connect_tx
 #define stream_disconnect_rx			vsf.component.stream.disconnect_rx
 #define stream_disconnect_tx			vsf.component.stream.disconnect_tx
-#define fifo_stream_op					(*vsf.component.stream.fifo_stream_op)
-#define multibuf_stream_op				(*vsf.component.stream.multibuf_stream_op)
-#define buffer_stream_op				(*vsf.component.stream.buffer_stream_op)
+#define fifostream_op					(*vsf.component.stream.fifostream_op)
+#define mbufstream_op					(*vsf.component.stream.mbufstream_op)
+#define bufstream_op					(*vsf.component.stream.bufstream_op)
 
 #define vsfmal_init						vsf.component.mal.init
 #define vsfmal_fini						vsf.component.mal.fini
