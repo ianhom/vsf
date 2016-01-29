@@ -77,6 +77,11 @@ struct vsfile_t
 
 vsf_err_t vsfile_init(void);
 
+vsf_err_t vsfile_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+						struct vsfile_fsop_t *op, struct vsfile_t *dir);
+vsf_err_t vsfile_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+						struct vsfile_t *dir);
+
 vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name, struct vsfile_t **file);
 vsf_err_t vsfile_findfirst(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -129,6 +134,19 @@ struct vsfile_memfile_t
 	// protected: initialized by derived class
 	uint32_t child_file_size;
 };
-extern struct vsfile_fsop_t vsf_memfs_op;
+extern const struct vsfile_fsop_t vsf_memfs_op;
+// protected
+vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
+					struct vsfile_t **file);
+vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
+					struct vsfile_t **file);
+vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *rsize);
+vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *wsize);
 
 #endif		// __VSFILE_H_INCLUDED__

@@ -62,7 +62,8 @@ struct fakefat32_param_t
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE
-extern struct vsfmal_drv_t fakefat32_drv;
+extern struct vsfmal_drv_t fakefat32_mal_drv;
+extern struct vsfile_fsop_t fakefat32_fs_op;
 #endif
 
 #endif	// __FAKEFAT32_H_INCLUDED__

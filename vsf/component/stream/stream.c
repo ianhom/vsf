@@ -166,9 +166,12 @@ fifo_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 const struct vsf_stream_op_t fifostream_op =
 {
-	fifo_stream_init, fifo_stream_init,
-	fifo_stream_write, fifo_stream_read,
-	fifo_stream_get_data_length, fifo_stream_get_avail_length
+	.init = fifo_stream_init,
+	.fini = fifo_stream_init,
+	.write = fifo_stream_write,
+	.read = fifo_stream_read,
+	.get_data_length = fifo_stream_get_data_length,
+	.get_avail_length = fifo_stream_get_avail_length,
 };
 
 // multibuf stream
@@ -250,9 +253,12 @@ multibuf_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 const struct vsf_stream_op_t mbufstream_op =
 {
-	multibuf_stream_init, multibuf_stream_init,
-	multibuf_stream_write, multibuf_stream_read,
-	multibuf_stream_get_data_length, multibuf_stream_get_avail_length
+	.init = multibuf_stream_init,
+	.fini = multibuf_stream_init,
+	.write = multibuf_stream_write,
+	.read = multibuf_stream_read,
+	.get_data_length = multibuf_stream_get_data_length,
+	.get_avail_length = multibuf_stream_get_avail_length,
 };
 
 // buffer stream
@@ -312,7 +318,10 @@ buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 
 const struct vsf_stream_op_t bufstream_op =
 {
-	buffer_stream_init, buffer_stream_init,
-	buffer_stream_write, buffer_stream_read,
-	buffer_stream_get_data_length, buffer_stream_get_avail_length
+	.init = buffer_stream_init,
+	.fini = buffer_stream_init,
+	.write = buffer_stream_write,
+	.read = buffer_stream_read,
+	.get_data_length = buffer_stream_get_data_length,
+	.get_avail_length = buffer_stream_get_avail_length,
 };

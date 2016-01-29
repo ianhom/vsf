@@ -119,6 +119,19 @@ vsf_err_t vsfile_findend(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return vsfsm_crit_leave(&vsfile_srch.crit);
 }
 
+vsf_err_t vsfile_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+						struct vsfile_fsop_t *op, struct vsfile_t *dir)
+{
+	return op->mount(pt, evt, dir);
+}
+
+vsf_err_t vsfile_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+						struct vsfile_t *dir)
+{
+	// TODO
+	return VSFERR_NONE;
+}
+
 vsf_err_t vsfile_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
@@ -190,7 +203,7 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // memfs
-static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
+vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
@@ -209,7 +222,7 @@ static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 	return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
 }
 
-static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
+vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
@@ -230,7 +243,7 @@ static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
@@ -247,7 +260,7 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {
@@ -264,17 +277,17 @@ static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-struct vsfile_fsop_t vsf_memfs_op =
+const struct vsfile_fsop_t vsf_memfs_op =
 {
 	// mount / unmount
-	vsfile_dummy_mount, vsfile_dummy_unmount,
+	.mount = vsfile_dummy_mount,
+	.unmount = vsfile_dummy_unmount,
 	// f_op
-	{
-		vsfile_dummy_open, vsfile_dummy_close,
-		vsfile_memfs_read, vsfile_memfs_write,
-	},
+	.f_op.open = vsfile_dummy_open,
+	.f_op.close = vsfile_dummy_close,
+	.f_op.read = vsfile_memfs_read,
+	.f_op.write = vsfile_memfs_write,
 	// d_op
-	{
-		vsfile_memfs_getchild_byname, vsfile_memfs_getchild_byidx
-	},
+	.d_op.getchild_byname = vsfile_memfs_getchild_byname,
+	.d_op.getchild_byidx = vsfile_memfs_getchild_byidx,
 };

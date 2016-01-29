@@ -273,7 +273,7 @@ struct vsfapp_t
 	.mal.fakefat32.root[0].memfile.file.name= "ROOT",
 	.mal.fakefat32.root[0].memfile.child	= (struct vsfile_t *)fakefat32_root_dir,
 
-	.mal.mal.drv							= &fakefat32_drv,
+	.mal.mal.drv							= &fakefat32_mal_drv,
 	.mal.mal.param							= &app.mal.fakefat32,
 	.mal.pbuffer[0]							= app.mal.buffer[0],
 	.mal.pbuffer[1]							= app.mal.buffer[1],
