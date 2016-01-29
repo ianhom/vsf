@@ -284,6 +284,7 @@ static vsf_err_t fakefat32_init(struct fakefat32_param_t *param,
 	{
 		return VSFERR_FAIL;
 	}
+	file->memfile.file.op = &fakefat32_fs_op;
 	file->memfile.child_file_size = sizeof(struct fakefat32_file_t);
 	rawfile = &file->memfile.file;
 

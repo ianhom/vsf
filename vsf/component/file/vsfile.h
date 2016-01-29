@@ -104,6 +104,7 @@ vsf_err_t vsfile_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 // helper
 char* vsfile_getfileext(char* name);
+bool vsfile_is_div(char ch);
 
 // dummy op
 vsf_err_t vsfile_dummy_file(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,

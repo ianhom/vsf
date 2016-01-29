@@ -31,6 +31,28 @@ struct vsfile_srch_t
 	struct vsfsm_pt_t file_pt;
 } static vsfile_srch;
 
+// helper
+char* vsfile_getfileext(char* fname)
+{
+	char *ext, *tmp;
+
+	ext = tmp = fname;
+	while (1)
+	{
+		tmp = strchr(ext, '.');
+		if (tmp != NULL)
+			ext = tmp + 1;
+		else
+			break;
+	}
+	return ext;
+}
+
+bool vsfile_is_div(char ch)
+{
+	return ('\\' == ch) || ('/' == ch);
+}
+
 vsf_err_t vsfile_init(void)
 {
 	return vsfsm_crit_init(&vsfile_srch.crit, VSFILE_EVT_CRIT);
@@ -50,8 +72,23 @@ vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfile_srch.cur_name = name;
 	vsfile_srch.cur_file = dir;
-	while (vsfile_srch.cur_name != NULL)
+	while (*vsfile_srch.cur_name != '\0')
 	{
+		if (vsfile_is_div(*vsfile_srch.cur_name))
+		{
+			if (!(vsfile_srch.cur_file->attr & VSFILE_ATTR_DIRECTORY))
+			{
+				// want to find something under a file not a directory
+				return VSFERR_FAIL;
+			}
+
+			vsfile_srch.cur_name++;
+			if ('\0' == *vsfile_srch.cur_name)
+			{
+				break;
+			}
+		}
+
 		vsfile_srch.file_pt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfile_srch.cur_file->op->d_op.getchild_byname(
@@ -61,9 +98,10 @@ vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		{
 			goto end;
 		}
-		vsfile_srch.cur_name = strchr(vsfile_srch.cur_name, '/') + 1;
+		vsfile_srch.cur_name += strlen((*file)->name);
 		vsfile_srch.cur_file = *file;
 	}
+	*file = vsfile_srch.cur_file;
 end:
 	vsfsm_crit_leave(&vsfile_srch.crit);
 
@@ -173,23 +211,6 @@ vsf_err_t vsfile_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return file->op->f_op.write(pt, evt, file, offset, size, buff, wsize);
 }
 
-// helper
-char* vsfile_getfileext(char* fname)
-{
-	char *ext, *tmp;
-
-	ext = tmp = fname;
-	while (1)
-	{
-		tmp = strchr(ext, '.');
-		if (tmp != NULL)
-			ext = tmp + 1;
-		else
-			break;
-	}
-	return ext;
-}
-
 // dummy
 vsf_err_t vsfile_dummy_file(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir)
@@ -209,12 +230,17 @@ vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 {
 	struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)dir;
 	struct vsfile_t *child = memfile->child;
+	char ch;
 
-	while (child != NULL)
+	while ((child != NULL) && (child->name != NULL))
 	{
-		if (!strcmp(child->name, name))
+		if (strstr(name, child->name) == name)
 		{
-			break;
+			ch = name[strlen(child->name)];
+			if (('\0' == ch) || vsfile_is_div(ch))
+			{
+				break;
+			}
 		}
 		child = (struct vsfile_t *)((uint32_t)child + memfile->child_file_size);
 	}
