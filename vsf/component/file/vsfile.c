@@ -303,7 +303,7 @@ vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-const struct vsfile_fsop_t vsf_memfs_op =
+const struct vsfile_fsop_t vsfile_memfs_op =
 {
 	// mount / unmount
 	.mount = vsfile_dummy_mount,

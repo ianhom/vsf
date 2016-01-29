@@ -445,6 +445,44 @@ struct vsf_t
 				const struct vsfscsi_lun_op_t *mal2scsi_op;
 			} scsi;
 		} mal;
+
+		struct
+		{
+			vsf_err_t (*init)(void);
+
+			vsf_err_t (*mount)(struct vsfsm_pt_t*, vsfsm_evt_t,
+						struct vsfile_fsop_t*, struct vsfile_t*);
+			vsf_err_t (*unmount)(struct vsfsm_pt_t*, vsfsm_evt_t,
+						struct vsfile_t*);
+
+			vsf_err_t (*getfile)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*, char*, struct vsfile_t**);
+			vsf_err_t (*findfirst)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*, struct vsfile_t**);
+			vsf_err_t (*findnext)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*, struct vsfile_t**);
+			vsf_err_t (*findend)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*);
+
+			vsf_err_t (*open)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*);
+			vsf_err_t (*close)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*);
+			vsf_err_t (*read)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*, uint64_t, uint32_t, uint8_t*, uint32_t*);
+			vsf_err_t (*write)(struct vsfsm_pt_t*, vsfsm_evt_t,
+					struct vsfile_t*, uint64_t, uint32_t, uint8_t*, uint32_t*);
+
+			char* (*getfileext)(char* name);
+			bool (*is_div)(char ch);
+
+			vsf_err_t (*dummy_file)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir);
+			vsf_err_t (*dummy_rw)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir);
+
+			const struct vsfile_fsop_t *memfs_op;
+		} file;
 	} component;
 
 	struct
@@ -678,6 +716,23 @@ struct vsf_t
 #define vsfscsi_cancel_transact			vsf.component.mal.scsi.cancel_transact
 #define vsfscsi_release_transact		vsf.component.mal.scsi.release_transact
 #define vsf_mal2scsi_op					(*vsf.component.mal.scsi.mal2scsi_op)
+
+#define vsfile_init						vsf.component.file.init
+#define vsfile_mount					vsf.component.file.mount
+#define vsfile_unmount					vsf.component.file.unmount
+#define vsfile_getfile					vsf.component.file.getfile
+#define vsfile_findfirst				vsf.component.file.findfirst
+#define vsfile_findnext					vsf.component.file.findnext
+#define vsfile_findend					vsf.component.file.findend
+#define vsfile_open						vsf.component.file.open
+#define vsfile_close					vsf.component.file.close
+#define vsfile_read						vsf.component.file.read
+#define vsfile_write					vsf.component.file.write
+#define vsfile_getfileext				vsf.component.file.getfileext
+#define vsfile_is_div					vsf.component.file.is_div
+#define vsfile_dummy_file				vsf.component.file.dummy_file
+#define vsfile_dummy_rw					vsf.component.file.dummy_rw
+#define vsfile_memfs_op					(*vsf.component.file.memfs_op)
 
 #define vsfq_init						vsf.component.buffer.queue.init
 #define vsfq_append						vsf.component.buffer.queue.append

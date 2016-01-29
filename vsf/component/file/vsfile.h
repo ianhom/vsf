@@ -77,6 +77,17 @@ struct vsfile_t
 
 vsf_err_t vsfile_init(void);
 
+#define VSFILE_MOUNT(p, e, op, d)			vsfile_mount((p), (e), (op), (struct vsfile_t *)(d))
+#define VSFILE_UNMOUNT(p, e, d)				vsfile_unmount((p), (e), (struct vsfile_t *)(d))
+#define VSFILE_GETFILE(p, e, d, n, f)		vsfile_getfile((p), (e), (struct vsfile_t *)(d), (n), (struct vsfile_t **)(f))
+#define VSFILE_FINDFIRST(p, e, d, f)		vsfile_findfirst((p), (e), (struct vsfile_t *)(d), (struct vsfile_t **)(f))
+#define VSFILE_FINDNEXT(p, e, d, f)			vsfile_findnext((p), (e), (struct vsfile_t *)(d), (struct vsfile_t **)(f))
+#define VSFILE_FINDEND(p, e, d)				vsfile_findend((p), (e), (struct vsfile_t *)(d))
+#define VSFILE_OPEN(p, e, f)				vsfile_open((p), (e), (struct vsfile_t *)(f))
+#define VSFILE_CLOSE(p, e, f)				vsfile_close((p), (e), (struct vsfile_t *)(f))
+#define VSFILE_READ(p, e, f, o, s, b, r)	vsfile_read((p), (e), (struct vsfile_t *)(f), (o), (s), (b), (r))
+#define VSFILE_WRITE(p, e, f, o, s, b, w)	vsfile_write((p), (e), (struct vsfile_t *)(f), (o), (s), (b), (w))
+
 vsf_err_t vsfile_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfile_fsop_t *op, struct vsfile_t *dir);
 vsf_err_t vsfile_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -135,7 +146,7 @@ struct vsfile_memfile_t
 	// protected: initialized by derived class
 	uint32_t child_file_size;
 };
-extern const struct vsfile_fsop_t vsf_memfs_op;
+extern const struct vsfile_fsop_t vsfile_memfs_op;
 // protected
 vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
