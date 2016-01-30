@@ -31,6 +31,8 @@ struct sllist
 
 int sllist_is_in(struct sllist *head, struct sllist *node);
 int sllist_remove(struct sllist **head, struct sllist *node);
+void sllist_append(struct sllist *head, struct sllist *new_node);
+void sllist_delete_next(struct sllist *head);
 
 #endif // __LIST_H_INCLUDED__
 

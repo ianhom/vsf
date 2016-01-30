@@ -38,7 +38,7 @@ int sllist_remove(struct sllist **head, struct sllist *node)
 	{
 		return -1;
 	}
-	
+
 	if (*head == node)
 	{
 		*head = node->next;
@@ -54,4 +54,27 @@ int sllist_remove(struct sllist **head, struct sllist *node)
 		*head = (*head)->next;
 	}
 	return 0;
+}
+
+void sllist_append(struct sllist *head, struct sllist *new_node)
+{
+	struct sllist *next;
+
+	next = head;
+	while (next->next != NULL)
+		next = next->next;
+
+	next->next = new_node;
+	new_node->next = NULL;
+}
+
+void sllist_delete_next(struct sllist *head)
+{
+	struct sllist *next;
+
+	next = head->next;
+	if (next->next)
+		head->next = next->next;
+	else
+		head->next = NULL;
 }

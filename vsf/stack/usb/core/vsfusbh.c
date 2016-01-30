@@ -20,31 +20,6 @@
 
 #define USB_MAX_DEVICE				127
 
-void sllist_append(struct sllist *head, struct sllist *new)
-{
-	struct sllist *next;
-
-	next = head;
-
-	while (next->next != NULL)
-		next = next->next;
-
-	next->next = new;
-	new->next = NULL;
-}
-
-void sllist_delete_next(struct sllist *head)
-{
-	struct sllist *next;
-
-	next = head->next;
-
-	if (next->next)
-		head->next = next->next;
-	else
-		head->next = NULL;
-}
-
 struct vsfusbh_class_drv_list
 {
 	const struct vsfusbh_class_drv_t *drv;
