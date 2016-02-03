@@ -69,8 +69,102 @@ struct vsf_shell_api_t
 };
 #endif
 
+#ifdef VSFCFG_FUNC_TCPIP
+#include "stack/tcpip/vsfip.h"
+#include "stack/tcpip/netif/eth/vsfip_eth.h"
+#include "stack/tcpip/proto/dhcp/vsfip_dhcpc.h"
+#include "stack/tcpip/proto/dns/vsfip_dnsc.h"
+#include "stack/tcpip/proto/http/vsfip_httpc.h"
+struct vsf_tcpip_api_t
+{
+	struct vsfip_t local;
+
+	vsf_err_t (*init)(struct vsfip_mem_op_t*);
+	vsf_err_t (*fini)(void);
+
+	vsf_err_t (*netif_add)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							struct vsfip_netif_t*);
+	vsf_err_t (*netif_remove)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							struct vsfip_netif_t*);
+
+	struct vsfip_buffer_t* (*buffer_get)(uint32_t);
+	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t, uint32_t);
+	void (*buffer_reference)(struct vsfip_buffer_t*);
+	void (*buffer_release)(struct vsfip_buffer_t*);
+
+	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t,
+							enum vsfip_sockproto_t);
+	vsf_err_t (*close)(struct vsfip_socket_t*);
+
+	vsf_err_t (*listen)(struct vsfip_socket_t*, uint8_t);
+	vsf_err_t (*bind)(struct vsfip_socket_t*, uint16_t);
+
+	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
+	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_socket_t**);
+	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
+	vsf_err_t (*tcp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t*, bool);
+	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
+	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t**);
+	vsf_err_t (*tcp_close)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*);
+
+	vsf_err_t (*udp_async_send)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
+	vsf_err_t (*udp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t*);
+	vsf_err_t (*udp_async_recv)(struct vsfip_socket_t*,
+				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
+	vsf_err_t (*udp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
+				struct vsfip_buffer_t**);
+
+	struct
+	{
+		struct
+		{
+			vsf_err_t (*header)(struct vsfip_buffer_t ,
+				enum vsfip_netif_proto_t, const struct vsfip_macaddr_t*);
+			void (*input)(struct vsfip_buffer_t*);
+		} eth;
+	} netif;
+
+	struct
+	{
+		struct
+		{
+			struct vsfip_dhcpc_local_t local;
+			vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
+		} dhcpc;
+		struct
+		{
+			struct vsfip_dns_local_t local;
+			vsf_err_t (*init)(void);
+			vsf_err_t (*setserver)(uint8_t, struct vsfip_ipaddr_t*);
+			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t*, vsfsm_evt_t,
+							char*, struct vsfip_ipaddr_t*);
+		} dns;
+		struct
+		{
+			struct vsfip_httpc_op_t op_stream;
+			struct vsfip_httpc_op_t op_buffer;
+		} httpc;
+	} protocol;
+};
+#endif
+
 #ifdef VSFCFG_FUNC_USBD
 #include "stack/usb/core/vsfusbd.h"
+#include "stack/usb/class/device/CDC/vsfusbd_CDC.h"
+#include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
 #include "stack/usb/class/device/CDC/vsfusbd_RNDIS.h"
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
@@ -167,98 +261,6 @@ struct vsf_usbh_api_t
 #endif
 		} hub;
 	} classes;
-};
-#endif
-
-#ifdef VSFCFG_FUNC_TCPIP
-#include "stack/tcpip/vsfip.h"
-#include "stack/tcpip/netif/eth/vsfip_eth.h"
-#include "stack/tcpip/proto/dhcp/vsfip_dhcpc.h"
-#include "stack/tcpip/proto/dns/vsfip_dnsc.h"
-#include "stack/tcpip/proto/http/vsfip_httpc.h"
-struct vsf_tcpip_api_t
-{
-	struct vsfip_t local;
-
-	vsf_err_t (*init)(struct vsfip_mem_op_t*);
-	vsf_err_t (*fini)(void);
-
-	vsf_err_t (*netif_add)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							struct vsfip_netif_t*);
-	vsf_err_t (*netif_remove)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							struct vsfip_netif_t*);
-
-	struct vsfip_buffer_t* (*buffer_get)(uint32_t);
-	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t, uint32_t);
-	void (*buffer_reference)(struct vsfip_buffer_t*);
-	void (*buffer_release)(struct vsfip_buffer_t*);
-
-	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t,
-							enum vsfip_sockproto_t);
-	vsf_err_t (*close)(struct vsfip_socket_t*);
-
-	vsf_err_t (*listen)(struct vsfip_socket_t*, uint8_t);
-	vsf_err_t (*bind)(struct vsfip_socket_t*, uint16_t);
-
-	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
-	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_socket_t**);
-	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
-	vsf_err_t (*tcp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t*, bool);
-	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
-	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t**);
-	vsf_err_t (*tcp_close)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*);
-
-	vsf_err_t (*udp_async_send)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
-	vsf_err_t (*udp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t*);
-	vsf_err_t (*udp_async_recv)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
-	vsf_err_t (*udp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t**);
-
-	struct
-	{
-		struct
-		{
-			vsf_err_t (*header)(struct vsfip_buffer_t ,
-				enum vsfip_netif_proto_t, const struct vsfip_macaddr_t*);
-			void (*input)(struct vsfip_buffer_t*);
-		} eth;
-	} netif;
-
-	struct
-	{
-		struct
-		{
-			struct vsfip_dhcpc_local_t local;
-			vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
-		} dhcpc;
-		struct
-		{
-			struct vsfip_dns_local_t local;
-			vsf_err_t (*init)(void);
-			vsf_err_t (*setserver)(uint8_t, struct vsfip_ipaddr_t*);
-			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							char*, struct vsfip_ipaddr_t*);
-		} dns;
-		struct
-		{
-			struct vsfip_httpc_op_t op_stream;
-			struct vsfip_httpc_op_t op_buffer;
-		} httpc;
-	} protocol;
 };
 #endif
 

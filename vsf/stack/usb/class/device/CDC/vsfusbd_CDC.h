@@ -20,9 +20,6 @@
 #ifndef __VSFUSBD_CDC_H_INCLUDED__
 #define __VSFUSBD_CDC_H_INCLUDED__
 
-#include "component/buffer/buffer.h"
-#include "component/stream/stream.h"
-
 //#define VSFUSBD_CDCCFG_TRANSACT
 
 enum usb_CDC_req_t

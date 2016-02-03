@@ -19,6 +19,11 @@
 
 #include "vsf.h"
 
+const uint32_t vsfusbd_RNDIS_OID_Supportlist[VSFUSBD_RNDIS_CFG_OIDNUM] =
+{
+	0,
+};
+
 static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			struct vsfusbd_CDC_param_t *param, struct vsf_buffer_t *buffer)
 {

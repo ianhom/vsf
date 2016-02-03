@@ -20,16 +20,38 @@
 #ifndef __VSFUSBD_RNDIS_H_INCLUDED__
 #define __VSFUSBD_RNDIS_H_INCLUDED__
 
-#include "vsfusbd_CDCACM.h"
-
 #ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISControl_class;
 extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class;
 #endif
 
+#ifndef VSFUSBD_RNDIS_CFG_OIDNUM
+#define VSFUSBD_RNDIS_CFG_OIDNUM				22
+#endif
+
 struct vsfusbd_RNDIS_param_t
 {
 	struct vsfusbd_CDCACM_param_t CDCACM_param;
+
+	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
+
+	struct vsfip_addr_t mac;
+
+	// private
+	struct
+	{
+		uint32_t txok;
+		uint32_t rxok;
+		uint32_t txbad;
+		uint32_t rxbad;
+	} eth_state;
+	uint32_t oid_packet_filter;
+	enum
+	{
+		VSFUSBD_RNDIS_UNINITED,
+		VSFUSBD_RNDIS_INITED,
+		VSFUSBD_RNDIS_DATA_INITED,
+	} rndis_state;
 };
 
 #endif	// __VSFUSBD_RNDIS_H_INCLUDED__

@@ -20,8 +20,6 @@
 #ifndef __VSFUSBD_CDCACM_H_INCLUDED__
 #define __VSFUSBD_CDCACM_H_INCLUDED__
 
-#include "vsfusbd_CDC.h"
-
 struct vsfusbd_CDCACM_line_coding_t
 {
 	uint32_t bitrate;
