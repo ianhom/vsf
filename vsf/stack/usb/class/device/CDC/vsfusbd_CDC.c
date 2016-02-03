@@ -338,7 +338,7 @@ vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
 	if (USB_CDCREQ_SEND_ENCAPSULATED_COMMAND == request->bRequest)
 	{
 		if ((param->callback.send_encapsulated_command != NULL) &&
-			param->callback.send_encapsulated_command(buffer))
+			param->callback.send_encapsulated_command(param, buffer))
 		{
 			return VSFERR_FAIL;
 		}

@@ -2139,6 +2139,9 @@
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDCACM.c</name>
               </file>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_RNDIS.c</name>
+              </file>
             </group>
           </group>
         </group>

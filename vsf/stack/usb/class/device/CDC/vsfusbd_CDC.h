@@ -51,7 +51,8 @@ struct vsfusbd_CDC_param_t
 	
 	struct
 	{
-		vsf_err_t (*send_encapsulated_command)(struct vsf_buffer_t *buffer);
+		vsf_err_t (*send_encapsulated_command)(
+				struct vsfusbd_CDC_param_t *param, struct vsf_buffer_t *buffer);
 	} callback;
 	
 	// no need to initialize below if encapsulate command/response is not used

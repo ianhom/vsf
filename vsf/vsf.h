@@ -71,7 +71,7 @@ struct vsf_shell_api_t
 
 #ifdef VSFCFG_FUNC_USBD
 #include "stack/usb/core/vsfusbd.h"
-#include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
+#include "stack/usb/class/device/CDC/vsfusbd_RNDIS.h"
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
 struct vsf_usbd_api_t
