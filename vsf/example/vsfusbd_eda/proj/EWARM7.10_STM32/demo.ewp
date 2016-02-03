@@ -2140,12 +2140,6 @@
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDCACM.c</name>
               </file>
             </group>
-            <group>
-              <name>HID</name>
-              <file>
-                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\HID\vsfusbd_HID.c</name>
-              </file>
-            </group>
           </group>
         </group>
         <group>
