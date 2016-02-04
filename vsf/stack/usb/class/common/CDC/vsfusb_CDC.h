@@ -17,43 +17,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __VSFUSBD_RNDIS_H_INCLUDED__
-#define __VSFUSBD_RNDIS_H_INCLUDED__
+#ifndef __VSFUSB_CDC_H_INCLUDED__
+#define __VSFUSB_CDC_H_INCLUDED__
 
-#include "../../common/CDC/vsfusb_RNDIS.h"
-
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISControl_class;
-extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class;
-#endif
-
-#ifndef VSFUSBD_RNDIS_CFG_OIDNUM
-#define VSFUSBD_RNDIS_CFG_OIDNUM				22
-#endif
-
-struct vsfusbd_RNDIS_param_t
+enum usb_CDC_req_t
 {
-	struct vsfusbd_CDCACM_param_t CDCACM_param;
-
-	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
-
-	struct vsfip_addr_t mac;
-
-	// private
-	struct
-	{
-		uint32_t txok;
-		uint32_t rxok;
-		uint32_t txbad;
-		uint32_t rxbad;
-	} eth_state;
-	uint32_t oid_packet_filter;
-	enum
-	{
-		VSFUSBD_RNDIS_UNINITED,
-		VSFUSBD_RNDIS_INITED,
-		VSFUSBD_RNDIS_DATA_INITED,
-	} rndis_state;
+	USB_CDCREQ_SEND_ENCAPSULATED_COMMAND	= 0x00,
+	USB_CDCREQ_GET_ENCAPSULATED_RESPONSE	= 0x01,
+	USB_CDCREQ_SET_COMM_FEATURE				= 0x02,
+	USB_CDCREQ_GET_COMM_FEATURE				= 0x03,
+	USB_CDCREQ_CLEAR_COMM_FEATURE			= 0x04,
 };
 
-#endif	// __VSFUSBD_RNDIS_H_INCLUDED__
+#endif	// __VSFUSB_CDC_H_INCLUDED__

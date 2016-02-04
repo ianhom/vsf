@@ -49,7 +49,7 @@ vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_CDCACM_param_t *param =
 		(struct vsfusbd_CDCACM_param_t *)config->iface[iface].protocol_param;
-	struct vsfusbd_CDCACM_line_coding_t *line_coding = &param->line_coding;
+	struct usb_CDCACM_line_coding_t *line_coding = &param->line_coding;
 
 	switch (request->bRequest)
 	{
@@ -113,7 +113,7 @@ vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
 
 	if (USB_CDCACMREQ_SET_LINE_CODING == request->bRequest)
 	{
-		struct vsfusbd_CDCACM_line_coding_t *line_coding = &param->line_coding;
+		struct usb_CDCACM_line_coding_t *line_coding = &param->line_coding;
 
 		line_coding->bitrate = GET_LE_U32(&buffer->buffer[0]);
 		line_coding->stopbittype = buffer->buffer[4];

@@ -17,43 +17,27 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __VSFUSBD_RNDIS_H_INCLUDED__
-#define __VSFUSBD_RNDIS_H_INCLUDED__
+#ifndef __VSFUSB_CDCACM_H_INCLUDED__
+#define __VSFUSB_CDCACM_H_INCLUDED__
 
-#include "../../common/CDC/vsfusb_RNDIS.h"
-
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISControl_class;
-extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class;
-#endif
-
-#ifndef VSFUSBD_RNDIS_CFG_OIDNUM
-#define VSFUSBD_RNDIS_CFG_OIDNUM				22
-#endif
-
-struct vsfusbd_RNDIS_param_t
+struct usb_CDCACM_line_coding_t
 {
-	struct vsfusbd_CDCACM_param_t CDCACM_param;
-
-	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
-
-	struct vsfip_addr_t mac;
-
-	// private
-	struct
-	{
-		uint32_t txok;
-		uint32_t rxok;
-		uint32_t txbad;
-		uint32_t rxbad;
-	} eth_state;
-	uint32_t oid_packet_filter;
-	enum
-	{
-		VSFUSBD_RNDIS_UNINITED,
-		VSFUSBD_RNDIS_INITED,
-		VSFUSBD_RNDIS_DATA_INITED,
-	} rndis_state;
+	uint32_t bitrate;
+	uint8_t stopbittype;
+	uint8_t paritytype;
+	uint8_t datatype;
 };
 
-#endif	// __VSFUSBD_RNDIS_H_INCLUDED__
+#define USBCDCACM_CONTROLLINE_RTS			0x02
+#define USBCDCACM_CONTROLLINE_DTR			0x01
+#define USBCDCACM_CONTROLLINE_MASK			0x03
+
+enum usb_CDCACM_req_t
+{
+	USB_CDCACMREQ_SET_LINE_CODING			= 0x20,
+	USB_CDCACMREQ_GET_LINE_CODING			= 0x21,
+	USB_CDCACMREQ_SET_CONTROL_LINE_STATE	= 0x22,
+	USB_CDCACMREQ_SEND_BREAK				= 0x23,
+};
+
+#endif	// __VSFUSB_CDCACM_H_INCLUDED__

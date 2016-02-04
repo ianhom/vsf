@@ -20,16 +20,9 @@
 #ifndef __VSFUSBD_CDC_H_INCLUDED__
 #define __VSFUSBD_CDC_H_INCLUDED__
 
-//#define VSFUSBD_CDCCFG_TRANSACT
+#include "../../common/CDC/vsfusb_CDC.h"
 
-enum usb_CDC_req_t
-{
-	USB_CDCREQ_SEND_ENCAPSULATED_COMMAND	= 0x00,
-	USB_CDCREQ_GET_ENCAPSULATED_RESPONSE	= 0x01,
-	USB_CDCREQ_SET_COMM_FEATURE				= 0x02,
-	USB_CDCREQ_GET_COMM_FEATURE				= 0x03,
-	USB_CDCREQ_CLEAR_COMM_FEATURE			= 0x04,
-};
+//#define VSFUSBD_CDCCFG_TRANSACT
 
 #ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class;
