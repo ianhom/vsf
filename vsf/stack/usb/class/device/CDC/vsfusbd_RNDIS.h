@@ -33,7 +33,7 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class;
 
 struct vsfusbd_RNDIS_param_t
 {
-	struct vsfusbd_CDCACM_param_t CDCACM_param;
+	struct vsfusbd_CDCACM_param_t CDCACM;
 
 	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
 
@@ -46,7 +46,7 @@ struct vsfusbd_RNDIS_param_t
 		uint32_t rxok;
 		uint32_t txbad;
 		uint32_t rxbad;
-	} eth_state;
+	} statistics;
 	uint32_t oid_packet_filter;
 	enum
 	{

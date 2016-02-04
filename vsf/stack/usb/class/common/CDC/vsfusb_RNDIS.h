@@ -349,7 +349,11 @@ struct rndis_halt_msg_t
 struct rndis_query_msg_t
 {
 	struct rndis_requesthead_t request;
-	enum oid_t Oid;
+	union
+	{
+		enum oid_t oid;
+		uint32_t value;
+	} Oid;
 	uint32_t InformationBufferLength;
 	uint32_t InformationBufferOffset;
 	uint32_t DeviceVcHandle;
@@ -365,7 +369,11 @@ struct rndis_query_cmplt_t
 struct rndis_set_msg_t
 {
 	struct rndis_requesthead_t request;
-	enum oid_t Oid;
+	union
+	{
+		enum oid_t oid;
+		uint32_t value;
+	} Oid;
 	uint32_t InformationBufferLength;
 	uint32_t InformationBufferOffset;
 	uint32_t DeviceVcHandle;
@@ -392,7 +400,11 @@ struct rndis_reset_cmplt_t
 struct rndis_indicate_status_msg_t
 {
 	struct rndis_msghead_t head;
-	enum ndis_status_t status;
+	union
+	{
+		enum ndis_status_t status;
+		uint32_t value;
+	} status;
 	uint32_t StatusBufferLength;
 	uint32_t StatusBufferOffset;
 };
