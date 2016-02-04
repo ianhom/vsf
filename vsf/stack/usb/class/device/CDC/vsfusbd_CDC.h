@@ -31,6 +31,7 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_CDCData_class;
 
 struct vsfusbd_CDC_param_t
 {
+	uint8_t ep_notify;
 	uint8_t ep_out;
 	uint8_t ep_in;
 	
@@ -46,8 +47,8 @@ struct vsfusbd_CDC_param_t
 	} callback;
 	
 	// no need to initialize below if encapsulate command/response is not used
-	struct vsf_buffer_t encapsulated_command_buffer;
-	struct vsf_buffer_t encapsulated_response_buffer;
+	struct vsf_buffer_t encapsulated_command;
+	struct vsf_buffer_t encapsulated_response;
 	
 	// no need to initialize below by user
 	struct vsfusbd_device_t *device;

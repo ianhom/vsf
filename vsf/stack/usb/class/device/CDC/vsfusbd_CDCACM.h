@@ -29,7 +29,7 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_CDCACMData_class;
 
 struct vsfusbd_CDCACM_param_t
 {
-	struct vsfusbd_CDC_param_t CDC_param;
+	struct vsfusbd_CDC_param_t CDC;
 	
 	struct
 	{

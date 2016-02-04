@@ -308,6 +308,11 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.stack.usb.device.classes.cdc.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCData_class,
 	.stack.usb.device.classes.cdcacm.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
 	.stack.usb.device.classes.cdcacm.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
+#ifdef VSFCFG_FUNC_TCPIP
+	.stack.usb.device.classes.rndis.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISControl_class,
+	.stack.usb.device.classes.rndis.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISData_class,
+#endif
+	.stack.usb.device.classes.mscbot.protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_MSCBOT_class,
 #endif
 #endif
 

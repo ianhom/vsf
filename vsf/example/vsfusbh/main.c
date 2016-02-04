@@ -1,19 +1,4 @@
-#include "app_cfg.h"
-#include "app_type.h"
-
-#include "interfaces.h"
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-#include "framework/vsfshell/vsfshell.h"
-
-#include "component/stream/stream.h"
-#include "component/debug/debug.h"
-
-#include "stack/usb/vsfusb.h"
-#include "stack/usb/core/hcd/ohci/vsfohci.h"
-#include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
-#include "stack/usb/class/host/HID/vsfusbh_HID.h"
-#include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
+#include "vsf.h"
 
 #define APPCFG_VSFTIMER_NUM				16
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
@@ -238,10 +223,11 @@ struct vsfapp_t
 	uint8_t bufmgr_buffer[12 * 1024];
 } static app =
 {
-	.usbd.cdc.param.CDC_param.ep_out		= 3,
-	.usbd.cdc.param.CDC_param.ep_in			= 3,
-	.usbd.cdc.param.CDC_param.stream_tx		= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
-	.usbd.cdc.param.CDC_param.stream_rx		= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
+	.usbd.cdc.param.CDC.ep_notify			= 2,
+	.usbd.cdc.param.CDC.ep_out				= 3,
+	.usbd.cdc.param.CDC.ep_in				= 3,
+	.usbd.cdc.param.CDC.stream_tx			= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
+	.usbd.cdc.param.CDC.stream_rx			= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
 	.usbd.cdc.param.line_coding.bitrate		= 115200,
 	.usbd.cdc.param.line_coding.stopbittype	= 0,
 	.usbd.cdc.param.line_coding.paritytype	= 0,

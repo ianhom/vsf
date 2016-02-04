@@ -303,19 +303,19 @@ vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 	switch (request->bRequest)
 	{
 	case USB_CDCREQ_SEND_ENCAPSULATED_COMMAND:
-		if (request->wLength > param->encapsulated_command_buffer.size)
+		if (request->wLength > param->encapsulated_command.size)
 		{
 			return VSFERR_FAIL;
 		}
-		buffer->buffer = param->encapsulated_command_buffer.buffer;
+		buffer->buffer = param->encapsulated_command.buffer;
 		buffer->size = request->wLength;
 		break;
 	case USB_CDCREQ_GET_ENCAPSULATED_RESPONSE:
-		if (request->wLength > param->encapsulated_response_buffer.size)
+		if (request->wLength > param->encapsulated_response.size)
 		{
 			return VSFERR_FAIL;
 		}
-		buffer->buffer = param->encapsulated_response_buffer.buffer;
+		buffer->buffer = param->encapsulated_response.buffer;
 		buffer->size = request->wLength;
 		break;
 	default:

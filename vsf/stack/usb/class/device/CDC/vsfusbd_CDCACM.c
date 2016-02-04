@@ -125,7 +125,7 @@ vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
 		{
 			return VSFERR_FAIL;
 		}
-		vsfusbd_CDCData_connect(&param->CDC_param);
+		vsfusbd_CDCData_connect(&param->CDC);
 	}
 	return VSFERR_NONE;
 }

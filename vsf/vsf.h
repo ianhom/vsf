@@ -36,6 +36,7 @@
 #include "component/mal/vsfmal.h"
 #include "component/mal/vsfscsi.h"
 #include "component/file/vsfile.h"
+#include "component/debug/debug.h"
 
 #define VSF_API_VERSION						0x00000001
 
@@ -165,7 +166,9 @@ struct vsf_tcpip_api_t
 #include "stack/usb/core/vsfusbd.h"
 #include "stack/usb/class/device/CDC/vsfusbd_CDC.h"
 #include "stack/usb/class/device/CDC/vsfusbd_CDCACM.h"
+#ifdef VSFCFG_FUNC_TCPIP
 #include "stack/usb/class/device/CDC/vsfusbd_RNDIS.h"
+#endif
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
 struct vsf_usbd_api_t
@@ -211,6 +214,18 @@ struct vsf_usbd_api_t
 			struct vsfusbd_class_protocol_t *data_protocol;
 #endif
 		} cdcacm;
+#ifdef VSFCFG_FUNC_TCPIP
+		struct
+		{
+#if defined(VSFCFG_MODULE_USBD)
+			struct vsfusbd_class_protocol_t control_protocol;
+			struct vsfusbd_class_protocol_t data_protocol;
+#else
+			struct vsfusbd_class_protocol_t *control_protocol;
+			struct vsfusbd_class_protocol_t *data_protocol;
+#endif
+		} rndis;
+#endif
 		struct
 		{
 #if defined(VSFCFG_MODULE_USBD)
