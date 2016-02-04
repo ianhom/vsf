@@ -62,13 +62,13 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			struct rndis_initialize_cmplt_t *reply =
 						(struct rndis_initialize_cmplt_t *)replybuf;
 
-			reply->reply.request.head.MessageType.msg = RNDIS_INITIALIZE_CMPLT;
+			reply->reply.request.head.MessageType.value = RNDIS_INITIALIZE_CMPLT;
 			reply->reply.request.RequestId = msg->request.RequestId;
-			reply->reply.status.status = NDIS_STATUS_SUCCESS;
+			reply->reply.status.value = NDIS_STATUS_SUCCESS;
 			reply->MajorVersion = RNDIS_MAJOR_VERSION;
 			reply->MinorVersion = RNDIS_MINOR_VERSION;
-			reply->DeviceFlags.flags = RNDIS_DF_CONNECTIONLESS;
-			reply->Medium.medium = NDIS_MEDIUM_802_3;
+			reply->DeviceFlags.value = RNDIS_DF_CONNECTIONLESS;
+			reply->Medium.value = NDIS_MEDIUM_802_3;
 			reply->MaxPacketsPerMessage = 1;
 			reply->MaxTransferSize = VSFIP_BUFFER_SIZE;
 			reply->PacketAlignmentFactor = 0;
@@ -132,10 +132,10 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 				reply->InformationBufferLength = replylen;
 				memcpy((uint8_t *)(reply + 1), replybuf, replylen);
 				replylen += sizeof(*reply);
-				reply->reply.request.head.MessageType.msg = RNDIS_QUERY_CMPLT;
+				reply->reply.request.head.MessageType.value = RNDIS_QUERY_CMPLT;
 				reply->reply.request.head.MessageLength = replylen;
 				reply->reply.request.RequestId = msg->request.RequestId;
-				reply->reply.status.status = status;
+				reply->reply.status.value = status;
 				reply->InformationBufferOffset = 16;
 			}
 		}
@@ -149,11 +149,11 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			uint8_t *ptr = (uint8_t *)
 						&msg->request.RequestId + msg->InformationBufferOffset;
 
-			reply->reply.request.head.MessageType.msg = RNDIS_SET_CMPLT;
+			reply->reply.request.head.MessageType.value = RNDIS_SET_CMPLT;
 			reply->reply.request.head.MessageLength = sizeof(*reply);
 			replylen = reply->reply.request.head.MessageLength;
 			reply->reply.request.RequestId = msg->request.RequestId;
-			reply->reply.status.status = NDIS_STATUS_SUCCESS;
+			reply->reply.status.value = NDIS_STATUS_SUCCESS;
 			switch (msg->Oid.oid)
 			{
 			case OID_GEN_RNDIS_CONFIG_PARAMETER:
@@ -173,21 +173,19 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			case OID_PNP_REMOVE_WAKE_UP_PATTERN:
 			case OID_PNP_ENABLE_WAKE_UP:
 			default:
-				reply->reply.status.status = NDIS_STATUS_FAILURE;
+				reply->reply.status.value = NDIS_STATUS_FAILURE;
 			}
 		}
 		break;
 	case RNDIS_RESET_MSG:
 		{
-			struct rndis_reset_msg_t *msg =
-						(struct rndis_reset_msg_t *)buffer->buffer;
 			struct rndis_reset_cmplt_t *reply =
 						(struct rndis_reset_cmplt_t *)replybuf;
 
-			reply->head.MessageType.msg = RNDIS_RESET_CMPLT;
+			reply->head.MessageType.value = RNDIS_RESET_CMPLT;
 			reply->head.MessageLength = sizeof(*reply);
 			replylen = reply->head.MessageLength;
-			reply->status = NDIS_STATUS_SUCCESS;
+			reply->status.value = NDIS_STATUS_SUCCESS;
 			reply->AddressingReset = 1;
 			rndis_param->rndis_state = VSFUSBD_RNDIS_UNINITED;
 		}
@@ -201,11 +199,11 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			struct rndis_keepalive_cmplt_t *reply =
 						(struct rndis_keepalive_cmplt_t *)replybuf;
 
-			reply->reply.request.head.MessageType.msg = RNDIS_KEEPALIVE_CMPLT;
+			reply->reply.request.head.MessageType.value = RNDIS_KEEPALIVE_CMPLT;
 			reply->reply.request.head.MessageLength = sizeof(*reply);
 			reply->reply.request.RequestId = msg->request.RequestId;
 			replylen = reply->reply.request.head.MessageLength;
-			reply->reply.status.status = NDIS_STATUS_SUCCESS;
+			reply->reply.status.value = NDIS_STATUS_SUCCESS;
 		}
 		break;
 	}

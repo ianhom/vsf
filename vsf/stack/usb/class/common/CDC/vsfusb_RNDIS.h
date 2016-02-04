@@ -393,7 +393,11 @@ struct rndis_reset_msg_t
 struct rndis_reset_cmplt_t
 {
 	struct rndis_msghead_t head;
-	enum ndis_status_t status;
+	union
+	{
+		enum ndis_status_t status;
+		uint32_t value;
+	} status;
 	uint32_t AddressingReset;
 };
 
