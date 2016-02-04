@@ -22,7 +22,7 @@
 
 #include "../../common/CDC/vsfusb_CDC.h"
 
-//#define VSFUSBD_CDCCFG_TRANSACT
+#define VSFUSBD_CDCCFG_TRANSACT
 
 #ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class;
@@ -44,6 +44,10 @@ struct vsfusbd_CDC_param_t
 	{
 		vsf_err_t (*send_encapsulated_command)(
 				struct vsfusbd_CDC_param_t *param, struct vsf_buffer_t *buffer);
+#ifdef VSFUSBD_CDCCFG_TRANSACT
+		void (*on_tx_finish)(void *param);
+		void (*on_rx_finish)(void *param);
+#endif
 	} callback;
 	
 	// no need to initialize below if encapsulate command/response is not used

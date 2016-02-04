@@ -20,6 +20,10 @@
 #ifndef __VSFUSBD_RNDIS_H_INCLUDED__
 #define __VSFUSBD_RNDIS_H_INCLUDED__
 
+#ifndef VSFUSBD_CDCCFG_TRANSACT
+#error "vsfusbd_RNDIS need vsfusbd_CDC run in TRANSACT mode"
+#endif
+
 #include "../../common/CDC/vsfusb_RNDIS.h"
 
 #ifndef VSFCFG_STANDALONE_MODULE
@@ -40,12 +44,24 @@ struct vsfusbd_RNDIS_param_t
 	struct vsfip_addr_t mac;
 
 	// private
+	struct vsfip_netif_t netif;
+	struct vsfip_netdrv_t netdrv;
+	bool netif_inited;
+	struct vsf_bufstream_t tx_bufstream;
+	struct vsf_bufstream_t rx_bufstream;
+	struct vsfip_buffer_t *tx_buffer;
+	struct vsfip_buffer_t *rx_buffer;
+
+	// thread to receive netif.output_sem
+	struct vsfsm_t sm;
+
 	struct
 	{
 		uint32_t txok;
 		uint32_t rxok;
 		uint32_t txbad;
 		uint32_t rxbad;
+		uint32_t rx_nobuf;
 	} statistics;
 	uint32_t oid_packet_filter;
 	enum

@@ -19,6 +19,129 @@
 
 #include "vsf.h"
 
+void vsfusbd_RNDIS_on_tx_finish(void *param)
+{
+	struct vsfusbd_RNDIS_param_t *rndis_param =
+						(struct vsfusbd_RNDIS_param_t *)param;
+	struct vsf_bufstream_t *bufstream = &rndis_param->tx_bufstream;
+
+	if (!STREAM_GET_DATA_SIZE(bufstream))
+	{
+		struct vsfq_node_t *node = vsfq_dequeue(&rndis_param->netif.outq);
+		struct vsfip_buffer_t *tmpbuf =
+					container_of(node, struct vsfip_buffer_t, proto_node);
+
+		if (rndis_param->tx_buffer != NULL)
+		{
+			vsfip_buffer_release(rndis_param->tx_buffer);
+			rndis_param->tx_buffer = NULL;
+		}
+
+		if (tmpbuf != NULL)
+		{
+			rndis_param->tx_buffer = tmpbuf;
+			bufstream->mem.buffer = tmpbuf->buf;
+			STREAM_INIT(bufstream);
+		}
+	}
+}
+
+void vsfusbd_RNDIS_on_rx_finish(void *param)
+{
+	struct vsfusbd_RNDIS_param_t *rndis_param =
+						(struct vsfusbd_RNDIS_param_t *)param;
+
+	if (rndis_param->rx_buffer != NULL)
+	{
+		if (rndis_param->netif_inited)
+		{
+			vsfip_eth_input(rndis_param->rx_buffer);
+		}
+		else
+		{
+			vsfip_buffer_release(rndis_param->rx_buffer);
+		}
+		rndis_param->rx_buffer = NULL;
+	}
+
+	rndis_param->rx_buffer = vsfip_buffer_get(VSFIP_BUFFER_SIZE);
+	if (NULL == rndis_param->rx_buffer)
+	{
+		rndis_param->statistics.rx_nobuf++;
+		// will not receive any more later
+	}
+	else
+	{
+		struct vsf_bufstream_t *bufstream = &rndis_param->rx_bufstream;
+		bufstream->mem.buffer = rndis_param->rx_buffer->buf;
+		STREAM_INIT(bufstream);
+	}
+}
+
+// netdrv
+static struct vsfsm_state_t*
+vsfusbd_RNDIS_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
+	struct vsfusbd_RNDIS_param_t *param =
+						(struct vsfusbd_RNDIS_param_t *)sm->user_data;
+
+	switch (evt)
+	{
+	case VSFSM_EVT_INIT:
+	pend_loop:
+		if (vsfsm_sem_pend(&param->netif.output_sem, sm))
+		{
+			break;
+		}
+	case VSFSM_EVT_USER_LOCAL:
+		if (NULL == param->tx_buffer)
+		{
+			vsfusbd_RNDIS_on_tx_finish(param);
+		}
+		goto pend_loop;
+	}
+	return NULL;
+}
+
+vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfusbd_RNDIS_param_t *param =
+						(struct vsfusbd_RNDIS_param_t *)pt->user_data;
+	struct vsfip_netif_t *netif = &param->netif;
+
+	netif->macaddr = param->mac;
+	netif->mac_broadcast.size = param->mac.size;
+	memset(netif->mac_broadcast.addr.s_addr_buf, 0xFF, param->mac.size);
+	netif->mtu = VSFIP_CFG_MTU;
+	netif->drv->netif_header_size = VSFIP_ETH_HEADSIZE;
+	netif->drv->drv_header_size = 0;
+	netif->drv->hwtype = VSFIP_ETH_HWTYPE;
+
+	// start pt to receive output_sem
+	param->sm.init_state.evt_handler = vsfusbd_RNDIS_evt_handler;
+	param->sm.user_data = param;
+	return vsfsm_init(&param->sm);
+}
+
+vsf_err_t vsfusbd_RNDIS_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	((struct vsfusbd_RNDIS_param_t *)pt->user_data)->netif_inited = false;
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsfusbd_RNDIS_netdrv_header(struct vsfip_buffer_t *buf,
+			enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest)
+{
+	return VSFERR_NONE;
+}
+
+static struct vsfip_netdrv_op_t vsfusbd_RNDIS_netdrv_op =
+{
+	vsfusbd_RNDIS_netdrv_init, vsfusbd_RNDIS_netdrv_fini,
+	vsfusbd_RNDIS_netdrv_header
+};
+
+// rndis
 const enum oid_t vsfusbd_RNDIS_OID_Supportlist[VSFUSBD_RNDIS_CFG_OIDNUM] =
 {
 	OID_GEN_SUPPORTED_LIST,
@@ -76,6 +199,11 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			reply->AFListSize = 0;
 			rndis_param->rndis_state = VSFUSBD_RNDIS_INITED;
 			replylen = sizeof(struct rndis_initialize_cmplt_t);
+
+			// prepare vsfip buffer and connect stream
+			vsfusbd_CDCData_connect(param);
+			stream_connect_tx(param->stream_tx);
+			stream_connect_rx(param->stream_rx);
 		}
 		break;
 	case RNDIS_HALT_MSG:
@@ -98,7 +226,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			case OID_GEN_HARDWARE_STATUS:
 			case OID_GEN_MAC_OPTIONS:
 			case OID_GEN_RNDIS_CONFIG_PARAMETER:
-			case OID_GEN_RCV_NO_BUFFER:
 			case OID_802_3_RCV_ERROR_ALIGNMENT:
 			case OID_802_3_XMIT_ONE_COLLISION:
 			case OID_802_3_XMIT_MORE_COLLISION:	tmp32 = SYS_TO_LE_U32(0);
@@ -123,6 +250,7 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			case OID_GEN_RCV_OK:				tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rxok); goto reply_tmp32;
 			case OID_GEN_XMIT_ERROR:			tmp32 = SYS_TO_LE_U32(rndis_param->statistics.txbad); goto reply_tmp32;
 			case OID_GEN_RCV_ERROR:				tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rxbad); goto reply_tmp32;
+			case OID_GEN_RCV_NO_BUFFER:			tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rx_nobuf); goto reply_tmp32;
 			case OID_802_3_PERMANENT_ADDRESS:
 			case OID_802_3_CURRENT_ADDRESS:		replybuf = rndis_param->mac.addr.s_addr_buf; replylen = rndis_param->mac.size; break;
 			case OID_802_3_MAXIMUM_LIST_SIZE:	tmp32 = SYS_TO_LE_U32(1); goto reply_tmp32;
@@ -160,8 +288,20 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 				break;
 			case OID_GEN_CURRENT_PACKET_FILTER:
 				rndis_param->oid_packet_filter = GET_LE_U32(ptr);
-				rndis_param->rndis_state = rndis_param->oid_packet_filter ?
-							VSFUSBD_RNDIS_DATA_INITED : VSFUSBD_RNDIS_INITED;
+				if (rndis_param->oid_packet_filter)
+				{
+					struct vsfsm_pt_t pt;
+					rndis_param->rndis_state = VSFUSBD_RNDIS_DATA_INITED;
+					// connect netif, for RNDIS netif_add is non-block
+					pt.state = 0;
+					pt.sm = 0;
+					pt.user_data = rndis_param;
+					vsfip_netif_add(&pt, 0, &rndis_param->netif);
+				}
+				else
+				{
+					rndis_param->rndis_state = VSFUSBD_RNDIS_INITED;
+				}
 				break;
 			case OID_GEN_CURRENT_LOOKAHEAD:
 				break;
@@ -188,6 +328,8 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			reply->status.value = NDIS_STATUS_SUCCESS;
 			reply->AddressingReset = 1;
 			rndis_param->rndis_state = VSFUSBD_RNDIS_UNINITED;
+
+			// free all vsfip buffer and reset stream
 		}
 		break;
 	case RNDIS_INDICATE_STATUS_MSG:
@@ -226,19 +368,40 @@ vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	struct vsfusbd_RNDIS_param_t *param =
 		(struct vsfusbd_RNDIS_param_t *)config->iface[iface].protocol_param;
 
-	param->CDCACM.CDC.encapsulated_command.buffer = param->encapsulated_buf;
-	param->CDCACM.CDC.encapsulated_command.size = sizeof(param->encapsulated_buf);
-	param->CDCACM.CDC.encapsulated_response.buffer = NULL;
-	param->CDCACM.CDC.encapsulated_response.size = 0;
-	if (vsfusbd_CDCACMData_class.init(iface, device))
-	{
-		return VSFERR_FAIL;
-	}
-
+	// private init
+	param->netdrv.op = &vsfusbd_RNDIS_netdrv_op;
+	param->netif.drv = &param->netdrv;
+	param->netif_inited = false;
+	param->tx_buffer = param->rx_buffer = NULL;
 	param->rndis_state = VSFUSBD_RNDIS_UNINITED;
+	param->statistics.rxok = 0;
+	param->statistics.rxok = 0;
+	param->statistics.txbad = 0;
+	param->statistics.rxbad = 0;
+	param->statistics.rx_nobuf = 0;
+
+	// stream init
+	memset(&param->tx_bufstream, 0, sizeof(param->tx_bufstream));
+	param->tx_bufstream.stream.op = &bufstream_op;
+	param->tx_bufstream.stream.callback_tx.param = param;
+	param->tx_bufstream.mem.read = true;
+	param->CDCACM.CDC.stream_tx = (struct vsf_stream_t *)&param->tx_bufstream;
+	param->CDCACM.CDC.callback.on_tx_finish = vsfusbd_RNDIS_on_tx_finish;
+	memset(&param->rx_bufstream, 0, sizeof(param->rx_bufstream));
+	param->rx_bufstream.stream.op = &bufstream_op;
+	param->rx_bufstream.stream.callback_rx.param = param;
+	param->rx_bufstream.mem.read = false;
+	param->CDCACM.CDC.callback.on_rx_finish = vsfusbd_RNDIS_on_rx_finish;
+	param->CDCACM.CDC.stream_rx = (struct vsf_stream_t *)&param->rx_bufstream;
+
+	// CDCACM and CDC init
 	param->CDCACM.CDC.callback.send_encapsulated_command =
 								vsfusbd_RNDIS_on_encapsulated_command;
-	return VSFERR_NONE;
+	param->CDCACM.CDC.encapsulated_command.buffer = param->encapsulated_buf;
+	param->CDCACM.CDC.encapsulated_command.size = sizeof(param->encapsulated_buf);
+	param->CDCACM.CDC.encapsulated_response.buffer = param->encapsulated_buf;
+	param->CDCACM.CDC.encapsulated_response.size = 0;
+	return vsfusbd_CDCACMData_class.init(iface, device);
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE

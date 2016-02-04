@@ -266,6 +266,22 @@ static void buffer_stream_init(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	bufstream->mem.pos = 0;
+	if (bufstream->mem.read)
+	{
+		if (stream_get_data_size(stream) && stream->rx_ready &&
+			(stream->callback_rx.on_inout != NULL))
+		{
+			stream->callback_rx.on_inout(stream->callback_rx.param);
+		}
+	}
+	else
+	{
+		if (stream_get_free_size(stream) && stream->tx_ready &&
+			(stream->callback_tx.on_inout != NULL))
+		{
+			stream->callback_tx.on_inout(stream->callback_tx.param);
+		}
+	}
 }
 
 static uint32_t buffer_stream_get_data_length(struct vsf_stream_t *stream)

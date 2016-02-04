@@ -35,6 +35,11 @@ static void vsfusbd_CDCData_on_OUT_finish(void *p)
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 	struct vsf_stream_t *stream = param->stream_rx;
 
+	if (param->callback.on_rx_finish != NULL)
+	{
+		param->callback.on_rx_finish(stream->callback_rx.param);
+	}
+
 	if (!stream->rx_ready)
 	{
 		stream->callback_tx.param = param;
@@ -59,6 +64,8 @@ static void vsfusbd_CDCData_on_in(void *p)
 	{
 		param->IN_transact.data_size = size;
 		param->IN_transact.stream = param->stream_tx;
+		param->IN_transact.zlp = true;
+		// stream->callback_rx.on_inout will be overwritten
 		vsfusbd_ep_send(param->device, &param->IN_transact);
 	}
 }
@@ -67,6 +74,11 @@ void vsfusbd_CDCData_on_IN_finish(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 	struct vsf_stream_t *stream = param->stream_tx;
+
+	if (param->callback.on_tx_finish != NULL)
+	{
+		param->callback.on_tx_finish(stream->callback_tx.param);
+	}
 
 	stream->callback_rx.param = param;
 	stream->callback_rx.on_connect = NULL;

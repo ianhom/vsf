@@ -26,18 +26,13 @@ vsfusbd_CDCACMData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	struct vsfusbd_CDCACM_param_t *param =
 		(struct vsfusbd_CDCACM_param_t *)config->iface[iface].protocol_param;
 
-	if (vsfusbd_CDCData_class.init(iface, device))
-	{
-		return VSFERR_FAIL;
-	}
-
 	param->control_line = 0;
 	if ((param->callback.set_line_coding != NULL) &&
 		(param->callback.set_line_coding(&param->line_coding)))
 	{
 		return VSFERR_FAIL;
 	}
-	return VSFERR_NONE;
+	return vsfusbd_CDCData_class.init(iface, device);
 }
 
 vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
