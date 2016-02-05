@@ -281,8 +281,7 @@ static struct vsfip_buffer_t *vsfip_netif_prepare_arp_request(
 	
 	if (buf != NULL)
 	{
-		uint32_t headsize = netif->drv->netif_header_size +
-							netif->drv->drv_header_size;
+		uint32_t headsize = netif->drv->netif_header_size;
 		struct vsfip_arphead_t *head;
 		uint8_t *ptr;
 		

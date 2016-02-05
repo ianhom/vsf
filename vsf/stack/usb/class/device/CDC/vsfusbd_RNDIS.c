@@ -39,6 +39,17 @@ void vsfusbd_RNDIS_on_tx_finish(void *param)
 
 		if (tmpbuf != NULL)
 		{
+			struct rndis_data_packet_t *packet;
+
+			tmpbuf->buf.buffer -= sizeof(struct rndis_data_packet_t);
+			tmpbuf->buf.size += sizeof(struct rndis_data_packet_t);
+			packet = (struct rndis_data_packet_t *)tmpbuf->buf.buffer;
+			memset(packet, 0, sizeof(*packet));
+			packet->head.MessageType.value = RNDIS_PACKET_MSG;
+			packet->head.MessageLength = tmpbuf->buf.size;
+			packet->DataOffset = sizeof(*packet) - sizeof(packet->head);
+			packet->DataLength = tmpbuf->buf.size - sizeof(*packet);
+
 			rndis_param->tx_buffer = tmpbuf;
 			bufstream->mem.buffer = tmpbuf->buf;
 			STREAM_INIT(bufstream);
@@ -55,6 +66,12 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 	{
 		if (rndis_param->netif_inited)
 		{
+			struct rndis_data_packet_t *packet = (struct rndis_data_packet_t *)\
+											rndis_param->rx_buffer->buf.buffer;
+
+			rndis_param->rx_buffer->buf.buffer +=
+						sizeof(struct rndis_msghead_t) + packet->DataOffset;
+			rndis_param->rx_buffer->buf.size = packet->DataLength;
 			vsfip_eth_input(rndis_param->rx_buffer);
 		}
 		else
@@ -113,8 +130,7 @@ vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	netif->mac_broadcast.size = param->mac.size;
 	memset(netif->mac_broadcast.addr.s_addr_buf, 0xFF, param->mac.size);
 	netif->mtu = VSFIP_CFG_MTU;
-	netif->drv->netif_header_size = VSFIP_ETH_HEADSIZE;
-	netif->drv->drv_header_size = 0;
+	netif->drv->netif_header_size = 64;
 	netif->drv->hwtype = VSFIP_ETH_HWTYPE;
 
 	// start pt to receive output_sem
@@ -296,6 +312,7 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 					pt.sm = 0;
 					pt.user_data = &rndis_param->netif;
 					vsfip_netif_add(&pt, 0, &rndis_param->netif);
+					rndis_param->netif_inited = true;
 				}
 				else
 				{
@@ -332,6 +349,7 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			reply->status.value = NDIS_STATUS_SUCCESS;
 			reply->AddressingReset = 1;
 			rndis_param->rndis_state = VSFUSBD_RNDIS_UNINITED;
+			rndis_param->netif_inited = false;
 
 			// free all vsfip buffer and reset stream
 			stream_disconnect_tx(param->stream_tx);

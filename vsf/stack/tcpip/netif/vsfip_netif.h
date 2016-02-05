@@ -52,7 +52,6 @@ struct vsfip_netdrv_t
 	const struct vsfip_netdrv_op_t *op;
 	void *param;
 	uint32_t netif_header_size;
-	uint32_t drv_header_size;
 	uint16_t hwtype;
 };
 

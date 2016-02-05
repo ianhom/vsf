@@ -24,6 +24,10 @@
 #error "vsfusbd_RNDIS need vsfusbd_CDC run in TRANSACT mode"
 #endif
 
+#if VSFIP_CFG_NETIF_HEADLEN < 64
+#error "RNDIS require minimum 64 bytes netif header size"
+#endif
+
 #include "../../common/CDC/vsfusb_RNDIS.h"
 
 #ifndef VSFCFG_STANDALONE_MODULE
