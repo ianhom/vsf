@@ -21,10 +21,10 @@ DefaultDestDir = 12
 ;            VID/PID Settings
 ;------------------------------------------------------------------------------
 [DeviceList.NT]
-%DESCRIPTION%=DriverInstall,USB\VID_0483&PID_A039&MI_01
+%DESCRIPTION%=DriverInstall,USB\VID_0483&PID_A03A&MI_02
 
 [DeviceList.NTamd64]
-%DESCRIPTION%=DriverInstall,USB\VID_0483&PID_A039&MI_01
+%DESCRIPTION%=DriverInstall,USB\VID_0483&PID_A03A&MI_02
 
 [DriverInstall.NT]
 Include=mdmcpq.inf

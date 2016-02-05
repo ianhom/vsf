@@ -22,6 +22,12 @@
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
 #define APPCFG_VSFSM_MAINQ_LEN			16
 
+#define APPCFG_BUFMGR_SIZE				(4 * 1024)
+
+#define APPCFG_VSFIP_BUFFER_NUM			4
+#define APPCFG_VSFIP_SOCKET_NUM			8
+#define APPCFG_VSFIP_TCPPCB_NUM			8
+
 // USB descriptors
 static const uint8_t USB_DeviceDescriptor[] =
 {
@@ -323,13 +329,17 @@ struct vsfapp_t
 	{
 		struct
 		{
+			struct vsfusbd_RNDIS_param_t param;
+		} rndis;
+		struct
+		{
 			struct vsfusbd_CDCACM_param_t param;
 			struct vsf_fifostream_t stream_tx;
 			struct vsf_fifostream_t stream_rx;
 			uint8_t txbuff[65];
 			uint8_t rxbuff[65];
 		} cdc;
-		struct vsfusbd_iface_t ifaces[2];
+		struct vsfusbd_iface_t ifaces[4];
 		struct vsfusbd_config_t config[1];
 		struct vsfusbd_device_t device;
 	} usbd;
@@ -344,17 +354,36 @@ struct vsfapp_t
 	// buffer mamager
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 
+	struct
+	{
+		VSFPOOL_DEFINE(buffer_pool, struct vsfip_buffer_t, APPCFG_VSFIP_BUFFER_NUM);
+		VSFPOOL_DEFINE(socket_pool, struct vsfip_socket_t, APPCFG_VSFIP_SOCKET_NUM);
+		VSFPOOL_DEFINE(tcppcb_pool, struct vsfip_tcppcb_t, APPCFG_VSFIP_TCPPCB_NUM);
+
+		uint8_t buffer_mem[APPCFG_VSFIP_BUFFER_NUM][VSFIP_BUFFER_SIZE];
+	} vsfip;
+
 	struct vsfsm_evtq_element_t pendsvq_ele[APPCFG_VSFSM_PENDSVQ_LEN];
 	struct vsfsm_evtq_element_t mainq_ele[APPCFG_VSFSM_MAINQ_LEN];
-	uint8_t bufmgr_buffer[8 * 1024];
+	uint8_t bufmgr_buffer[APPCFG_BUFMGR_SIZE];
 } static app =
 {
 	.usb_pullup.port						= USB_PULLUP_PORT,
 	.usb_pullup.pin							= USB_PULLUP_PIN,
 
-	.usbd.cdc.param.CDC.ep_notify			= 2,
-	.usbd.cdc.param.CDC.ep_out				= 3,
-	.usbd.cdc.param.CDC.ep_in				= 3,
+	.usbd.rndis.param.CDCACM.CDC.ep_notify	= 1,
+	.usbd.rndis.param.CDCACM.CDC.ep_out		= 2,
+	.usbd.rndis.param.CDCACM.CDC.ep_in		= 2,
+	.usbd.rndis.param.mac.size				= 6,
+	.usbd.rndis.param.mac.addr.s_addr_buf[0]= 0xEF,
+	.usbd.rndis.param.mac.addr.s_addr_buf[1]= 0x02,
+	.usbd.rndis.param.mac.addr.s_addr_buf[2]= 0x03,
+	.usbd.rndis.param.mac.addr.s_addr_buf[3]= 0x04,
+	.usbd.rndis.param.mac.addr.s_addr_buf[4]= 0x05,
+	.usbd.rndis.param.mac.addr.s_addr_buf[5]= 0x06,
+	.usbd.cdc.param.CDC.ep_notify			= 3,
+	.usbd.cdc.param.CDC.ep_out				= 4,
+	.usbd.cdc.param.CDC.ep_in				= 4,
 	.usbd.cdc.param.CDC.stream_tx			= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	.usbd.cdc.param.CDC.stream_rx			= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
 	.usbd.cdc.param.line_coding.bitrate		= 115200,
@@ -367,10 +396,14 @@ struct vsfapp_t
 	.usbd.cdc.stream_rx.stream.op			= &fifostream_op,
 	.usbd.cdc.stream_rx.mem.buffer.buffer	= (uint8_t *)&app.usbd.cdc.rxbuff,
 	.usbd.cdc.stream_rx.mem.buffer.size		= sizeof(app.usbd.cdc.rxbuff),
-	.usbd.ifaces[0].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
-	.usbd.ifaces[0].protocol_param			= &app.usbd.cdc.param,
-	.usbd.ifaces[1].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
-	.usbd.ifaces[1].protocol_param			= &app.usbd.cdc.param,
+	.usbd.ifaces[0].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISControl_class,
+	.usbd.ifaces[0].protocol_param			= &app.usbd.rndis.param,
+	.usbd.ifaces[1].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISData_class,
+	.usbd.ifaces[1].protocol_param			= &app.usbd.rndis.param,
+	.usbd.ifaces[2].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
+	.usbd.ifaces[2].protocol_param			= &app.usbd.cdc.param,
+	.usbd.ifaces[3].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
+	.usbd.ifaces[3].protocol_param			= &app.usbd.cdc.param,
 	.usbd.config[0].num_of_ifaces			= dimof(app.usbd.ifaces),
 	.usbd.config[0].iface					= app.usbd.ifaces,
 	.usbd.device.num_of_configuration		= dimof(app.usbd.config),
@@ -404,7 +437,48 @@ static void app_pendsv_activate(struct vsfsm_evtq_t *q)
 	vsfhal_core_pendsv_trigger();
 }
 
-// vsftimer buffer mamager
+// vsfip buffer manager
+static struct vsfip_buffer_t* app_vsfip_get_buffer(uint32_t size)
+{
+	return VSFPOOL_ALLOC(&app.vsfip.buffer_pool, struct vsfip_buffer_t);
+}
+
+static void app_vsfip_release_buffer(struct vsfip_buffer_t *buffer)
+{
+	VSFPOOL_FREE(&app.vsfip.buffer_pool, buffer);
+}
+
+static struct vsfip_socket_t* app_vsfip_get_socket(void)
+{
+	return VSFPOOL_ALLOC(&app.vsfip.socket_pool, struct vsfip_socket_t);
+}
+
+static void app_vsfip_release_socket(struct vsfip_socket_t *socket)
+{
+	VSFPOOL_FREE(&app.vsfip.socket_pool, socket);
+}
+
+static struct vsfip_tcppcb_t* app_vsfip_get_tcppcb(void)
+{
+	return VSFPOOL_ALLOC(&app.vsfip.tcppcb_pool, struct vsfip_tcppcb_t);
+}
+
+static void app_vsfip_release_tcppcb(struct vsfip_tcppcb_t *tcppcb)
+{
+	VSFPOOL_FREE(&app.vsfip.tcppcb_pool, tcppcb);
+}
+
+const struct vsfip_mem_op_t app_vsfip_mem_op =
+{
+	.get_buffer		= app_vsfip_get_buffer,
+	.release_buffer	= app_vsfip_release_buffer,
+	.get_socket		= app_vsfip_get_socket,
+	.release_socket	= app_vsfip_release_socket,
+	.get_tcppcb		= app_vsfip_get_tcppcb,
+	.release_tcppcb	= app_vsfip_release_tcppcb,
+};
+
+// vsftimer buffer manager
 static struct vsftimer_t* vsftimer_memop_alloc(void)
 {
 	return VSFPOOL_ALLOC(&app.vsftimer_pool, struct vsftimer_t);
@@ -415,10 +489,10 @@ static void vsftimer_memop_free(struct vsftimer_t *timer)
 	VSFPOOL_FREE(&app.vsftimer_pool, timer);
 }
 
-struct vsftimer_mem_op_t vsftimer_memop =
+const struct vsftimer_mem_op_t vsftimer_memop =
 {
-	.alloc	= vsftimer_memop_alloc,
-	.free	= vsftimer_memop_free,
+	.alloc			= vsftimer_memop_alloc,
+	.free			= vsftimer_memop_free,
 };
 
 static struct vsfsm_state_t *
@@ -432,11 +506,29 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsfhal_tickclk_start();
 
 		VSFPOOL_INIT(&app.vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
-		vsftimer_init(&vsftimer_memop);
+		vsftimer_init((struct vsftimer_mem_op_t *)&vsftimer_memop);
 		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
 
 		vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 
+		// vsfip buffer init
+		{
+			struct vsfip_buffer_t *buffer;
+			int i;
+
+			buffer = &app.vsfip.buffer_pool.buffer[0];
+			for (i = 0; i < APPCFG_VSFIP_BUFFER_NUM; i++)
+			{
+				buffer->buffer = app.vsfip.buffer_mem[i];
+				buffer++;
+			}
+		}
+		VSFPOOL_INIT(&app.vsfip.buffer_pool, struct vsfip_buffer_t, APPCFG_VSFIP_BUFFER_NUM);
+		VSFPOOL_INIT(&app.vsfip.socket_pool, struct vsfip_socket_t, APPCFG_VSFIP_SOCKET_NUM);
+		VSFPOOL_INIT(&app.vsfip.tcppcb_pool, struct vsfip_tcppcb_t, APPCFG_VSFIP_TCPPCB_NUM);
+		vsfip_init((struct vsfip_mem_op_t *)&app_vsfip_mem_op);
+
+		// shell init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);
 		vsfusbd_device_init(&app.usbd.device);
