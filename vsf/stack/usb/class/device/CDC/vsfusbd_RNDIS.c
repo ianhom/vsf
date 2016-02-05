@@ -105,9 +105,9 @@ vsfusbd_RNDIS_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
+	struct vsfip_netif_t *netif = (struct vsfip_netif_t *)pt->user_data;
 	struct vsfusbd_RNDIS_param_t *param =
-						(struct vsfusbd_RNDIS_param_t *)pt->user_data;
-	struct vsfip_netif_t *netif = &param->netif;
+						(struct vsfusbd_RNDIS_param_t *)netif->drv->param;
 
 	netif->macaddr = param->mac;
 	netif->mac_broadcast.size = param->mac.size;
@@ -275,28 +275,26 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 						(struct rndis_set_msg_t *)buffer->buffer;
 			struct rndis_set_cmplt_t *reply =
 						(struct rndis_set_cmplt_t *)replybuf;
+			enum ndis_status_t status = NDIS_STATUS_SUCCESS;
 			uint8_t *ptr = (uint8_t *)
 						&msg->request.RequestId + msg->InformationBufferOffset;
 
-			reply->reply.request.head.MessageType.value = RNDIS_SET_CMPLT;
-			reply->reply.request.head.MessageLength = sizeof(*reply);
-			replylen = reply->reply.request.head.MessageLength;
-			reply->reply.request.RequestId = msg->request.RequestId;
-			reply->reply.status.value = NDIS_STATUS_SUCCESS;
 			switch (msg->Oid.oid)
 			{
 			case OID_GEN_RNDIS_CONFIG_PARAMETER:
 				break;
 			case OID_GEN_CURRENT_PACKET_FILTER:
 				rndis_param->oid_packet_filter = GET_LE_U32(ptr);
-				if (rndis_param->oid_packet_filter)
+				if (rndis_param->oid_packet_filter &&
+					(rndis_param->rndis_state != VSFUSBD_RNDIS_DATA_INITED))
 				{
 					struct vsfsm_pt_t pt;
+
 					rndis_param->rndis_state = VSFUSBD_RNDIS_DATA_INITED;
 					// connect netif, for RNDIS netif_add is non-block
 					pt.state = 0;
 					pt.sm = 0;
-					pt.user_data = rndis_param;
+					pt.user_data = &rndis_param->netif;
 					vsfip_netif_add(&pt, 0, &rndis_param->netif);
 				}
 				else
@@ -314,8 +312,13 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			case OID_PNP_REMOVE_WAKE_UP_PATTERN:
 			case OID_PNP_ENABLE_WAKE_UP:
 			default:
-				reply->reply.status.value = NDIS_STATUS_FAILURE;
+				status = NDIS_STATUS_FAILURE;
 			}
+			replylen = sizeof(*reply);
+			reply->reply.request.head.MessageType.value = RNDIS_SET_CMPLT;
+			reply->reply.request.head.MessageLength = replylen;
+			reply->reply.request.RequestId = msg->request.RequestId;
+			reply->reply.status.value = status;
 		}
 		break;
 	case RNDIS_RESET_MSG:
@@ -374,6 +377,7 @@ vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 
 	// private init
 	param->netdrv.op = &vsfusbd_RNDIS_netdrv_op;
+	param->netdrv.param = param;
 	param->netif.drv = &param->netdrv;
 	param->netif_inited = false;
 	param->tx_buffer = param->rx_buffer = NULL;
