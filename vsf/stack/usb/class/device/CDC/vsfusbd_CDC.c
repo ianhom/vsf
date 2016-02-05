@@ -325,7 +325,7 @@ vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 	case USB_CDCREQ_GET_ENCAPSULATED_RESPONSE:
 		if (request->wLength > param->encapsulated_response.size)
 		{
-			return VSFERR_FAIL;
+			request->wLength = param->encapsulated_response.size;
 		}
 		buffer->buffer = param->encapsulated_response.buffer;
 		buffer->size = request->wLength;

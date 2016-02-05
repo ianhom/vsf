@@ -185,7 +185,9 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			struct rndis_initialize_cmplt_t *reply =
 						(struct rndis_initialize_cmplt_t *)replybuf;
 
+			replylen = sizeof(struct rndis_initialize_cmplt_t);
 			reply->reply.request.head.MessageType.value = RNDIS_INITIALIZE_CMPLT;
+			reply->reply.request.head.MessageLength = replylen;
 			reply->reply.request.RequestId = msg->request.RequestId;
 			reply->reply.status.value = NDIS_STATUS_SUCCESS;
 			reply->MajorVersion = RNDIS_MAJOR_VERSION;
@@ -198,7 +200,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			reply->AFListOffset = 0;
 			reply->AFListSize = 0;
 			rndis_param->rndis_state = VSFUSBD_RNDIS_INITED;
-			replylen = sizeof(struct rndis_initialize_cmplt_t);
 
 			// prepare vsfip buffer and connect stream
 			vsfusbd_CDCData_connect(param);
@@ -330,6 +331,8 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			rndis_param->rndis_state = VSFUSBD_RNDIS_UNINITED;
 
 			// free all vsfip buffer and reset stream
+			stream_disconnect_tx(param->stream_tx);
+			stream_disconnect_rx(param->stream_rx);
 		}
 		break;
 	case RNDIS_INDICATE_STATUS_MSG:
@@ -355,6 +358,7 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 		uint8_t ep_notify = param->ep_notify;
 		uint8_t notify_buf[] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+		param->encapsulated_response.size = replylen;
 		drv->ep.write_IN_buffer(ep_notify, notify_buf, sizeof(notify_buf));
 		drv->ep.set_IN_count(ep_notify, sizeof(notify_buf));
 	}
@@ -405,9 +409,13 @@ vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE
+vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device);
+vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device);
 const struct vsfusbd_class_protocol_t vsfusbd_RNDISControl_class =
 {
-	NULL, NULL, NULL, NULL, NULL
+	NULL,
+	vsfusbd_CDCACMControl_request_prepare, vsfusbd_CDCACMControl_request_process,
+	NULL, NULL
 };
 
 const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class =

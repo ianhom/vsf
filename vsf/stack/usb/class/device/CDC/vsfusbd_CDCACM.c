@@ -90,7 +90,7 @@ vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 		}
 		break;
 	default:
-		return VSFERR_FAIL;
+		return vsfusbd_CDCControl_class.request_prepare(device);
 	}
 	ctrl_handler->data_size = buffer->size;
 	return VSFERR_NONE;
@@ -121,6 +121,10 @@ vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
 			return VSFERR_FAIL;
 		}
 		vsfusbd_CDCData_connect(&param->CDC);
+	}
+	else
+	{
+		return vsfusbd_CDCControl_class.request_process(device);
 	}
 	return VSFERR_NONE;
 }
