@@ -266,22 +266,6 @@ static void buffer_stream_init(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	bufstream->mem.pos = 0;
-	if (bufstream->mem.read)
-	{
-		if (stream_get_data_size(stream) && stream->rx_ready &&
-			(stream->callback_rx.on_inout != NULL))
-		{
-			stream->callback_rx.on_inout(stream->callback_rx.param);
-		}
-	}
-	else
-	{
-		if (stream_get_free_size(stream) && stream->tx_ready &&
-			(stream->callback_tx.on_inout != NULL))
-		{
-			stream->callback_tx.on_inout(stream->callback_tx.param);
-		}
-	}
 }
 
 static uint32_t buffer_stream_get_data_length(struct vsf_stream_t *stream)
@@ -304,7 +288,13 @@ buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	uint32_t wsize = 0;
 
-	if (!bufstream->mem.read)
+	if (bufstream->mem.read)
+	{
+		bufstream->mem.buffer = *buffer;
+		bufstream->mem.pos = 0;
+		wsize = buffer->size;
+	}
+	else
 	{
 		uint32_t avail_len = buffer_stream_get_avail_length(stream);
 		wsize = min(avail_len, buffer->size);
@@ -328,6 +318,13 @@ buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 		memcpy(buffer->buffer,
 					bufstream->mem.buffer.buffer + bufstream->mem.pos, rsize);
 		bufstream->mem.pos += rsize;
+	}
+	else
+	{
+		bufstream->mem.buffer = *buffer;
+		bufstream->mem.pos = 0;
+		// just to notify the rx end
+		rsize = 1;
 	}
 	return rsize;
 }

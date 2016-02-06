@@ -59,8 +59,8 @@ struct vsf_stream_t
 
 #define STREAM_INIT(s)			stream_init((struct vsf_stream_t *)(s))
 #define STREAM_FINI(s)			stream_fini((struct vsf_stream_t *)(s))
-#define STREAM_WRITE(s, b)		stream_write(((struct vsf_stream_t *)(s), (b))
-#define STREAM_READ(s, b)		stream_read(((struct vsf_stream_t *)(s), (b))
+#define STREAM_WRITE(s, b)		stream_write((struct vsf_stream_t *)(s), (b))
+#define STREAM_READ(s, b)		stream_read((struct vsf_stream_t *)(s), (b))
 #define STREAM_GET_DATA_SIZE(s)	stream_get_data_size((struct vsf_stream_t *)(s))
 #define STREAM_GET_FREE_SIZE(s)	stream_get_free_size((struct vsf_stream_t *)(s))
 #define STREAM_CONNECT_RX(s)	stream_connect_rx((struct vsf_stream_t *)(s))

@@ -51,8 +51,7 @@ void vsfusbd_RNDIS_on_tx_finish(void *param)
 			packet->DataLength = tmpbuf->buf.size - sizeof(*packet);
 
 			rndis_param->tx_buffer = tmpbuf;
-			bufstream->mem.buffer = tmpbuf->buf;
-			STREAM_INIT(bufstream);
+			STREAM_WRITE(bufstream, &tmpbuf->buf);
 		}
 	}
 }
@@ -89,9 +88,7 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 	}
 	else
 	{
-		struct vsf_bufstream_t *bufstream = &rndis_param->rx_bufstream;
-		bufstream->mem.buffer = rndis_param->rx_buffer->buf;
-		STREAM_INIT(bufstream);
+		STREAM_READ(&rndis_param->rx_bufstream, &rndis_param->rx_buffer->buf);
 	}
 }
 
