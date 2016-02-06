@@ -89,28 +89,34 @@ uint32_t stream_get_free_size(struct vsf_stream_t *stream)
 
 void stream_connect_rx(struct vsf_stream_t *stream)
 {
-	if (!stream->rx_ready && (stream->callback_tx.on_connect != NULL))
+	if (!stream->rx_ready)
 	{
-		stream->callback_tx.on_connect(stream->callback_tx.param);
+		if (stream->callback_tx.on_connect != NULL)
+		{
+			stream->callback_tx.on_connect(stream->callback_tx.param);
+		}
+		if ((stream->tx_ready) && (stream->callback_rx.on_connect != NULL))
+		{
+			stream->callback_rx.on_connect(stream->callback_rx.param);
+		}
+		stream->rx_ready = true;
 	}
-	if ((stream->tx_ready) && (stream->callback_rx.on_connect != NULL))
-	{
-		stream->callback_rx.on_connect(stream->callback_rx.param);
-	}
-	stream->rx_ready = true;
 }
 
 void stream_connect_tx(struct vsf_stream_t *stream)
 {
-	if (!stream->tx_ready && (stream->callback_rx.on_connect != NULL))
+	if (!stream->tx_ready)
 	{
-		stream->callback_rx.on_connect(stream->callback_rx.param);
+		if (stream->callback_rx.on_connect != NULL)
+		{
+			stream->callback_rx.on_connect(stream->callback_rx.param);
+		}
+		if ((stream->rx_ready) && (stream->callback_tx.on_connect != NULL))
+		{
+			stream->callback_tx.on_connect(stream->callback_tx.param);
+		}
+		stream->tx_ready = true;
 	}
-	if ((stream->rx_ready) && (stream->callback_tx.on_connect != NULL))
-	{
-		stream->callback_tx.on_connect(stream->callback_tx.param);
-	}
-	stream->tx_ready = true;
 }
 
 void stream_disconnect_rx(struct vsf_stream_t *stream)
