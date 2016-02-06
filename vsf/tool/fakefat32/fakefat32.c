@@ -916,8 +916,9 @@ static vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			if ((file->memfile.buff != NULL) &&
 				!(rawfile->attr & VSFILE_ATTR_DIRECTORY))
 			{
-				return vsf_memfs_op.f_op.read(pt, evt, (struct vsfile_t *)file,
-										addr_offset, page_size, buff, &rsize);
+				return vsfile_memfs_op.f_op.read(pt, evt,
+						(struct vsfile_t *)file, addr_offset, page_size, buff,
+						&rsize);
 			}
 			else if (file->cb.read != NULL)
 			{
@@ -971,7 +972,7 @@ static vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		if ((file->memfile.buff != NULL) &&
 			!(rawfile->attr & VSFILE_ATTR_DIRECTORY))
 		{
-			return vsf_memfs_op.f_op.write(pt, evt, (struct vsfile_t *)file,
+			return vsfile_memfs_op.f_op.write(pt, evt, (struct vsfile_t *)file,
 										addr_offset, page_size, buff, &wsize);
 		}
 		else if (file->cb.write != NULL)
