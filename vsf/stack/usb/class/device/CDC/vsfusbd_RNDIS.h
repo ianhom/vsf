@@ -69,12 +69,6 @@ struct vsfusbd_RNDIS_param_t
 		uint32_t rx_nobuf;
 	} statistics;
 	uint32_t oid_packet_filter;
-	enum
-	{
-		VSFUSBD_RNDIS_UNINITED,
-		VSFUSBD_RNDIS_INITED,
-		VSFUSBD_RNDIS_DATA_INITED,
-	} rndis_state;
 };
 
 #endif	// __VSFUSBD_RNDIS_H_INCLUDED__

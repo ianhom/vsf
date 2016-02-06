@@ -412,6 +412,15 @@ struct vsfapp_t
 	.usbd.device.drv						= (struct interface_usbd_t *)&core_interfaces.usbd,
 	.usbd.device.int_priority				= 0,
 
+	.usbd.rndis.param.netif.macaddr.size			= 6,
+	.usbd.rndis.param.netif.macaddr.addr.s_addr64	= 0xEF0A0B0C0D0E,
+	.usbd.rndis.param.netif.ipaddr.size				= 4,
+	.usbd.rndis.param.netif.ipaddr.addr.s_addr		= 0x20202001,
+	.usbd.rndis.param.netif.netmask.size			= 4,
+	.usbd.rndis.param.netif.netmask.addr.s_addr		= 0xFFFFFF00,
+	.usbd.rndis.param.netif.gateway.size			= 4,
+	.usbd.rndis.param.netif.gateway.addr.s_addr		= 0x20202001,
+
 	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
 

@@ -228,7 +228,6 @@ vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		netif->ipaddr.size = 4;		// default IPv4
 	}
-	memset(netif->ipaddr.addr.s_addr_buf, 0, netif->ipaddr.size);
 
 	vsfip_netif_construct(netif);
 	netif->init_pt.user_data = netif;

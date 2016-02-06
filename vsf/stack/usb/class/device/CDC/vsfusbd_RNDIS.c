@@ -29,7 +29,7 @@ void vsfusbd_RNDIS_on_tx_finish(void *param)
 	{
 		struct vsfq_node_t *node = vsfq_dequeue(&rndis_param->netif.outq);
 		struct vsfip_buffer_t *tmpbuf =
-					container_of(node, struct vsfip_buffer_t, proto_node);
+					container_of(node, struct vsfip_buffer_t, netif_node);
 
 		if (rndis_param->tx_buffer != NULL)
 		{
@@ -124,7 +124,6 @@ vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfusbd_RNDIS_param_t *param =
 						(struct vsfusbd_RNDIS_param_t *)netif->drv->param;
 
-	netif->macaddr = param->mac;
 	netif->mac_broadcast.size = param->mac.size;
 	memset(netif->mac_broadcast.addr.s_addr_buf, 0xFF, param->mac.size);
 	netif->mtu = VSFIP_CFG_MTU;
@@ -143,16 +142,9 @@ vsf_err_t vsfusbd_RNDIS_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_RNDIS_netdrv_header(struct vsfip_buffer_t *buf,
-			enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest)
-{
-	return VSFERR_NONE;
-}
-
 static struct vsfip_netdrv_op_t vsfusbd_RNDIS_netdrv_op =
 {
-	vsfusbd_RNDIS_netdrv_init, vsfusbd_RNDIS_netdrv_fini,
-	vsfusbd_RNDIS_netdrv_header
+	vsfusbd_RNDIS_netdrv_init, vsfusbd_RNDIS_netdrv_fini, vsfip_eth_header
 };
 
 // rndis
@@ -213,7 +205,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			reply->PacketAlignmentFactor = 0;
 			reply->AFListOffset = 0;
 			reply->AFListSize = 0;
-			rndis_param->rndis_state = VSFUSBD_RNDIS_INITED;
 
 			// prepare vsfip buffer and connect stream
 			vsfusbd_CDCData_connect(param);
@@ -300,11 +291,10 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			case OID_GEN_CURRENT_PACKET_FILTER:
 				rndis_param->oid_packet_filter = GET_LE_U32(ptr);
 				if (rndis_param->oid_packet_filter &&
-					(rndis_param->rndis_state != VSFUSBD_RNDIS_DATA_INITED))
+					!rndis_param->netif_inited)
 				{
 					struct vsfsm_pt_t pt;
 
-					rndis_param->rndis_state = VSFUSBD_RNDIS_DATA_INITED;
 					// connect netif, for RNDIS netif_add is non-block
 					pt.state = 0;
 					pt.sm = 0;
@@ -317,10 +307,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 						dhcpd->netif = &rndis_param->netif;
 						vsfip_dhcpd_start(dhcpd->netif, dhcpd);
 					}
-				}
-				else
-				{
-					rndis_param->rndis_state = VSFUSBD_RNDIS_INITED;
 				}
 				break;
 			case OID_GEN_CURRENT_LOOKAHEAD:
@@ -352,7 +338,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			replylen = reply->head.MessageLength;
 			reply->status.value = NDIS_STATUS_SUCCESS;
 			reply->AddressingReset = 1;
-			rndis_param->rndis_state = VSFUSBD_RNDIS_UNINITED;
 			rndis_param->netif_inited = false;
 
 			// free all vsfip buffer and reset stream
@@ -403,7 +388,6 @@ vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	param->netif.drv = &param->netdrv;
 	param->netif_inited = false;
 	param->tx_buffer = param->rx_buffer = NULL;
-	param->rndis_state = VSFUSBD_RNDIS_UNINITED;
 	param->statistics.rxok = 0;
 	param->statistics.rxok = 0;
 	param->statistics.txbad = 0;
