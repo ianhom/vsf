@@ -50,6 +50,7 @@ struct vsfusbd_RNDIS_param_t
 	// private
 	struct vsfip_netif_t netif;
 	struct vsfip_netdrv_t netdrv;
+	struct vsfip_dhcpd_t dhcpd;
 	bool netif_inited;
 	struct vsf_bufstream_t tx_bufstream;
 	struct vsf_bufstream_t rx_bufstream;

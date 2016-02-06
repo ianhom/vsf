@@ -71,6 +71,7 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 			rndis_param->rx_buffer->buf.buffer +=
 						sizeof(struct rndis_msghead_t) + packet->DataOffset;
 			rndis_param->rx_buffer->buf.size = packet->DataLength;
+			rndis_param->rx_buffer->netif = &rndis_param->netif;
 			vsfip_eth_input(rndis_param->rx_buffer);
 		}
 		else
@@ -308,8 +309,14 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 					pt.state = 0;
 					pt.sm = 0;
 					pt.user_data = &rndis_param->netif;
-					vsfip_netif_add(&pt, 0, &rndis_param->netif);
-					rndis_param->netif_inited = true;
+					if (!vsfip_netif_add(&pt, 0, &rndis_param->netif))
+					{
+						struct vsfip_dhcpd_t *dhcpd = &rndis_param->dhcpd;
+
+						rndis_param->netif_inited = true;
+						dhcpd->netif = &rndis_param->netif;
+						vsfip_dhcpd_start(dhcpd->netif, dhcpd);
+					}
 				}
 				else
 				{

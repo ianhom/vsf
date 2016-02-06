@@ -2107,6 +2107,9 @@
             <file>
               <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpc.c</name>
             </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpd.c</name>
+            </file>
           </group>
           <group>
             <name>dns</name>

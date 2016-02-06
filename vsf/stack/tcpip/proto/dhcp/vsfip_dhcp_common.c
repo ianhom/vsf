@@ -45,3 +45,25 @@ void vsfip_dhcp_end_opt(struct vsfip_buffer_t *buf, uint32_t *optlen)
 	buf->app.size -= sizeof(head->options);
 	buf->app.size += *optlen;
 }
+
+uint8_t vsfip_dhcp_get_opt(struct vsfip_buffer_t *buf, uint8_t option,
+						uint8_t **data)
+{
+	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
+	uint8_t *ptr = head->options;
+
+	while ((ptr[0] != VSFIP_DHCPOPT_END) &&
+			((ptr - buf->app.buffer) < buf->app.size))
+	{
+		if (ptr[0] == option)
+		{
+			if (data != NULL)
+			{
+				*data = &ptr[2];
+			}
+			return ptr[1];
+		}
+		ptr += 2 + ptr[1];
+	}
+	return 0;
+}

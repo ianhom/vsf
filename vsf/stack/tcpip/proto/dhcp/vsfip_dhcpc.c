@@ -29,7 +29,7 @@ static struct vsfip_dhcpc_local_t vsfip_dhcpc =
 
 #define VSFIP_DHCPC_RETRY_CNT	10
 
-enum vsfip_dhcp_EVT_t
+enum vsfip_dhcpc_EVT_t
 {
 	VSFIP_DHCP_EVT_READY		= VSFSM_EVT_USER_LOCAL_INSTANT + 0,
 	VSFIP_DHCP_EVT_SEND_REQUEST	= VSFSM_EVT_USER_LOCAL_INSTANT + 1,
@@ -81,28 +81,6 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcp, uint8_t op)
 #endif
 
 	return VSFERR_NONE;
-}
-
-static uint8_t vsfip_dhcp_get_opt(struct vsfip_buffer_t *buf, uint8_t option,
-									uint8_t **data)
-{
-	struct vsfip_dhcphead_t *head = (struct vsfip_dhcphead_t *)buf->app.buffer;
-	uint8_t *ptr = head->options;
-
-	while ((ptr[0] != VSFIP_DHCPOPT_END) &&
-			((ptr - buf->app.buffer) < buf->app.size))
-	{
-		if (ptr[0] == option)
-		{
-			if (data != NULL)
-			{
-				*data = &ptr[2];
-			}
-			return ptr[1];
-		}
-		ptr += 2 + ptr[1];
-	}
-	return 0;
 }
 
 static void vsfip_dhcpc_input(void *param, struct vsfip_buffer_t *buf)
@@ -253,6 +231,7 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		if (dhcp->so != NULL)
 		{
 			vsfip_close(dhcp->so);
+			dhcp->so = NULL;
 		}
 		if (!dhcp->ready && (++dhcp->retry < VSFIP_DHCPC_RETRY_CNT))
 		{
@@ -278,7 +257,7 @@ vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
 		return VSFERR_FAIL;
 	}
 
-	netif->dhcpc = dhcpc;
+	netif->dhcp.dhcpc = dhcpc;
 	dhcpc->netif = netif;
 	dhcpc->starttick = vsfhal_tickclk_get_count();
 

@@ -41,7 +41,7 @@ struct vsfip_netdrv_op_t
 {
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*fini)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
-	
+
 	vsf_err_t (*header)(struct vsfip_buffer_t *buf,
 						enum vsfip_netif_proto_t proto,
 						const struct vsfip_macaddr_t *dest_addr);
@@ -59,20 +59,20 @@ struct vsfip_netif_t
 {
 	struct vsfip_netdrv_t *drv;
 	struct vsfip_macaddr_t macaddr;
-	
+
 	struct vsfip_ipaddr_t ipaddr;
 	struct vsfip_ipaddr_t netmask;
 	struct vsfip_ipaddr_t gateway;
 	struct vsfip_ipaddr_t dns[2];
-	
+
 	struct vsfip_macaddr_t mac_broadcast;
-	
+
 	uint16_t mtu;
-	
+
 	// output bufferlist and semaphore
 	struct vsfq_t outq;
 	struct vsfsm_sem_t output_sem;
-	
+
 	// arp client
 	struct
 	{
@@ -88,17 +88,22 @@ struct vsfip_netif_t
 		struct vsfip_ipaddr_t ip_for_mac;
 		uint32_t retry;
 	} arpc;
-	
+
 	uint32_t arp_time;
 	struct vsfip_arp_entry_t arp_cache[VSFIP_CFG_ARPCACHE_SIZE];
-	
+
 	struct vsfsm_pt_t init_pt;
 	bool connected;
 	bool quit;
-	
+
 	// for DHCP
-	struct vsfip_dhcpc_t *dhcpc;
-	
+	union
+	{
+		struct vsfip_dhcpc_t *dhcpc;
+		struct vsfip_dhcpd_t *dhcpd;
+		void *ptr;
+	} dhcp;
+
 	struct vsfip_netif_t *next;
 };
 

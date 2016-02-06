@@ -76,8 +76,16 @@ PACKED_HEAD struct PACKED_MID vsfip_dhcphead_t
 	uint8_t options[VSFIP_DHCPOPT_MINLEN];	// min option size
 }; PACKED_TAIL
 
+struct vsfip_dhcp_assoc_t
+{
+	struct vsfip_macaddr_t mac;
+	struct vsfip_ipaddr_t ip;
+};
+
 void vsfip_dhcp_append_opt(struct vsfip_buffer_t *buf, uint32_t *optlen,
 						uint8_t option, uint8_t len, uint8_t *data);
 void vsfip_dhcp_end_opt(struct vsfip_buffer_t *buf, uint32_t *optlen);
+uint8_t vsfip_dhcp_get_opt(struct vsfip_buffer_t *buf, uint8_t option,
+						uint8_t **data);
 
 #endif		// __VSFIP_DHCP_COMMON_H_INCLUDED__
