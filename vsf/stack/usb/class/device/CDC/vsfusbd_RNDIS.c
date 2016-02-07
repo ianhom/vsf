@@ -163,15 +163,20 @@ const enum oid_t vsfusbd_RNDIS_OID_Supportlist[VSFUSBD_RNDIS_CFG_OIDNUM] =
 	OID_GEN_VENDOR_DRIVER_VERSION,
 	OID_GEN_CURRENT_PACKET_FILTER,
 	OID_GEN_MAXIMUM_TOTAL_SIZE,
-	OID_GEN_PROTOCOL_OPTIONS,
-	OID_GEN_MAC_OPTIONS,
 	OID_GEN_MEDIA_CONNECT_STATUS,
-	OID_GEN_MAXIMUM_SEND_PACKETS,
+	OID_GEN_PHYSICAL_MEDIUM,
+
+	OID_GEN_XMIT_OK,
+	OID_GEN_RCV_OK,
+	OID_GEN_XMIT_ERROR,
+	OID_GEN_RCV_ERROR,
+	OID_GEN_RCV_NO_BUFFER,
+
 	OID_802_3_PERMANENT_ADDRESS,
 	OID_802_3_CURRENT_ADDRESS,
 	OID_802_3_MULTICAST_LIST,
-	OID_802_3_MAXIMUM_LIST_SIZE,
 	OID_802_3_MAC_OPTIONS,
+	OID_802_3_MAXIMUM_LIST_SIZE,
 };
 
 static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
@@ -227,39 +232,36 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			switch (msg->Oid.oid)
 			{
 			case OID_GEN_SUPPORTED_LIST:		replylen = 4 * VSFUSBD_RNDIS_CFG_OIDNUM; replybuf = (uint8_t *)vsfusbd_RNDIS_OID_Supportlist; break;
-			case OID_802_3_MULTICAST_LIST:
-			case OID_802_3_MAC_OPTIONS:			status = NDIS_STATUS_NOT_SUPPORTED;
+			case OID_802_3_MAC_OPTIONS:
 			case OID_GEN_HARDWARE_STATUS:
 			case OID_GEN_MAC_OPTIONS:
-			case OID_GEN_RNDIS_CONFIG_PARAMETER:
 			case OID_802_3_RCV_ERROR_ALIGNMENT:
 			case OID_802_3_XMIT_ONE_COLLISION:
-			case OID_802_3_XMIT_MORE_COLLISION:	tmp32 = SYS_TO_LE_U32(0);
+			case OID_802_3_XMIT_MORE_COLLISION:
+			case OID_GEN_PHYSICAL_MEDIUM:		tmp32 = 0;
 			reply_tmp32:
-												replylen = 4; replybuf = (uint8_t *)&tmp32; break;
+												tmp32 = SYS_TO_LE_U32(tmp32); replylen = 4; replybuf = (uint8_t *)&tmp32; break;
 			case OID_GEN_MEDIA_SUPPORTED:
-			case OID_GEN_MEDIA_IN_USE:
-			case OID_GEN_PHYSICAL_MEDIUM:		tmp32 = SYS_TO_LE_U32(NDIS_MEDIUM_802_3); goto reply_tmp32;
-			case OID_GEN_MAXIMUM_FRAME_SIZE:	tmp32 = SYS_TO_LE_U32(VSFIP_CFG_MTU); goto reply_tmp32;
-			case OID_GEN_LINK_SPEED:			tmp32 = SYS_TO_LE_U32(2500); goto reply_tmp32;
+			case OID_GEN_MEDIA_IN_USE:			tmp32 = NDIS_MEDIUM_802_3; goto reply_tmp32;
 			case OID_GEN_TRANSMIT_BLOCK_SIZE:
 			case OID_GEN_RECEIVE_BLOCK_SIZE:
-			case OID_GEN_MAXIMUM_TOTAL_SIZE:	tmp32 = SYS_TO_LE_U32(VSFIP_BUFFER_SIZE); goto reply_tmp32;
-			case OID_GEN_VENDOR_ID:				tmp32 = SYS_TO_LE_U32(0x00FFFFFF); goto reply_tmp32;
+			case OID_GEN_MAXIMUM_FRAME_SIZE:	tmp32 = VSFIP_CFG_MTU; goto reply_tmp32;
+			case OID_GEN_LINK_SPEED:			tmp32 = 2500; goto reply_tmp32;
+			case OID_GEN_MAXIMUM_TOTAL_SIZE:	tmp32 = VSFIP_BUFFER_SIZE; goto reply_tmp32;
+			case OID_GEN_VENDOR_ID:				tmp32 = 0x00FFFFFF; goto reply_tmp32;
 			case OID_GEN_VENDOR_DESCRIPTION:	replybuf = "vsfusbd_rndis"; replylen = strlen((char *)replybuf) + 1; break;
-			case OID_GEN_VENDOR_DRIVER_VERSION:	tmp32 = SYS_TO_LE_U32(0x00001000); goto reply_tmp32;
-			case OID_GEN_CURRENT_PACKET_FILTER:	tmp32 = SYS_TO_LE_U32(rndis_param->oid_packet_filter); goto reply_tmp32;
-//			case OID_GEN_PROTOCOL_OPTIONS:
-			case OID_GEN_MEDIA_CONNECT_STATUS:	tmp32 = SYS_TO_LE_U32(NDIS_MEDIA_STATE_CONNECTED); goto reply_tmp32;
-//			case OID_GEN_MAXIMUM_SEND_PACKETS:	
-			case OID_GEN_XMIT_OK:				tmp32 = SYS_TO_LE_U32(rndis_param->statistics.txok); goto reply_tmp32;
-			case OID_GEN_RCV_OK:				tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rxok); goto reply_tmp32;
-			case OID_GEN_XMIT_ERROR:			tmp32 = SYS_TO_LE_U32(rndis_param->statistics.txbad); goto reply_tmp32;
-			case OID_GEN_RCV_ERROR:				tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rxbad); goto reply_tmp32;
-			case OID_GEN_RCV_NO_BUFFER:			tmp32 = SYS_TO_LE_U32(rndis_param->statistics.rx_nobuf); goto reply_tmp32;
+			case OID_GEN_VENDOR_DRIVER_VERSION:	tmp32 = 0x00001000; goto reply_tmp32;
+			case OID_GEN_CURRENT_PACKET_FILTER:	tmp32 = rndis_param->oid_packet_filter; goto reply_tmp32;
+			case OID_GEN_MEDIA_CONNECT_STATUS:	tmp32 = NDIS_MEDIA_STATE_CONNECTED; goto reply_tmp32;
+			case OID_GEN_XMIT_OK:				tmp32 = rndis_param->statistics.txok; goto reply_tmp32;
+			case OID_GEN_RCV_OK:				tmp32 = rndis_param->statistics.rxok; goto reply_tmp32;
+			case OID_GEN_XMIT_ERROR:			tmp32 = rndis_param->statistics.txbad; goto reply_tmp32;
+			case OID_GEN_RCV_ERROR:				tmp32 = rndis_param->statistics.rxbad; goto reply_tmp32;
+			case OID_GEN_RCV_NO_BUFFER:			tmp32 = rndis_param->statistics.rx_nobuf; goto reply_tmp32;
 			case OID_802_3_PERMANENT_ADDRESS:
 			case OID_802_3_CURRENT_ADDRESS:		replybuf = rndis_param->mac.addr.s_addr_buf; replylen = rndis_param->mac.size; break;
-			case OID_802_3_MAXIMUM_LIST_SIZE:	tmp32 = SYS_TO_LE_U32(1); goto reply_tmp32;
+			case OID_802_3_MULTICAST_LIST:		tmp32 = 0xE0000000; goto reply_tmp32;
+			case OID_802_3_MAXIMUM_LIST_SIZE:	tmp32 = 1; goto reply_tmp32;
 			}
 			if (replylen)
 			{
@@ -286,8 +288,6 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 
 			switch (msg->Oid.oid)
 			{
-			case OID_GEN_RNDIS_CONFIG_PARAMETER:
-				break;
 			case OID_GEN_CURRENT_PACKET_FILTER:
 				rndis_param->oid_packet_filter = GET_LE_U32(ptr);
 				if (rndis_param->oid_packet_filter &&
@@ -309,17 +309,10 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 					}
 				}
 				break;
-			case OID_GEN_CURRENT_LOOKAHEAD:
-				break;
-			case OID_GEN_PROTOCOL_OPTIONS:
-				break;
 			case OID_802_3_MULTICAST_LIST:
 				break;
-			case OID_PNP_ADD_WAKE_UP_PATTERN:
-			case OID_PNP_REMOVE_WAKE_UP_PATTERN:
-			case OID_PNP_ENABLE_WAKE_UP:
 			default:
-				status = NDIS_STATUS_FAILURE;
+				status = NDIS_STATUS_NOT_SUPPORTED;
 			}
 			replylen = sizeof(*reply);
 			reply->reply.request.head.MessageType.value = RNDIS_SET_CMPLT;

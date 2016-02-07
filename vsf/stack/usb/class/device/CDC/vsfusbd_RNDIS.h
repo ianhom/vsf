@@ -36,7 +36,7 @@ extern const struct vsfusbd_class_protocol_t vsfusbd_RNDISData_class;
 #endif
 
 #ifndef VSFUSBD_RNDIS_CFG_OIDNUM
-#define VSFUSBD_RNDIS_CFG_OIDNUM				22
+#define VSFUSBD_RNDIS_CFG_OIDNUM				25
 #endif
 
 struct vsfusbd_RNDIS_param_t
