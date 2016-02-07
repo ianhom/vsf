@@ -732,7 +732,7 @@ struct vsfapp_t
 	.usb_pullup.pin							= USB_PULLUP_PIN,
 
 	.mal.fakefat32.sector_size				= 512,
-	.mal.fakefat32.sector_number			= 0x00760000,
+	.mal.fakefat32.sector_number			= 0x00001000,
 	.mal.fakefat32.sectors_per_cluster		= 8,
 	.mal.fakefat32.volume_id				= 0x0CA93E47,
 	.mal.fakefat32.disk_id					= 0x12345678,
