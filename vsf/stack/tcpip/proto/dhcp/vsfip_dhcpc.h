@@ -41,7 +41,6 @@ struct vsfip_dhcpc_t
 	struct vsftimer_t *to;
 	uint32_t xid;
 	uint32_t optlen;
-	uint32_t starttick;
 	uint32_t retry;
 	uint32_t arp_retry;
 	uint32_t leasetime;

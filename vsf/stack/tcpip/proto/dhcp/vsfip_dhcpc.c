@@ -56,8 +56,7 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcpc, uint8_t op)
 	head->hlen = netif->macaddr.size;
 	head->xid = dhcpc->xid;
 	// shift right 10-bit for div 1000
-	head->secs = SYS_TO_LE_U16(\
-					(vsfhal_tickclk_get_count() - dhcpc->starttick) >> 10);
+	head->secs = 0;
 	memcpy(head->chaddr, netif->macaddr.addr.s_addr_buf, netif->macaddr.size);
 	head->magic = SYS_TO_BE_U32(DHCP_MAGIC);
 	dhcpc->optlen = 0;
@@ -260,7 +259,6 @@ vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
 
 	netif->dhcp.dhcpc = dhcpc;
 	dhcpc->netif = netif;
-	dhcpc->starttick = vsfhal_tickclk_get_count();
 
 	dhcpc->sockaddr.sin_port = DHCP_SERVER_PORT;
 	dhcpc->sockaddr.sin_addr.size = 4;
