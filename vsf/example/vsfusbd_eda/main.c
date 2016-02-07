@@ -284,7 +284,7 @@ static const uint8_t USB_StringProduct[] =
 
 static const uint8_t RNDIS_StringFunc[] =
 {
-	14,
+	18,
 	USB_DT_STRING,
 	'V', 0, 'S', 0, 'F', 0, 'R', 0, 'N', 0, 'D', 0, 'I', 0, 'S', 0
 };
