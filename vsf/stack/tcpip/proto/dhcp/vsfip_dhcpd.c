@@ -132,6 +132,10 @@ static void vsfip_dhcpd_input(void *param, struct vsfip_buffer_t *buf)
 		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_HOSTNAME,
 					strlen(VSFIP_CFG_HOSTNAME), (uint8_t *)VSFIP_CFG_HOSTNAME);
 #endif
+#ifdef VSFIP_CFG_DOMAIN
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_DOMAIN,
+					strlen(VSFIP_CFG_DOMAIN), (uint8_t *)VSFIP_CFG_DOMAIN);
+#endif
 		vsfip_dhcp_end_opt(buf, &dhcpd->optlen);
 
 		dhcpd->sockaddr.sin_addr.addr.s_addr = assoc->ip.addr.s_addr;
