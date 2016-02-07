@@ -72,8 +72,8 @@ static const uint8_t USB_ConfigDescriptor[] =
 	0,		// bFirstInterface
 	2,		// bInterfaceCount
 	0x02,	// bFunctionClass
-	0x02,	// bFunctionSubClass
-	0xFF,	// bFunctionProtocol
+	0x06,	// bFunctionSubClass
+	0x00,	// bFunctionProtocol
 	0x04,	// iFunction
 
 	// Interface Descriptor for CDC
@@ -135,7 +135,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	0x0A,	// bInterfaceClass: CDC
 	0x00,	// bInterfaceSubClass:
 	0x00,	// bInterfaceProtocol:
-	0x00,	// iInterface:
+	0x04,	// iInterface:
 
 	// Endpoint 2 Descriptor
 	0x07,	// bLength: Endpoint Descriptor size
@@ -374,12 +374,7 @@ struct vsfapp_t
 	.usbd.rndis.param.CDCACM.CDC.ep_out		= 2,
 	.usbd.rndis.param.CDCACM.CDC.ep_in		= 2,
 	.usbd.rndis.param.mac.size				= 6,
-	.usbd.rndis.param.mac.addr.s_addr_buf[0]= 0xEF,
-	.usbd.rndis.param.mac.addr.s_addr_buf[1]= 0x02,
-	.usbd.rndis.param.mac.addr.s_addr_buf[2]= 0x03,
-	.usbd.rndis.param.mac.addr.s_addr_buf[3]= 0x04,
-	.usbd.rndis.param.mac.addr.s_addr_buf[4]= 0x05,
-	.usbd.rndis.param.mac.addr.s_addr_buf[5]= 0x06,
+	.usbd.rndis.param.mac.addr.s_addr64		= 0x0605040302E0,
 	.usbd.cdc.param.CDC.ep_notify			= 3,
 	.usbd.cdc.param.CDC.ep_out				= 4,
 	.usbd.cdc.param.CDC.ep_in				= 4,
@@ -413,7 +408,7 @@ struct vsfapp_t
 	.usbd.device.int_priority				= 0,
 
 	.usbd.rndis.param.netif.macaddr.size			= 6,
-	.usbd.rndis.param.netif.macaddr.addr.s_addr64	= 0x0E0D0C0B0AEF,
+	.usbd.rndis.param.netif.macaddr.addr.s_addr64	= 0x0E0D0C0B0AE0,
 	.usbd.rndis.param.netif.ipaddr.size				= 4,
 	.usbd.rndis.param.netif.ipaddr.addr.s_addr		= 0x01202020,
 	.usbd.rndis.param.netif.netmask.size			= 4,
