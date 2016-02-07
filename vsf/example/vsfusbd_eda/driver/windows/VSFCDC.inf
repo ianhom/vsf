@@ -3,7 +3,7 @@ Signature="$Windows NT$"
 Class=Ports
 ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
 Provider=%PRVDR%
-CatalogFile=VSF_HIDCDC_Shell.cat
+CatalogFile=VSFCDC.cat
 DriverVer=04/25/2010,1.3.1
 
 [SourceDisksNames]
@@ -54,6 +54,6 @@ LoadOrderGroup = Base
 [Strings]
 PRVDR = "VSF"
 MFGNAME = "VSF."
-DESCRIPTION = "VSF_HIDCDC Shell"
-SERVICE = "VSF_HIDCDC_Shell"
+DESCRIPTION = "VSFCDC"
+SERVICE = "VSFCDC"
 DriversDisk = "VSF Drivers Disk" 

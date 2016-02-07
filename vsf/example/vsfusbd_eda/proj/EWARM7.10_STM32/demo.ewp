@@ -1919,9 +1919,24 @@
         </file>
       </group>
       <group>
+        <name>file</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
+        </file>
+      </group>
+      <group>
         <name>list</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
+        </file>
+      </group>
+      <group>
+        <name>mal</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfmal.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfscsi.c</name>
         </file>
       </group>
       <group>
@@ -2146,6 +2161,12 @@
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_RNDIS.c</name>
               </file>
             </group>
+            <group>
+              <name>MSC</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\MSC\vsfusbd_MSC_BOT.c</name>
+              </file>
+            </group>
           </group>
         </group>
         <group>
@@ -2166,10 +2187,6 @@
       </group>
       <group>
         <name>fakefat32</name>
-        <excluded>
-          <configuration>Debug</configuration>
-          <configuration>Release</configuration>
-        </excluded>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\fakefat32\fakefat32.c</name>
         </file>

@@ -41,7 +41,7 @@ static const uint8_t USB_ConfigDescriptor[] =
 	0x80,	// bmAttributes: bus powered
 	0x64,	// MaxPower 200 mA
 
-	// Interface Descriptor for CDC
+	// Interface Descriptor for MSC
 	0x09,	// bLength: Interface Descriptor size
 	USB_DT_INTERFACE,
 			// bDescriptorType: Interface
