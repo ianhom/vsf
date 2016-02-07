@@ -62,7 +62,6 @@ static struct vsfip_dns_local_t vsfip_dns;
 #endif
 
 #define VSFIP_DNS_PKG_SIZE		512
-#define VSFIP_DNS_ID			121
 #define VSFIP_DNS_AFNET			0x0100
 #define VSFIP_DNS_AFDOMAINADDR	0x0100
 
@@ -283,7 +282,7 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	err = vsfip_listen(vsfip_dns.so, 0);
 	if (err < 0) goto close;
 
-	vsfip_dns.id = VSFIP_DNS_ID;
+	vsfip_dns.id++;
 	vsfip_dns.outbuf = vsfip_dns_build_query(domain, vsfip_dns.id);
 	vsfip_dns.socket_pt.sm = pt->sm;
 	vsfip_dns.so->rx_timeout_ms = 1000;
@@ -317,8 +316,16 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	} while ((err != 0) && (vsfip_dns.try_cnt > 0));
 
 close:
-	if (vsfip_dns.outbuf != NULL) vsfip_buffer_release(vsfip_dns.outbuf);
-	if (vsfip_dns.so != NULL) vsfip_close(vsfip_dns.so);
+	if (vsfip_dns.outbuf != NULL)
+	{
+		vsfip_buffer_release(vsfip_dns.outbuf);
+		vsfip_dns.outbuf = NULL;
+	}
+	if (vsfip_dns.so != NULL)
+	{
+		vsfip_close(vsfip_dns.so);
+		vsfip_dns.so = NULL;
+	}
 	vsfsm_crit_leave(&vsfip_dns.crit);
 
 	vsfsm_pt_end(pt);
