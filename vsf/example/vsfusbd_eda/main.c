@@ -23,6 +23,7 @@
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
 //#define APPCFG_VSFSM_MAINQ_LEN			16
 
+// Note: shell also depend on APPCFG_BUFMGR_SIZE
 //#define APPCFG_BUFMGR_SIZE				(4 * 1024)
 
 #define APPCFG_VSFIP_BUFFER_NUM			4
@@ -693,7 +694,9 @@ struct vsfapp_t
 		struct vsfusbd_config_t config[1];
 		struct vsfusbd_device_t device;
 	} usbd;
+#if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 	struct vsfshell_t shell;
+#endif
 
 	struct
 	{
@@ -806,8 +809,10 @@ struct vsfapp_t
 	.usbd.rndis.param.netif.gateway.size			= 4,
 	.usbd.rndis.param.netif.gateway.addr.s_addr		= 0x01202020,
 
+#if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
+#endif
 
 	.sm.init_state.evt_handler				= app_evt_handler,
 
@@ -930,7 +935,9 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);
 		vsfusbd_device_init(&app.usbd.device);
+#if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 		vsfshell_init(&app.shell);
+#endif
 
 		if (app.usb_pullup.port != IFS_DUMMY_PORT)
 		{
