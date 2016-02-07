@@ -20,12 +20,12 @@
 
 #include "vsfip_dhcp_common.h"
 
-static struct vsfip_dhcp_assoc_t*
+static struct vsfip_ipmac_assoc*
 vsfip_dhcpd_get_assoc(struct vsfip_netif_t *netif, uint8_t *hwaddr)
 {
 	struct vsfip_dhcpd_t *dhcpd = netif->dhcp.dhcpd;
 	uint8_t macsize = netif->macaddr.size;
-	struct vsfip_dhcp_assoc_t *assoc = NULL;
+	struct vsfip_ipmac_assoc *assoc = NULL;
 	uint32_t i;
 
 	for (i = 0; i < dimof(dhcpd->assoc); i++)
@@ -70,7 +70,7 @@ static void vsfip_dhcpd_input(void *param, struct vsfip_buffer_t *buf)
 	struct vsfip_dhcpd_t *dhcpd = (struct vsfip_dhcpd_t *)param;
 	struct vsfip_netif_t *netif = dhcpd->netif;
 	struct vsfip_dhcphead_t *head;
-	struct vsfip_dhcp_assoc_t *assoc;
+	struct vsfip_ipmac_assoc *assoc;
 	uint8_t optlen, op;
 	uint8_t *optptr;
 
@@ -80,48 +80,56 @@ static void vsfip_dhcpd_input(void *param, struct vsfip_buffer_t *buf)
 	}
 
 	head = (struct vsfip_dhcphead_t *)buf->app.buffer;
-	if ((head->op != VSFIP_DHCP_TOSERVER) ||
-		(head->magic != SYS_TO_BE_U32(VSFIP_DHCP_MAGIC)) ||
+	if ((head->op != DHCP_TOSERVER) ||
+		(head->magic != SYS_TO_BE_U32(DHCP_MAGIC)) ||
 		(head->htype != VSFIP_ETH_HWTYPE) || (head->hlen != 6))
 	{
 		goto exit;
 	}
 
-	optlen = vsfip_dhcp_get_opt(buf, VSFIP_DHCPOPT_MSGTYPE, &optptr);
-	if (optlen != VSFIP_DHCPOPT_MSGTYPE_LEN)
+	optlen = vsfip_dhcp_get_opt(buf, DHCPOPT_MSGTYPE, &optptr);
+	if (optlen != DHCPOPT_MSGTYPE_LEN)
 	{
 		goto exit;
 	}
 
 	switch (optptr[0])
 	{
-	case VSFIP_DHCPOP_DISCOVER:
+	case DHCPOP_DISCOVER:
 		assoc = vsfip_dhcpd_get_assoc(netif, head->chaddr);
 		if (NULL == assoc)
 		{
 			goto exit;
 		}
 
-		op = VSFIP_DHCPOP_OFFER;
+		op = DHCPOP_OFFER;
 
 	common_reply:
-		head->op = VSFIP_DHCP_TOCLIENT;
+		head->op = DHCP_TOCLIENT;
+		head->secs = 0;
 		head->flags = 0;
 		head->yiaddr = assoc->ip.addr.s_addr;
 		head->siaddr = netif->ipaddr.addr.s_addr;
 		buf->app.size = sizeof(*head);
 
 		dhcpd->optlen = 0;
-		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, VSFIP_DHCPOPT_MSGTYPE,
-					VSFIP_DHCPOPT_MSGTYPE_LEN, &op);
-		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, VSFIP_DHCPOPT_SUBNET_MASK,
-					netif->netmask.size, netif->netmask.addr.s_addr_buf);
-		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, VSFIP_DHCPOPT_ROUTER,
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_MSGTYPE,
+					DHCPOPT_MSGTYPE_LEN, &op);
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_SERVERID,
 					netif->ipaddr.size, netif->ipaddr.addr.s_addr_buf);
-		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, VSFIP_DHCPOPT_DNS,
+		{
+			uint32_t lease_time = SYS_TO_BE_U32(0x80000000);
+			vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_LEASE_TIME,
+					netif->ipaddr.size, (uint8_t *)&lease_time);
+		}
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_SUBNETMASK,
+					netif->netmask.size, netif->netmask.addr.s_addr_buf);
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_ROUTER,
+					netif->ipaddr.size, netif->ipaddr.addr.s_addr_buf);
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_DNSSERVER,
 					netif->ipaddr.size, netif->ipaddr.addr.s_addr_buf);
 #ifdef VSFIP_CFG_HOSTNAME
-		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, VSFIP_DHCPOPT_HOSTNAME,
+		vsfip_dhcp_append_opt(buf, &dhcpd->optlen, DHCPOPT_HOSTNAME,
 					strlen(VSFIP_CFG_HOSTNAME), (uint8_t *)VSFIP_CFG_HOSTNAME);
 #endif
 		vsfip_dhcp_end_opt(buf, &dhcpd->optlen);
@@ -133,14 +141,21 @@ static void vsfip_dhcpd_input(void *param, struct vsfip_buffer_t *buf)
 		vsfip_udp_async_send(dhcpd->so, &dhcpd->sockaddr, buf);
 		dhcpd->so->remote_sockaddr.sin_addr.addr.s_addr = VSFIP_IPADDR_ANY;
 		return;
-	case VSFIP_DHCPOP_REQUEST:
+	case DHCPOP_REQUEST:
 		assoc = vsfip_dhcpd_get_assoc(netif, head->chaddr);
 		if (NULL == assoc)
 		{
 			goto exit;
 		}
-
-		op = VSFIP_DHCPOP_ACK;
+		optlen = vsfip_dhcp_get_opt(buf, DHCPOPT_REQIP, &optptr);
+		if ((4 == optlen) && (*(uint32_t *)optptr != assoc->ip.addr.s_addr))
+		{
+			op = DHCPOP_NAK;
+		}
+		else
+		{
+			op = DHCPOP_ACK;
+		}
 		goto common_reply;
 	}
 
@@ -159,10 +174,9 @@ vsf_err_t vsfip_dhcpd_start(struct vsfip_netif_t *netif,
 	dhcpd->alloc_idx = 1;
 	netif->dhcp.dhcpd = dhcpd;
 	dhcpd->netif = netif;
-	dhcpd->starttick = vsfhal_tickclk_get_count();
 	memset(&dhcpd->assoc, 0, sizeof(dhcpd->assoc));
 
-	dhcpd->sockaddr.sin_port = VSFIP_DHCP_CLIENT_PORT;
+	dhcpd->sockaddr.sin_port = DHCP_CLIENT_PORT;
 	dhcpd->sockaddr.sin_addr.size = 4;
 
 	dhcpd->so = vsfip_socket(AF_INET, IPPROTO_UDP);
@@ -171,7 +185,7 @@ vsf_err_t vsfip_dhcpd_start(struct vsfip_netif_t *netif,
 		goto cleanup;
 	}
 	vsfip_socket_cb(dhcpd->so, dhcpd, vsfip_dhcpd_input, NULL);
-	if (vsfip_bind(dhcpd->so, VSFIP_DHCP_SERVER_PORT))
+	if (vsfip_bind(dhcpd->so, DHCP_SERVER_PORT))
 	{
 		goto cleanup;
 	}

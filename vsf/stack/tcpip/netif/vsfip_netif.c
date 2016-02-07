@@ -86,9 +86,9 @@ vsfip_netif_get_mac(struct vsfip_netif_t *netif, struct vsfip_ipaddr_t *ip)
 	for (i = 0; i < VSFIP_CFG_ARPCACHE_SIZE; i++)
 	{
 		if (netif->arp_cache[i].time &&
-			(ip->addr.s_addr == netif->arp_cache[i].ipaddr.addr.s_addr))
+			(ip->addr.s_addr == netif->arp_cache[i].assoc.ip.addr.s_addr))
 		{
-			return &netif->arp_cache[i].macaddr;
+			return &netif->arp_cache[i].assoc.mac;
 		}
 	}
 	return NULL;
@@ -210,10 +210,10 @@ void vsfip_netif_arp_add_assoc(struct vsfip_netif_t *netif,
 			entry = &netif->arp_cache[i];
 		}
 	}
-	entry->macaddr.size = hwlen;
-	memcpy(entry->macaddr.addr.s_addr_buf, hwaddr, hwlen);
-	entry->ipaddr.size = protolen;
-	memcpy(entry->ipaddr.addr.s_addr_buf, protoaddr, protolen);
+	entry->assoc.mac.size = hwlen;
+	memcpy(entry->assoc.mac.addr.s_addr_buf, hwaddr, hwlen);
+	entry->assoc.ip.size = protolen;
+	memcpy(entry->assoc.ip.addr.s_addr_buf, protoaddr, protolen);
 	entry->time = netif->arp_time++;
 }
 					

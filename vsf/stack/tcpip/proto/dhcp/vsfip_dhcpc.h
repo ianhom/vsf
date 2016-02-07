@@ -45,8 +45,8 @@ struct vsfip_dhcpc_t
 	uint32_t retry;
 	uint32_t arp_retry;
 	uint32_t leasetime;
-	uint32_t t1;
-	uint32_t t2;
+	uint32_t renew_time;
+	uint32_t rebinding_time;
 	unsigned ready : 1;
 };
 

@@ -28,9 +28,8 @@ struct vsfip_dhcpd_t
 	// private
 	struct vsfip_socket_t *so;
 	struct vsfip_sockaddr_t sockaddr;
-	struct vsfip_dhcp_assoc_t assoc[VSFIP_CFG_DHCPD_ASSOCNUM];
+	struct vsfip_ipmac_assoc assoc[VSFIP_CFG_DHCPD_ASSOCNUM];
 	uint32_t optlen;
-	uint32_t starttick;
 	uint32_t alloc_idx;
 };
 

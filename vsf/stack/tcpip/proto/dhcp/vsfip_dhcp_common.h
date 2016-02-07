@@ -19,41 +19,49 @@
 #ifndef __VSFIP_DHCP_COMMON_H_INCLUDED__
 #define __VSFIP_DHCP_COMMON_H_INCLUDED__
 
-#define VSFIP_DHCP_CLIENT_PORT				68
-#define VSFIP_DHCP_SERVER_PORT				67
-#define VSFIP_DHCP_MAGIC					0x63825363
+#define DHCP_CLIENT_PORT			68
+#define DHCP_SERVER_PORT			67
+#define DHCP_MAGIC					0x63825363
 
-#define VSFIP_DHCPOPT_SUBNET_MASK			1
-#define VSFIP_DHCPOPT_ROUTER				3
-#define VSFIP_DHCPOPT_DNS					6
-#define VSFIP_DHCPOPT_HOSTNAME				12
-#define VSFIP_DHCPOPT_BROADCAST				28
-#define VSFIP_DHCPOPT_REQIP					50
-#define VSFIP_DHCPOPT_LEASE_TIME			51
-#define VSFIP_DHCPOPT_MSGTYPE				53
-#define VSFIP_DHCPOPT_MSGTYPE_LEN			1
-#define VSFIP_DHCPOPT_PARAMLIST				55
-#define VSFIP_DHCPOPT_MAXMSGSIZE			57
-#define VSFIP_DHCPOPT_MAXMSGSIZE_LEN		2
-#define VSFIP_DHCPOPT_T1					58
-#define VSFIP_DHCPOPT_T2					59
-#define VSFIP_DHCPOPT_US					60
-#define VSFIP_DHCPOPT_END					255
-#define VSFIP_DHCPOPT_MINLEN				68
-
-#define VSFIP_DHCP_TOSERVER					1
-#define VSFIP_DHCP_TOCLIENT					2
-
-enum vsfip_dhcp_op_t
+enum dhcp_opt_t
 {
-	VSFIP_DHCPOP_DISCOVER					= 1,
-	VSFIP_DHCPOP_OFFER						= 2,
-	VSFIP_DHCPOP_REQUEST					= 3,
-	VSFIP_DHCPOP_DECLINE					= 4,
-	VSFIP_DHCPOP_ACK						= 5,
-	VSFIP_DHCPOP_NAK						= 6,
-	VSFIP_DHCPOP_RELEASE					= 7,
-	VSFIP_DHCPOP_INFORM						= 8,
+	DHCPOPT_PAD						= 0,
+	DHCPOPT_SUBNETMASK				= 1,
+	DHCPOPT_ROUTER					= 3,
+	DHCPOPT_DNSSERVER				= 6,
+	DHCPOPT_HOSTNAME				= 12,
+	DHCPOPT_DOMAIN					= 15,
+	DHCPOPT_MTU						= 26,
+	DHCPOPT_BROADCAST				= 28,
+	DHCPOPT_ROUTERDISCOVERY			= 31,
+	DHCPOPT_REQIP					= 50,
+	DHCPOPT_LEASE_TIME				= 51,
+	DHCPOPT_MSGTYPE					= 53,
+	DHCPOPT_SERVERID				= 54,
+	DHCPOPT_PARAMLIST				= 55,
+	DHCPOPT_MAXMSGSIZE				= 57,
+	DHCPOPT_RENEW_TIME				= 58,
+	DHCPOPT_REBINDING_TIME			= 59,
+	DHCPOPT_CLASSID					= 60,
+	DHCPOPT_END						= 255,
+};
+#define DHCPOPT_MSGTYPE_LEN			1
+#define DHCPOPT_MAXMSGSIZE_LEN		2
+#define DHCPOPT_MINLEN				68
+
+#define DHCP_TOSERVER				1
+#define DHCP_TOCLIENT				2
+
+enum dhcp_msg_t
+{
+	DHCPOP_DISCOVER					= 1,
+	DHCPOP_OFFER					= 2,
+	DHCPOP_REQUEST					= 3,
+	DHCPOP_DECLINE					= 4,
+	DHCPOP_ACK						= 5,
+	DHCPOP_NAK						= 6,
+	DHCPOP_RELEASE					= 7,
+	DHCPOP_INFORM					= 8,
 };
 
 PACKED_HEAD struct PACKED_MID vsfip_dhcphead_t
@@ -73,14 +81,8 @@ PACKED_HEAD struct PACKED_MID vsfip_dhcphead_t
 	char sname[64];
 	char file[128];
 	uint32_t magic;
-	uint8_t options[VSFIP_DHCPOPT_MINLEN];	// min option size
+	uint8_t options[DHCPOPT_MINLEN];	// min option size
 }; PACKED_TAIL
-
-struct vsfip_dhcp_assoc_t
-{
-	struct vsfip_macaddr_t mac;
-	struct vsfip_ipaddr_t ip;
-};
 
 void vsfip_dhcp_append_opt(struct vsfip_buffer_t *buf, uint32_t *optlen,
 						uint8_t option, uint8_t len, uint8_t *data);

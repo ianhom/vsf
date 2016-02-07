@@ -41,6 +41,12 @@ struct vsfip_addr_t
 #define vsfip_ipaddr_t		vsfip_addr_t
 #define vsfip_macaddr_t		vsfip_addr_t
 
+struct vsfip_ipmac_assoc
+{
+	struct vsfip_macaddr_t mac;
+	struct vsfip_ipaddr_t ip;
+};
+
 #include "netif/vsfip_netif.h"
 
 struct vsfip_buffer_t

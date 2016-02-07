@@ -30,8 +30,7 @@ enum vsfip_netif_proto_t
 
 struct vsfip_arp_entry_t
 {
-	struct vsfip_ipaddr_t ipaddr;
-	struct vsfip_macaddr_t macaddr;
+	struct vsfip_ipmac_assoc assoc;
 	uint32_t time;
 };
 
