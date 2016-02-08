@@ -47,17 +47,19 @@ struct vsfile_fop_t
 };
 struct vsfile_dop_t
 {
+	// for getchild_byname and getchild_byidx, if dir is NULL, means root
 	vsf_err_t (*getchild_byname)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name, struct vsfile_t **file);
 	vsf_err_t (*getchild_byidx)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, uint32_t idx, struct vsfile_t **file);
 	vsf_err_t (*addfile)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *dir, char *name);
+					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr);
 	vsf_err_t (*removefile)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name);
 };
 struct vsfile_fsop_t
 {
+	// dir in mount is the directory of the vfs under which fs is mounted
 	vsf_err_t (*mount)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir);
 	vsf_err_t (*unmount)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -75,8 +77,6 @@ struct vsfile_t
 	struct vsfile_t *parent;
 };
 
-vsf_err_t vsfile_init(void);
-
 #define VSFILE_MOUNT(p, e, op, d)			vsfile_mount((p), (e), (op), (struct vsfile_t *)(d))
 #define VSFILE_UNMOUNT(p, e, d)				vsfile_unmount((p), (e), (struct vsfile_t *)(d))
 #define VSFILE_GETFILE(p, e, d, n, f)		vsfile_getfile((p), (e), (struct vsfile_t *)(d), (n), (struct vsfile_t **)(f))
@@ -87,6 +87,8 @@ vsf_err_t vsfile_init(void);
 #define VSFILE_CLOSE(p, e, f)				vsfile_close((p), (e), (struct vsfile_t *)(f))
 #define VSFILE_READ(p, e, f, o, s, b, r)	vsfile_read((p), (e), (struct vsfile_t *)(f), (o), (s), (b), (r))
 #define VSFILE_WRITE(p, e, f, o, s, b, w)	vsfile_write((p), (e), (struct vsfile_t *)(f), (o), (s), (b), (w))
+#define VSFILE_ADDFILE(p, e, d, n, a)		vsfile_addfile((p), (e), (d), (n), (a))
+#define VSFILE_REMOVEFILE(p, e, d, n)		vsfile_removefile((p), (e), (d), (n))
 
 vsf_err_t vsfile_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfile_fsop_t *op, struct vsfile_t *dir);
@@ -113,6 +115,11 @@ vsf_err_t vsfile_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize);
 
+vsf_err_t vsfile_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr);
+vsf_err_t vsfile_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir, char *name);
+
 // helper
 char* vsfile_getfileext(char* name);
 bool vsfile_is_div(char ch);
@@ -130,6 +137,7 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 #define vsfile_dummy_write		vsfile_dummy_rw
 
 // memfile:
+// use pointer to vsfile_memfile_t as user_data of pt for mount
 // ptr of file points to a buffer
 // ptr of directory point to an array of children files
 struct vsfile_memfile_t
@@ -137,17 +145,20 @@ struct vsfile_memfile_t
 	struct vsfile_t file;
 	union
 	{
-		// for file
-		uint8_t *buff;
-		// for directory
-		struct vsfile_t *child;
+		struct
+		{
+			uint8_t *buff;
+		} f;		// msmfs file
+		struct
+		{
+			struct vsfile_memfile_t *child;
+			uint32_t child_size;
+		} d;		// memfs directory
 	};
-
-	// protected: initialized by derived class
-	uint32_t child_file_size;
 };
+// normal memfs
 extern const struct vsfile_fsop_t vsfile_memfs_op;
-// protected
+// for derived memfs classes
 vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file);
@@ -160,5 +171,38 @@ vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize);
+
+// TODO: implement malfs
+
+// vfs
+struct vsfile_vfsfile_t
+{
+	struct vsfile_t file;
+	bool mounted;
+	union
+	{
+		struct
+		{
+			struct vsfile_vfsfile_t *child;
+		} dir;
+		struct
+		{
+			struct vsfile_fsop_t *op;
+			void *param;
+		} subfs;
+		void *ptr;
+	};
+	struct vsfile_vfsfile_t *next;
+};
+extern const struct vsfile_fsop_t vsfile_vfs_op;
+
+// init
+struct vsfile_memop_t
+{
+	struct vsfile_vfsfile_t* (*alloc_vfs)(void);
+	void (*free_vfs)(struct vsfile_vfsfile_t *vfsfile);
+};
+
+vsf_err_t vsfile_init(struct vsfile_memop_t *memop);
 
 #endif		// __VSFILE_H_INCLUDED__

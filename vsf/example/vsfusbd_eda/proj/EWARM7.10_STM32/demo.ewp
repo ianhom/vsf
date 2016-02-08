@@ -330,7 +330,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -339,7 +339,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -2232,6 +2232,12 @@
     <name>$PROJ_DIR$\app_cfg.h</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\..\..\fakefat32_fs.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\httpd_fs.h</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\hw_cfg_STM32.h</name>
   </file>
   <file>
@@ -2239,6 +2245,9 @@
   </file>
   <file>
     <name>$PROJ_DIR$\..\..\main.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\usbd_desc.h</name>
   </file>
 </project>
 

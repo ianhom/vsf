@@ -17,7 +17,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
-#include "tool/fakefat32/fakefat32.h"
 
 #define APPCFG_VSFTIMER_NUM				16
 #define APPCFG_VSFSM_PENDSVQ_LEN		16
@@ -30,323 +29,9 @@
 #define APPCFG_VSFIP_SOCKET_NUM			8
 #define APPCFG_VSFIP_TCPPCB_NUM			8
 
-// USB descriptors
-static const uint8_t USB_DeviceDescriptor[] =
-{
-	0x12,	// bLength = 18
-	USB_DT_DEVICE,	// USB_DESC_TYPE_DEVICE
-	0x00,
-	0x02,	// bcdUSB
-	0xEF,	// device class: IAD
-	0x02,	// device sub class
-	0x01,	// device protocol
-	0x40,	// max packet size
-	0x83,
-	0x04,	// vendor
-	0x3A,
-	0xA0,	// product
-	0x00,
-	0x02,	// bcdDevice
-	1,		// manu facturer
-	2,		// product
-	3,		// serial number
-	0x01	// number of configuration
-};
-
-static const uint8_t USB_ConfigDescriptor[] =
-{
-	// Configuation Descriptor
-	0x09,	// bLength: Configuation Descriptor size
-	USB_DT_CONFIG,
-			// bDescriptorType: Configuration
-	172,	// wTotalLength:no of returned bytes*
-	0x00,
-	0x05,	// bNumInterfaces: 5 interface
-	0x01,	// bConfigurationValue: Configuration value
-	0x00,	// iConfiguration: Index of string descriptor describing the configuration
-	0x80,	// bmAttributes: bus powered
-	0x64,	// MaxPower 200 mA
-
-	// IAD for RNDIS
-	0x08,	// bLength: IAD Descriptor size
-	USB_DT_INTERFACE_ASSOCIATION,
-			// bDescriptorType: IAD
-	0,		// bFirstInterface
-	2,		// bInterfaceCount
-	0x02,	// bFunctionClass
-	0x06,	// bFunctionSubClass
-	0x00,	// bFunctionProtocol
-	0x04,	// iFunction
-
-	// Interface Descriptor for CDC
-	0x09,	// bLength: Interface Descriptor size
-	USB_DT_INTERFACE,
-			// bDescriptorType: Interface
-	0,		// bInterfaceNumber: Number of Interface
-	0x00,	// bAlternateSetting: Alternate setting
-	0x01,	// bNumEndpoints: One endpoints used
-	0x02,	// bInterfaceClass: Communication Interface Class
-	0x02,	// bInterfaceSubClass: Abstract Control Model
-	0xFF,	// bInterfaceProtocol: Vendor Specific
-	0x04,	// iInterface:
-
-	// Header Functional Descriptor
-	0x05,	// bLength: Endpoint Descriptor size
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x00,	// bDescriptorSubtype: Header Func Desc
-	0x10,	// bcdCDC: spec release number
-	0x01,
-
-	// Call Managment Functional Descriptor
-	0x05,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x01,	// bDescriptorSubtype: Call Management Func Desc
-	0x00,	// bmCapabilities: D0+D1
-	0x01,	// bDataInterface: 1
-
-	// ACM Functional Descriptor
-	0x04,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x02,	// bDescriptorSubtype: Abstract Control Management desc
-	0x00,	// bmCapabilities
-
-	// Union Functional Descriptor
-	0x05,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x06,	// bDescriptorSubtype: Union func desc
-	0,		// bMasterInterface: Communication class interface
-	1,		// bSlaveInterface0: Data Class Interface
-
-	// Endpoint 1 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x81,	// bEndpointAddress: (IN1)
-	0x03,	// bmAttributes: Interrupt
-	8,		// wMaxPacketSize:
-	0x00,
-	0xFF,	// bInterval:
-
-	// Data class interface descriptor
-	0x09,	// bLength: Endpoint Descriptor size
-	USB_DT_INTERFACE,
-			// bDescriptorType: Interface
-	1,		// bInterfaceNumber: Number of Interface
-	0x00,	// bAlternateSetting: Alternate setting
-	0x02,	// bNumEndpoints: Two endpoints used
-	0x0A,	// bInterfaceClass: CDC
-	0x00,	// bInterfaceSubClass:
-	0x00,	// bInterfaceProtocol:
-	0x04,	// iInterface:
-
-	// Endpoint 2 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x02,	// bEndpointAddress: (OUT2)
-	0x02,	// bmAttributes: Bulk
-	64,		// wMaxPacketSize:
-	0x00,
-	0x00,	// bInterval: ignore for Bulk transfer
-
-	// Endpoint 2 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x82,	// bEndpointAddress: (IN2)
-	0x02,	// bmAttributes: Bulk
-	64,		// wMaxPacketSize:
-	0x00,
-	0x00,	// bInterval
-
-	// IAD for CDC
-	0x08,	// bLength: IAD Descriptor size
-	USB_DT_INTERFACE_ASSOCIATION,
-			// bDescriptorType: IAD
-	2,		// bFirstInterface
-	2,		// bInterfaceCount
-	0x02,	// bFunctionClass
-	0x02,	// bFunctionSubClass
-	0x01,	// bFunctionProtocol
-	0x05,	// iFunction
-
-	// Interface Descriptor for CDC
-	0x09,	// bLength: Interface Descriptor size
-	USB_DT_INTERFACE,
-			// bDescriptorType: Interface
-	2,		// bInterfaceNumber: Number of Interface
-	0x00,	// bAlternateSetting: Alternate setting
-	0x01,	// bNumEndpoints: One endpoints used
-	0x02,	// bInterfaceClass: Communication Interface Class
-	0x02,	// bInterfaceSubClass: Abstract Control Model
-	0x01,	// bInterfaceProtocol: Common AT commands
-	0x05,	// iInterface:
-
-	// Header Functional Descriptor
-	0x05,	// bLength: Endpoint Descriptor size
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x00,	// bDescriptorSubtype: Header Func Desc
-	0x10,	// bcdCDC: spec release number
-	0x01,
-
-	// Call Managment Functional Descriptor
-	0x05,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x01,	// bDescriptorSubtype: Call Management Func Desc
-	0x00,	// bmCapabilities: D0+D1
-	0x01,	// bDataInterface: 1
-
-	// ACM Functional Descriptor
-	0x04,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x02,	// bDescriptorSubtype: Abstract Control Management desc
-	0x02,	// bmCapabilities
-
-	// Union Functional Descriptor
-	0x05,	// bFunctionLength
-	0x24,	// bDescriptorType: CS_INTERFACE
-	0x06,	// bDescriptorSubtype: Union func desc
-	2,		// bMasterInterface: Communication class interface
-	3,		// bSlaveInterface0: Data Class Interface
-
-	// Endpoint 3 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x83,	// bEndpointAddress: (IN3)
-	0x03,	// bmAttributes: Interrupt
-	8,		// wMaxPacketSize:
-	0x00,
-	0xFF,	// bInterval:
-
-	// Data class interface descriptor
-	0x09,	// bLength: Endpoint Descriptor size
-	USB_DT_INTERFACE,
-			// bDescriptorType: Interface
-	3,		// bInterfaceNumber: Number of Interface
-	0x00,	// bAlternateSetting: Alternate setting
-	0x02,	// bNumEndpoints: Two endpoints used
-	0x0A,	// bInterfaceClass: CDC
-	0x00,	// bInterfaceSubClass:
-	0x00,	// bInterfaceProtocol:
-	0x00,	// iInterface:
-
-	// Endpoint 4 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x04,	// bEndpointAddress: (OUT4)
-	0x02,	// bmAttributes: Bulk
-	32,		// wMaxPacketSize:
-	0x00,
-	0x00,	// bInterval: ignore for Bulk transfer
-
-	// Endpoint 4 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x84,	// bEndpointAddress: (IN4)
-	0x02,	// bmAttributes: Bulk
-	32,		// wMaxPacketSize:
-	0x00,
-	0x00,	// bInterval
-
-	// IAD for MSC
-	0x08,	// bLength: IAD Descriptor size
-	USB_DT_INTERFACE_ASSOCIATION,
-			// bDescriptorType: IAD
-	4,		// bFirstInterface
-	1,		// bInterfaceCount
-	0x08,	// bFunctionClass
-	0x06,	// bFunctionSubClass
-	0x50,	// bFunctionProtocol
-	0x06,	// iFunction
-
-	// Interface Descriptor for MSC
-	0x09,	// bLength: Interface Descriptor size
-	USB_DT_INTERFACE,
-			// bDescriptorType: Interface
-	4,		// bInterfaceNumber: Number of Interface
-	0x00,	// bAlternateSetting: Alternate setting
-	0x02,	// bNumEndpoints: Two endpoints used
-	0x08,	// bInterfaceClass: MSC
-	0x06,	// bInterfaceSubClass: SCSI
-	0x50,	// bInterfaceProtocol:
-	0x06,	// iInterface:
-
-	// Endpoint 5 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x85,	// bEndpointAddress: (IN5)
-	0x02,	// bmAttributes: Bulk
-	32,		// wMaxPacketSize:
-	0x00,
-	0x00,	// bInterval: ignore for Bulk transfer
-
-	// Endpoint 5 Descriptor
-	0x07,	// bLength: Endpoint Descriptor size
-	USB_DT_ENDPOINT,
-			// bDescriptorType: Endpoint
-	0x05,	// bEndpointAddress: (OUT5)
-	0x02,	// bmAttributes: Bulk
-	32,		// wMaxPacketSize:
-	0x00,
-	0x00	// bInterval
-};
-
-static const uint8_t USB_StringLangID[] =
-{
-	4,
-	USB_DT_STRING,
-	0x09,
-	0x04
-};
-
-static const uint8_t USB_StringVendor[] =
-{
-	20,
-	USB_DT_STRING,
-	'S', 0, 'i', 0, 'm', 0, 'o', 0, 'n', 0, 'Q', 0, 'i', 0, 'a', 0,
-	'n', 0
-};
-
-static const uint8_t USB_StringSerial[50] =
-{
-	50,
-	USB_DT_STRING,
-	'0', 0, '1', 0, '2', 0, '3', 0, '4', 0, '5', 0, '6', 0, '7', 0,
-	'8', 0, '9', 0, 'A', 0, 'B', 0, 'C', 0, 'D', 0, 'E', 0, 'F', 0,
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0,
-};
-
-static const uint8_t USB_StringProduct[] =
-{
-	14,
-	USB_DT_STRING,
-	'V', 0, 'S', 0, 'F', 0, 'U', 0, 'S', 0, 'B', 0
-};
-
-static const uint8_t RNDIS_StringFunc[] =
-{
-	18,
-	USB_DT_STRING,
-	'V', 0, 'S', 0, 'F', 0, 'R', 0, 'N', 0, 'D', 0, 'I', 0, 'S', 0
-};
-
-static const uint8_t CDC_StringFunc[] =
-{
-	14,
-	USB_DT_STRING,
-	'V', 0, 'S', 0, 'F', 0, 'C', 0, 'D', 0, 'C', 0
-};
-
-static const uint8_t MSC_StringFunc[] =
-{
-	14,
-	USB_DT_STRING,
-	'V', 0, 'S', 0, 'F', 0, 'M', 0, 'S', 0, 'C', 0
-};
+#include "fakefat32_fs.h"
+#include "httpd_fs.h"
+#include "usbd_desc.h"
 
 static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 {
@@ -360,287 +45,6 @@ static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 	VSFUSBD_DESC_STRING(0x0409, 5, CDC_StringFunc, sizeof(CDC_StringFunc)),
 	VSFUSBD_DESC_STRING(0x0409, 6, MSC_StringFunc, sizeof(MSC_StringFunc)),
 	VSFUSBD_DESC_NULL
-};
-
-// fakefs
-static const uint8_t vsfcdc_inf[] =
-"\
-[Version]\r\n\
-Signature=\"$Windows NT$\"\r\n\
-Class=Ports\r\n\
-ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}\r\n\
-Provider=%PRVDR%\r\n\
-CatalogFile=VSFCDC.cat\r\n\
-DriverVer=04/25/2010,1.3.1\r\n\
-\r\n\
-[SourceDisksNames]\r\n\
-1=%DriversDisk%,,,\r\n\
-\r\n\
-[SourceDisksFiles]\r\n\
-\r\n\
-[Manufacturer]\r\n\
-%MFGNAME%=DeviceList,NT,NTamd64\r\n\
-\r\n\
-[DestinationDirs]\r\n\
-DefaultDestDir = 12\r\n\
-\r\n\
-;------------------------------------------------------------------------------\r\n\
-;            VID/PID Settings\r\n\
-;------------------------------------------------------------------------------\r\n\
-[DeviceList.NT]\r\n\
-%DESCRIPTION%=DriverInstall,USB\\VID_0483&PID_A03A&MI_02\r\n\
-\r\n\
-[DeviceList.NTamd64]\r\n\
-%DESCRIPTION%=DriverInstall,USB\\VID_0483&PID_A03A&MI_02\r\n\
-\r\n\
-[DriverInstall.NT]\r\n\
-Include=mdmcpq.inf\r\n\
-CopyFiles=FakeModemCopyFileSection\r\n\
-AddReg=DriverInstall.NT.AddReg\r\n\
-\r\n\
-[DriverInstall.NT.AddReg]\r\n\
-HKR,,DevLoader,,*ntkern\r\n\
-HKR,,NTMPDriver,,usbser.sys\r\n\
-HKR,,EnumPropPages32,,\"MsPorts.dll,SerialPortPropPageProvider\"\r\n\
-\r\n\
-[DriverInstall.NT.Services]\r\n\
-AddService=usbser, 0x00000002, DriverServiceInst\r\n\
-\r\n\
-[DriverServiceInst]\r\n\
-DisplayName=%SERVICE%\r\n\
-ServiceType = 1 ; SERVICE_KERNEL_DRIVER\r\n\
-StartType = 3 ; SERVICE_DEMAND_START\r\n\
-ErrorControl = 1 ; SERVICE_ERROR_NORMAL\r\n\
-ServiceBinary= %12%\\usbser.sys\r\n\
-LoadOrderGroup = Base\r\n\
-\r\n\
-;------------------------------------------------------------------------------\r\n\
-;              String Definitions\r\n\
-;------------------------------------------------------------------------------\r\n\
-\r\n\
-[Strings]\r\n\
-PRVDR = \"VSF\"\r\n\
-MFGNAME = \"VSF.\"\r\n\
-DESCRIPTION = \"VSFCDC\"\r\n\
-SERVICE = \"VSFCDC\"\r\n\
-DriversDisk = \"VSF Drivers Disk\" \
-";
-static const uint8_t vsfrndis_inf[] =
-"\
-; Remote NDIS template device setup file\r\n\
-; Copyright (c) Microsoft Corporation\r\n\
-;\r\n\
-; This is the template for the INF installation script  for the RNDIS-over-USB\r\n\
-; host driver that leverages the newer NDIS 6.x miniport (rndismp6.sys) for\r\n\
-; improved performance. This INF works for Windows 7, Windows Server 2008 R2,\r\n\
-; and later operating systems on x86, amd64 and ia64 platforms.\r\n\
-\r\n\
-[Version]\r\n\
-Signature           = \"$Windows NT$\"\r\n\
-Class               = Net\r\n\
-ClassGUID           = {4d36e972-e325-11ce-bfc1-08002be10318}\r\n\
-Provider            = %Microsoft%\r\n\
-DriverVer           = 07/21/2008,6.0.6000.16384\r\n\
-;CatalogFile        = device.cat\r\n\
-\r\n\
-[Manufacturer]\r\n\
-%Microsoft%         = RndisDevices,NTx86,NTamd64,NTia64\r\n\
-\r\n\
-; Decoration for x86 architecture\r\n\
-[RndisDevices.NTx86]\r\n\
-%RndisDevice%    = RNDIS.NT.6.0, USB\\VID_0483&PID_A03A&MI_00\r\n\
-\r\n\
-; Decoration for x64 architecture\r\n\
-[RndisDevices.NTamd64]\r\n\
-%RndisDevice%    = RNDIS.NT.6.0, USB\\VID_0483&PID_A03A&MI_00\r\n\
-\r\n\
-; Decoration for ia64 architecture\r\n\
-[RndisDevices.NTia64]\r\n\
-%RndisDevice%    = RNDIS.NT.6.0, USB\\VID_0483&PID_A03A&MI_00\r\n\
-\r\n\
-;@@@ This is the common setting for setup\r\n\
-[ControlFlags]\r\n\
-ExcludeFromSelect=*\r\n\
-\r\n\
-; DDInstall section\r\n\
-; References the in-build Netrndis.inf\r\n\
-[RNDIS.NT.6.0]\r\n\
-Characteristics = 0x84   ; NCF_PHYSICAL + NCF_HAS_UI\r\n\
-BusType         = 15\r\n\
-; NEVER REMOVE THE FOLLOWING REFERENCE FOR NETRNDIS.INF\r\n\
-include         = netrndis.inf\r\n\
-needs           = usbrndis6.ndi\r\n\
-AddReg          = Rndis_AddReg\r\n\
-*IfType            = 6    ; IF_TYPE_ETHERNET_CSMACD.\r\n\
-*MediaType         = 16   ; NdisMediumNative802_11\r\n\
-*PhysicalMediaType = 14   ; NdisPhysicalMedium802_3\r\n\
-\r\n\
-; DDInstal.Services section\r\n\
-[RNDIS.NT.6.0.Services]\r\n\
-include     = netrndis.inf\r\n\
-needs       = usbrndis6.ndi.Services\r\n\
-\r\n\
-; Optional registry settings. You can modify as needed.\r\n\
-[RNDIS_AddReg] \r\n\
-HKR, NDI\\params\\RndisProperty, ParamDesc,  0, %Rndis_Property%\r\n\
-HKR, NDI\\params\\RndisProperty, type,       0, \"edit\"\r\n\
-HKR, NDI\\params\\RndisProperty, LimitText,  0, \"12\"\r\n\
-HKR, NDI\\params\\RndisProperty, UpperCase,  0, \"1\"\r\n\
-HKR, NDI\\params\\RndisProperty, default,    0, \" \"\r\n\
-HKR, NDI\\params\\RndisProperty, optional,   0, \"1\"\r\n\
-\r\n\
-; No sys copyfiles - the sys files are already in-build \r\n\
-; (part of the operating system).\r\n\
-\r\n\
-; Modify these strings for your device as needed.\r\n\
-[Strings]\r\n\
-Microsoft             = \"Microsoft Corporation\"\r\n\
-RndisDevice           = \"Remote NDIS6 based Device\"\r\n\
-Rndis_Property         = \"Optional RNDIS Property\"\
-";
-static struct fakefat32_file_t fakefat32_drv_windows_dir[] =
-{
-	{
-		.memfile.file.name = ".",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "..",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "VSFCDC.inf",
-		.memfile.file.size = sizeof(vsfcdc_inf) - 1,
-		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_READONLY,
-		.memfile.buff = (uint8_t *)vsfcdc_inf,
-	},
-	{
-		.memfile.file.name = "VSFRNDIS.inf",
-		.memfile.file.size = sizeof(vsfrndis_inf) - 1,
-		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_READONLY,
-		.memfile.buff = (uint8_t *)vsfrndis_inf,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
-};
-static struct fakefat32_file_t fakefat32_driver_dir[] =
-{
-	{
-		.memfile.file.name = ".",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "..",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "Windows",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-		.memfile.child = (struct vsfile_t *)fakefat32_drv_windows_dir,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
-};
-static struct fakefat32_file_t fakefat32_lost_dir[] =
-{
-	{
-		.memfile.file.name = ".",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "..",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
-};
-static uint8_t Win_recycle_DESKTOP_INI[] =
-"[.ShellClassInfo]\r\n\
-CLSID={645FF040-5081-101B-9F08-00AA002F954E}\r\n\
-LocalizedResourceName=@%SystemRoot%\\system32\\shell32.dll,-8964\r\n";
-static struct fakefat32_file_t fakefat32_recycle_dir[] =
-{
-	{
-		.memfile.file.name = ".",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "..",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "DESKTOP.INI",
-		.memfile.file.size = sizeof(Win_recycle_DESKTOP_INI) - 1,
-		.memfile.file.attr = VSFILE_ATTR_ARCHIVE,
-		.memfile.buff = Win_recycle_DESKTOP_INI,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
-};
-static uint8_t Win10_IndexerVolumeGuid[] =
-{
-	0x7B,0x00,0x45,0x00,0x34,0x00,0x42,0x00,0x38,0x00,0x37,0x00,0x41,0x00,0x39,0x00,
-	0x34,0x00,0x2D,0x00,0x39,0x00,0x32,0x00,0x32,0x00,0x39,0x00,0x2D,0x00,0x34,0x00,
-	0x38,0x00,0x32,0x00,0x34,0x00,0x2D,0x00,0x41,0x00,0x44,0x00,0x39,0x00,0x31,0x00,
-	0x2D,0x00,0x41,0x00,0x42,0x00,0x44,0x00,0x41,0x00,0x44,0x00,0x39,0x00,0x45,0x00,
-	0x30,0x00,0x43,0x00,0x34,0x00,0x30,0x00,0x34,0x00,0x7D,0x00
-};
-static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
-{
-	{
-		.memfile.file.name = ".",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "..",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-	},
-	{
-		.memfile.file.name = "IndexerVolumeGuid",
-		.memfile.file.size = sizeof(Win10_IndexerVolumeGuid),
-		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.buff = Win10_IndexerVolumeGuid,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
-};
-static struct fakefat32_file_t fakefat32_root_dir[] =
-{
-	{
-		.memfile.file.name = "VSFDriver",
-		.memfile.file.attr = VSFILE_ATTR_VOLUMID,
-	},
-	// "LOST.DIR is nesessary to make Android happy"
-	{
-		.memfile.file.name = "LOST.DIR",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_lost_dir,
-	},
-	// "$RECYCLE.BIN" is necessary to make Windows happy
-	{
-		.memfile.file.name = "$RECYCLE.BIN",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_recycle_dir,
-	},
-	// "System Voumne Information" is necessary to make Win10 happy
-	{
-		.memfile.file.name = "System Volume Information",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_systemvolumeinformation_dir,
-	},
-	{
-		.memfile.file.name = "Driver",
-		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
-		.memfile.child = (struct vsfile_t *)fakefat32_driver_dir,
-	},
-	{
-		.memfile.file.name = NULL,
-	},
 };
 
 // app state machine events
@@ -706,6 +110,8 @@ struct vsfapp_t
 		uint8_t buffer_mem[APPCFG_VSFIP_BUFFER_NUM][VSFIP_BUFFER_SIZE];
 	} vsfip;
 
+	struct vsfsm_pt_t pt;
+	struct vsfsm_pt_t caller_pt;
 	struct vsfsm_t sm;
 
 	// private
@@ -713,6 +119,8 @@ struct vsfapp_t
 #if defined(APPCFG_VSFTIMER_NUM) && (APPCFG_VSFTIMER_NUM > 0)
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 #endif
+
+	VSFPOOL_DEFINE(vfsfile_pool, struct vsfile_vfsfile_t, 2);
 
 #if defined(APPCFG_VSFSM_PENDSVQ_LEN) && (APPCFG_VSFSM_PENDSVQ_LEN > 0)
 	struct vsfsm_evtq_t pendsvq;
@@ -737,7 +145,7 @@ struct vsfapp_t
 	.mal.fakefat32.volume_id				= 0x0CA93E47,
 	.mal.fakefat32.disk_id					= 0x12345678,
 	.mal.fakefat32.root[0].memfile.file.name= "ROOT",
-	.mal.fakefat32.root[0].memfile.child	= (struct vsfile_t *)fakefat32_root_dir,
+	.mal.fakefat32.root[0].memfile.d.child	= (struct vsfile_memfile_t *)fakefat32_root_dir,
 
 	.mal.mal.drv							= &fakefat32_mal_drv,
 	.mal.mal.param							= &app.mal.fakefat32,
@@ -894,6 +302,23 @@ static void app_tickclk_callback_int(void *param)
 }
 #endif
 
+// vsfile_memop
+struct vsfile_vfsfile_t* app_vsfile_alloc_vfs(void)
+{
+	return VSFPOOL_ALLOC(&app.vfsfile_pool, struct vsfile_vfsfile_t);
+}
+
+static void app_vsfile_free_vfs(struct vsfile_vfsfile_t *vfsfile)
+{
+	VSFPOOL_FREE(&app.vfsfile_pool, vfsfile);
+}
+
+static const struct vsfile_memop_t app_vsfile_memop =
+{
+	.alloc_vfs = app_vsfile_alloc_vfs,
+	.free_vfs = app_vsfile_free_vfs,
+};
+
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -914,7 +339,39 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 #endif
 
-		// vsfip buffer init
+		// fs init: currently supported fs are non-block, so ugly pt code below
+		{
+			struct vsfile_t *file;
+
+			VSFPOOL_INIT(&app.vfsfile_pool, struct vsfile_vfsfile_t, 2);
+			vsfile_init((struct vsfile_memop_t *)&app_vsfile_memop);
+
+			// create msc_root and httpd_root under root
+			app.caller_pt.state = 0;
+			vsfile_addfile(&app.caller_pt, 0, NULL, "msc_root", VSFILE_ATTR_DIRECTORY);
+			app.caller_pt.state = 0;
+			vsfile_addfile(&app.caller_pt, 0, NULL, "httpd_root", VSFILE_ATTR_DIRECTORY);
+
+			// mount fakefat32 under /msc_root
+			app.caller_pt.state = 0;
+			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root", &file);
+			app.caller_pt.state = 0;
+			app.caller_pt.user_data = &app.mal.fakefat32;
+			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&fakefat32_fs_op, file);
+
+			// mount httpd under /httpd_root
+			app.caller_pt.state = 0;
+			vsfile_getfile(&app.caller_pt, 0, NULL, "/httpd_root", &file);
+			app.caller_pt.state = 0;
+			app.caller_pt.user_data = httpd_root_dir;
+			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&vsfile_memfs_op, file);
+
+			// tester
+			app.caller_pt.state = 0;
+			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root/Driver/Windows/VSFRNDIS.inf", &file);
+		}
+
+		// vsfip init
 		{
 			struct vsfip_buffer_t *buffer;
 			int i;
