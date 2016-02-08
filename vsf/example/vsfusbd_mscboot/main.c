@@ -150,7 +150,7 @@ static struct fakefat32_file_t fakefat32_recycle_dir[] =
 		.memfile.file.name = "DESKTOP.INI",
 		.memfile.file.size = sizeof(Win_recycle_DESKTOP_INI) - 1,
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE,
-		.memfile.buff = Win_recycle_DESKTOP_INI,
+		.memfile.f.buff = Win_recycle_DESKTOP_INI,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -178,7 +178,7 @@ static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
 		.memfile.file.name = "IndexerVolumeGuid",
 		.memfile.file.size = sizeof(Win10_IndexerVolumeGuid),
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.buff = Win10_IndexerVolumeGuid,
+		.memfile.f.buff = Win10_IndexerVolumeGuid,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -194,19 +194,19 @@ static struct fakefat32_file_t fakefat32_root_dir[] =
 	{
 		.memfile.file.name = "LOST.DIR",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_lost_dir,
+		.memfile.d.child = (struct vsfile_memfile_t *)fakefat32_lost_dir,
 	},
 	// "$RECYCLE.BIN" is necessary to make Windows happy
 	{
 		.memfile.file.name = "$RECYCLE.BIN",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_recycle_dir,
+		.memfile.d.child = (struct vsfile_memfile_t *)fakefat32_recycle_dir,
 	},
 	// "System Voumne Information" is necessary to make Win10 happy
 	{
 		.memfile.file.name = "System Volume Information",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
-		.memfile.child = (struct vsfile_t *)fakefat32_systemvolumeinformation_dir,
+		.memfile.d.child = (struct vsfile_memfile_t *)fakefat32_systemvolumeinformation_dir,
 	},
 	{
 		.memfile.file.name = NULL,
@@ -251,6 +251,8 @@ struct vsfapp_t
 		struct vsfusbd_device_t device;
 	} usbd;
 
+	struct vsfsm_pt_t pt;
+	struct vsfsm_pt_t caller_pt;
 	struct vsfsm_t sm;
 
 	struct vsfsm_evtq_t pendsvq;
@@ -258,6 +260,7 @@ struct vsfapp_t
 	// private
 	// buffer mamager
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
+	VSFPOOL_DEFINE(vfsfile_pool, struct vsfile_vfsfile_t, 2);
 
 	struct vsfsm_evtq_element_t pendsvq_ele[APPCFG_VSFSM_PENDSVQ_LEN];
 } static app =
@@ -266,12 +269,12 @@ struct vsfapp_t
 	.usb_pullup.pin							= USB_PULLUP_PIN,
 
 	.mal.fakefat32.sector_size				= 512,
-	.mal.fakefat32.sector_number			= 0x00760000,
+	.mal.fakefat32.sector_number			= 0x00001000,
 	.mal.fakefat32.sectors_per_cluster		= 8,
 	.mal.fakefat32.volume_id				= 0x0CA93E47,
 	.mal.fakefat32.disk_id					= 0x12345678,
 	.mal.fakefat32.root[0].memfile.file.name= "ROOT",
-	.mal.fakefat32.root[0].memfile.child	= (struct vsfile_t *)fakefat32_root_dir,
+	.mal.fakefat32.root[0].memfile.d.child	= (struct vsfile_memfile_t *)fakefat32_root_dir,
 
 	.mal.mal.drv							= &fakefat32_mal_drv,
 	.mal.mal.param							= &app.mal.fakefat32,
@@ -342,6 +345,23 @@ struct vsftimer_mem_op_t vsftimer_memop =
 	.free	= vsftimer_memop_free,
 };
 
+// vsfile_memop
+struct vsfile_vfsfile_t* app_vsfile_alloc_vfs(void)
+{
+	return VSFPOOL_ALLOC(&app.vfsfile_pool, struct vsfile_vfsfile_t);
+}
+
+static void app_vsfile_free_vfs(struct vsfile_vfsfile_t *vfsfile)
+{
+	VSFPOOL_FREE(&app.vfsfile_pool, vfsfile);
+}
+
+static const struct vsfile_memop_t app_vsfile_memop =
+{
+	.alloc_vfs = app_vsfile_alloc_vfs,
+	.free_vfs = app_vsfile_free_vfs,
+};
+
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -355,6 +375,25 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		VSFPOOL_INIT(&app.vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 		vsftimer_init(&vsftimer_memop);
 		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
+
+		// fs init: currently supported fs are non-block, so ugly pt code below
+		{
+			struct vsfile_t *file;
+
+			VSFPOOL_INIT(&app.vfsfile_pool, struct vsfile_vfsfile_t, 2);
+			vsfile_init((struct vsfile_memop_t *)&app_vsfile_memop);
+
+			// create msc_root and httpd_root under root
+			app.caller_pt.state = 0;
+			vsfile_addfile(&app.caller_pt, 0, NULL, "msc_root", VSFILE_ATTR_DIRECTORY);
+
+			// mount fakefat32 under /msc_root
+			app.caller_pt.state = 0;
+			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root", &file);
+			app.caller_pt.state = 0;
+			app.caller_pt.user_data = &app.mal.fakefat32;
+			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&fakefat32_fs_op, file);
+		}
 
 		vsfusbd_device_init(&app.usbd.device);
 
@@ -406,6 +445,6 @@ int main(void)
 	while (1)
 	{
 		// no thread runs in mainq, just sleep in main loop
-//		vsfhal_core_sleep(SLEEP_WFI);
+		vsfhal_core_sleep(SLEEP_WFI);
 	}
 }
