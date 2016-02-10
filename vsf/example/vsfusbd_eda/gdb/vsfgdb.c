@@ -201,17 +201,20 @@ static vsf_err_t vsfgdb_get_addrlen(char *str, uint64_t *addr, uint32_t *len,
 	return VSFERR_NONE;
 }
 
+static void vsfgdb_add_reply(struct vsfgdb_t *gdb, char *str)
+{
+	while (*str != '\0')
+	{
+		gdb->replybuf[gdb->replylen++] = *str++;
+	}
+}
+
 static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfgdb_t *gdb = (struct vsfgdb_t *)pt->user_data;
-	char *replybuf, *parambuf = (char *)gdb->rsptbuf.buffer.buffer + 1;
+	char *parambuf = (char *)gdb->rsptbuf.buffer.buffer + 1;
 	vsf_err_t err;
 	uint32_t i;
-
-	if (gdb->outbuf != NULL)
-	{
-		replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
-	}
 
 	vsfsm_pt_begin(pt);
 
@@ -262,8 +265,9 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			gdb->errcode = VSFERR_NOT_ENOUGH_RESOURCES;
 			goto fail_connected;
 		}
-		replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
-		strcmp(replybuf, "$");
+		gdb->replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
+		gdb->replylen = 0;
+		vsfgdb_add_reply(gdb, "$");
 
 		// rsp parser
 		gdb->cmd = (char)*gdb->rsptbuf.buffer.buffer;
@@ -274,7 +278,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		{
 			// Detach
 			gdb->exit = true;
-			strcat(replybuf, "OK");
+			vsfgdb_add_reply(gdb, "OK");
 		}
 		else if ('g' == gdb->cmd)
 		{
@@ -284,7 +288,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			for (i = 0; i < gdb->target.regnum; i++)
 			{
 				valuetohex(reg[i].value, reg[i].size, buf);
-				strcat(replybuf, buf);
+				vsfgdb_add_reply(gdb, buf);
 			}
 		}
 		else if ('G' == gdb->cmd)
@@ -296,7 +300,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				reg[i].value = hextovalue(parambuf, reg[i].size, &parambuf);
 				reg[i].dirty = true;
 			}
-			strcat(replybuf, "OK");
+			vsfgdb_add_reply(gdb, "OK");
 		}
 		else if ('p' == gdb->cmd)
 		{
@@ -306,11 +310,11 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				struct vsfgdb_reg_t *reg = &gdb->target.regs[idx];
 				char buf[17];
 				valuetohex(reg->value, reg->size, buf);
-				strcat(replybuf, buf);
+				vsfgdb_add_reply(gdb, buf);
 			}
 			else
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 			}
 		}
 		else if ('P' == gdb->cmd)
@@ -319,7 +323,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			uint64_t value;
 			if (*parambuf++ != '=')
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 			value = hextovalue(parambuf, 0, NULL);
@@ -331,14 +335,14 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			}
 			else
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 			}
 		}
 		else if ('m' == gdb->cmd)
 		{
 			if (vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, &parambuf))
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 			gdb->ptr = (uint8_t *)gdb->rsptbuf.buffer.buffer;
@@ -351,7 +355,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			if (err > 0) return err; else if (err < 0)
 			{
 				gdb->exit = true;
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 
@@ -360,7 +364,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				for (i = 0; i < gdb->len; i++)
 				{
 					u8tohex(*gdb->ptr++, buf);
-					strcat(replybuf, buf);
+					vsfgdb_add_reply(gdb, buf);
 				}
 			}
 		}
@@ -369,7 +373,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			if (vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, &parambuf) ||
 				(*parambuf++ != ':'))
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 			gdb->ptr = (uint8_t *)gdb->rsptbuf.buffer.buffer;
@@ -386,10 +390,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			if (err > 0) return err; else if (err < 0)
 			{
 				gdb->exit = true;
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
-			strcat(replybuf, "OK");
+			vsfgdb_add_reply(gdb, "OK");
 		}
 		else if ('z' == gdb->cmd)
 		{
@@ -397,7 +401,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			if ((*parambuf++ != ',') ||
 				vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, NULL))
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 
@@ -416,10 +420,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
-					strcat(replybuf, "E01");
+					vsfgdb_add_reply(gdb, "E01");
 					goto reply;
 				}
-				strcat(replybuf, "OK");
+				vsfgdb_add_reply(gdb, "OK");
 			}
 			else if (gdb->ztype.wptype <= VSFGDB_WPTYPE_ACCESS)
 			{
@@ -432,10 +436,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
-					strcat(replybuf, "E01");
+					vsfgdb_add_reply(gdb, "E01");
 					goto reply;
 				}
-				strcat(replybuf, "OK");
+				vsfgdb_add_reply(gdb, "OK");
 			}
 		}
 		else if ('Z' == gdb->cmd)
@@ -444,7 +448,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			if ((*parambuf++ != ',') ||
 				vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, NULL))
 			{
-				strcat(replybuf, "E01");
+				vsfgdb_add_reply(gdb, "E01");
 				goto reply;
 			}
 
@@ -463,10 +467,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
-					strcat(replybuf, "E01");
+					vsfgdb_add_reply(gdb, "E01");
 					goto reply;
 				}
-				strcat(replybuf, "OK");
+				vsfgdb_add_reply(gdb, "OK");
 			}
 			else if (gdb->ztype.wptype <= VSFGDB_WPTYPE_ACCESS)
 			{
@@ -479,10 +483,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
-					strcat(replybuf, "E01");
+					vsfgdb_add_reply(gdb, "E01");
 					goto reply;
 				}
-				strcat(replybuf, "OK");
+				vsfgdb_add_reply(gdb, "OK");
 			}
 		}
 		else if ('c' == gdb->cmd)
@@ -522,8 +526,8 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			}
 			buf[0] = '#';
 			u8tohex(gdb->checksum_calc, &buf[1]);
-			strcat(replybuf, buf);
-			gdb->outbuf->app.size = strlen(replybuf);
+			vsfgdb_add_reply(gdb, buf);
+			gdb->outbuf->app.size = gdb->replylen;
 			vsfip_tcp_async_send(so, &so->remote_sockaddr, gdb->outbuf);
 		}
 	}

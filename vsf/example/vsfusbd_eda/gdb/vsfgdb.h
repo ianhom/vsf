@@ -123,6 +123,8 @@ struct vsfgdb_t
 		char type;
 	} ztype;
 	uint8_t *ptr;
+	char *replybuf;
+	uint16_t replylen;
 
 	vsf_err_t errcode;
 };

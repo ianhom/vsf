@@ -172,7 +172,12 @@ vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize);
 
-// TODO: implement malfs
+// malfs for some real fs like fat, ntfs ...
+struct vsfile_malfile_t
+{
+	struct vsfile_t file;
+	uint32_t block_addr;
+};
 
 // vfs
 struct vsfile_vfsfile_t
