@@ -22,27 +22,111 @@
 
 #define VSFGDB_EVT_RSP_PACKET				VSFSM_EVT_USER
 
-static uint8_t hex2u8(char hex)
+static uint8_t chartou8(char c)
 {
-	if ((hex >= 'a') && (hex <= 'f'))
+	if ((c >= 'a') && (c <= 'f'))
 	{
-		return hex - 'a' + 10;
+		return c - 'a' + 10;
 	}
-	else if ((hex >= 'A') && (hex <= 'F'))
+	else if ((c >= 'A') && (c <= 'F'))
 	{
-		return hex - 'A' + 10;
+		return c - 'A' + 10;
 	}
-	else if ((hex >= '0') && (hex <= '9'))
+	else if ((c >= '0') && (c <= '9'))
 	{
-		return hex - '0';
+		return c - '0';
 	}
 	return 0;
 }
 
-const char hextbl[] = "0123456789ABCDEF";
-static char u82hex(uint8_t u8)
+static uint8_t hextou8(char *hex)
 {
-	return hextbl[u8 & 0x0F];
+	return (chartou8(hex[0]) << 4) + chartou8(hex[1]);
+}
+
+static uint16_t hextou16(char *hex)
+{
+	return ((uint16_t)hextou8(&hex[0]) << 8) + hextou8(&hex[2]);
+}
+
+static uint32_t hextou32(char *hex)
+{
+	return ((uint32_t)hextou16(&hex[0]) << 16) + hextou16(&hex[4]);
+}
+
+static uint64_t hextou64(char *hex)
+{
+	return ((uint64_t)hextou32(&hex[0]) << 32) + hextou32(&hex[8]);
+}
+
+static uint64_t hextovalue(char *hex, uint8_t bytelen, char **next)
+{
+	uint64_t value = 0;
+	int i;
+
+	if (!bytelen) bytelen = 8;
+	for (i = 0; i < 2 * bytelen; i++)
+	{
+		if ((*hex >= 'a') && (*hex <= 'f'))
+		{
+			value = (value << 4) + *hex - 'a' + 10;
+		}
+		else if ((*hex >= 'A') && (*hex <= 'F'))
+		{
+			value = (value << 4) + *hex - 'A' + 10;
+		}
+		else if ((*hex >= '0') && (*hex <= '9'))
+		{
+			value = (value << 4) + *hex - '0';
+		}
+		else
+		{
+			break;
+		}
+		hex++;
+	}
+	if (next != NULL)
+	{
+		*next = hex;
+	}
+	return value;
+}
+
+const char hextbl[] = "0123456789ABCDEF";
+static void u8tohex(uint8_t u8, char *hex)
+{
+	hex[0] = hextbl[(u8 >> 4) & 0x0F];
+	hex[1] = hextbl[(u8 >> 0) & 0x0F];
+	hex[2] = 0;
+}
+
+static void u16tohex(uint16_t u16, char *hex)
+{
+	u8tohex(u16 >> 8, hex + 0);
+	u8tohex(u16 >> 0, hex + 2);
+}
+
+static void u32tohex(uint32_t u32, char *hex)
+{
+	u16tohex(u32 >> 16, hex + 0);
+	u16tohex(u32 >> 0 , hex + 4);
+}
+
+static void u64tohex(uint64_t u64, char *hex)
+{
+	u32tohex(u64 >> 32, hex + 0);
+	u32tohex(u64 >> 0 , hex + 8);
+}
+
+static void valuetohex(uint64_t value, uint8_t bytelen, char *hex)
+{
+	switch (bytelen)
+	{
+	case 1: u8tohex(value, hex); break;
+	case 2: u16tohex(value, hex); break;
+	case 4: u32tohex(value, hex); break;
+	case 8: u64tohex(value, hex); break;
+	}
 }
 
 static void vsfgdb_on_session_input(void *param, struct vsfip_buffer_t *buf)
@@ -78,7 +162,7 @@ static void vsfgdb_on_session_input(void *param, struct vsfip_buffer_t *buf)
 	while (size && (gdb->checksum_size < 2))
 	{
 		gdb->checksum_size++;
-		gdb->checksum += hex2u8(*ptr++) << ((2 - gdb->checksum_size) << 2);
+		gdb->checksum += chartou8(*ptr++) << ((2 - gdb->checksum_size) << 2);
 		if (2 == gdb->checksum_size)
 		{
 			struct vsfip_socket_t *so = gdb->session;
@@ -105,10 +189,29 @@ end:
 	vsfip_buffer_release(buf);
 }
 
+static vsf_err_t vsfgdb_get_addrlen(char *str, uint64_t *addr, uint32_t *len,
+										char **next)
+{
+	*addr = hextovalue(str, 0, &str);
+	if (*str++ != ',')
+	{
+		return VSFERR_FAIL;
+	}
+	*len = (uint32_t)hextovalue(str, 4, next);
+	return VSFERR_NONE;
+}
+
 static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfgdb_t *gdb = (struct vsfgdb_t *)pt->user_data;
+	char *replybuf, *parambuf = (char *)gdb->rsptbuf.buffer.buffer + 1;
 	vsf_err_t err;
+	uint32_t i;
+
+	if (gdb->outbuf != NULL)
+	{
+		replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
+	}
 
 	vsfsm_pt_begin(pt);
 
@@ -159,43 +262,228 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			gdb->errcode = VSFERR_NOT_ENOUGH_RESOURCES;
 			goto fail_connected;
 		}
-		gdb->outbuf->app.buffer[0] = '$';
-		gdb->outbuf->app.size = 1;
+		replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
+		strcmp(replybuf, "$");
 
 		// rsp parser
 		gdb->cmd = (char)*gdb->rsptbuf.buffer.buffer;
 		if ('?' == gdb->cmd)
 		{
 		}
-		else if ('q' == gdb->cmd)
-		{
-		}
 		else if ('D' == gdb->cmd)
 		{
+			// Detach
+			gdb->exit = true;
+			strcat(replybuf, "OK");
 		}
 		else if ('g' == gdb->cmd)
 		{
+			struct vsfgdb_reg_t *reg = gdb->target.regs;
+			char buf[17];
+
+			for (i = 0; i < gdb->target.regnum; i++)
+			{
+				valuetohex(reg[i].value, reg[i].size, buf);
+				strcat(replybuf, buf);
+			}
 		}
 		else if ('G' == gdb->cmd)
 		{
+			struct vsfgdb_reg_t *reg = gdb->target.regs;
+
+			for (i = 0; i < gdb->target.regnum; i++)
+			{
+				reg[i].value = hextovalue(parambuf, reg[i].size, &parambuf);
+				reg[i].dirty = true;
+			}
+			strcat(replybuf, "OK");
 		}
 		else if ('p' == gdb->cmd)
 		{
+			uint32_t idx = (uint32_t)hextovalue(parambuf, 4, NULL);
+			if (idx < gdb->target.regnum)
+			{
+				struct vsfgdb_reg_t *reg = &gdb->target.regs[idx];
+				char buf[17];
+				valuetohex(reg->value, reg->size, buf);
+				strcat(replybuf, buf);
+			}
+			else
+			{
+				strcat(replybuf, "E01");
+			}
 		}
 		else if ('P' == gdb->cmd)
 		{
+			uint32_t idx = hextovalue(parambuf, 4, &parambuf);
+			uint64_t value;
+			if (*parambuf++ != '=')
+			{
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+			value = hextovalue(parambuf, 0, NULL);
+
+			if (idx < gdb->target.regnum)
+			{
+				gdb->target.regs[idx].dirty = true;
+				gdb->target.regs[idx].value = value;
+			}
+			else
+			{
+				strcat(replybuf, "E01");
+			}
 		}
 		else if ('m' == gdb->cmd)
 		{
+			if (vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, &parambuf))
+			{
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+			gdb->ptr = (uint8_t *)gdb->rsptbuf.buffer.buffer;
+
+			gdb->caller_pt.user_data = &gdb->target;
+			gdb->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = gdb->target.op->readmem(&gdb->caller_pt, evt, gdb->addr,
+											gdb->len, gdb->ptr);
+			if (err > 0) return err; else if (err < 0)
+			{
+				gdb->exit = true;
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+
+			{
+				char buf[3];
+				for (i = 0; i < gdb->len; i++)
+				{
+					u8tohex(*gdb->ptr++, buf);
+					strcat(replybuf, buf);
+				}
+			}
 		}
 		else if ('M' == gdb->cmd)
 		{
+			if (vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, &parambuf) ||
+				(*parambuf++ != ':'))
+			{
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+			gdb->ptr = (uint8_t *)gdb->rsptbuf.buffer.buffer;
+			for (i = 0; i < gdb->len; i++)
+			{
+				gdb->ptr[i] = hextou8(parambuf + i * 2);
+			}
+
+			gdb->caller_pt.user_data = &gdb->target;
+			gdb->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = gdb->target.op->writemem(&gdb->caller_pt, evt, gdb->addr,
+											gdb->len, gdb->ptr);
+			if (err > 0) return err; else if (err < 0)
+			{
+				gdb->exit = true;
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+			strcat(replybuf, "OK");
 		}
 		else if ('z' == gdb->cmd)
 		{
+			gdb->ztype.type = (enum vsfgdb_wptype_t)*parambuf++;
+			if ((*parambuf++ != ',') ||
+				vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, NULL))
+			{
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+
+			if (VSFGDB_BPTYPE_SOFT == gdb->ztype.bptype)
+			{
+				// software breakpoint
+			}
+			else if (VSFGDB_BPTYPE_HARD == gdb->ztype.bptype)
+			{
+				// hardware breakpoing
+				gdb->caller_pt.user_data = &gdb->target;
+				gdb->caller_pt.state = 0;
+				vsfsm_pt_entry(pt);
+				err = gdb->target.op->breakpoint(&gdb->caller_pt, evt,
+										gdb->addr, false);
+				if (err > 0) return err; else if (err < 0)
+				{
+					gdb->exit = true;
+					strcat(replybuf, "E01");
+					goto reply;
+				}
+				strcat(replybuf, "OK");
+			}
+			else if (gdb->ztype.wptype <= VSFGDB_WPTYPE_ACCESS)
+			{
+				// '2' for write wp, '3' for read wp, '4' for access wp
+				gdb->caller_pt.user_data = &gdb->target;
+				gdb->caller_pt.state = 0;
+				vsfsm_pt_entry(pt);
+				err = gdb->target.op->watchpoint(&gdb->caller_pt, evt,
+										gdb->addr, gdb->ztype.wptype, false);
+				if (err > 0) return err; else if (err < 0)
+				{
+					gdb->exit = true;
+					strcat(replybuf, "E01");
+					goto reply;
+				}
+				strcat(replybuf, "OK");
+			}
 		}
 		else if ('Z' == gdb->cmd)
 		{
+			gdb->ztype.type = (enum vsfgdb_wptype_t)*parambuf++;
+			if ((*parambuf++ != ',') ||
+				vsfgdb_get_addrlen(parambuf, &gdb->addr, &gdb->len, NULL))
+			{
+				strcat(replybuf, "E01");
+				goto reply;
+			}
+
+			if (VSFGDB_BPTYPE_SOFT == gdb->ztype.bptype)
+			{
+				// software breakpoint
+			}
+			else if (VSFGDB_BPTYPE_HARD == gdb->ztype.bptype)
+			{
+				// hardware breakpoing
+				gdb->caller_pt.user_data = &gdb->target;
+				gdb->caller_pt.state = 0;
+				vsfsm_pt_entry(pt);
+				err = gdb->target.op->breakpoint(&gdb->caller_pt, evt,
+										gdb->addr, true);
+				if (err > 0) return err; else if (err < 0)
+				{
+					gdb->exit = true;
+					strcat(replybuf, "E01");
+					goto reply;
+				}
+				strcat(replybuf, "OK");
+			}
+			else if (gdb->ztype.wptype <= VSFGDB_WPTYPE_ACCESS)
+			{
+				// '2' for write wp, '3' for read wp, '4' for access wp
+				gdb->caller_pt.user_data = &gdb->target;
+				gdb->caller_pt.state = 0;
+				vsfsm_pt_entry(pt);
+				err = gdb->target.op->watchpoint(&gdb->caller_pt, evt,
+										gdb->addr, gdb->ztype.wptype, true);
+				if (err > 0) return err; else if (err < 0)
+				{
+					gdb->exit = true;
+					strcat(replybuf, "E01");
+					goto reply;
+				}
+				strcat(replybuf, "OK");
+			}
 		}
 		else if ('c' == gdb->cmd)
 		{
@@ -211,33 +499,34 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		else if ('k' == gdb->cmd)
 		{
+			gdb->exit = true;
+			break;
 		}
 		else if ('v' == gdb->cmd)
 		{
+			
 		}
 
+	reply:
 		gdb->dollar = gdb->cmd = '\0';
 		gdb->idle = true;
 		// reply
 		{
-			uint8_t *ptr = &gdb->outbuf->app.buffer[gdb->outbuf->app.size];
 			struct vsfip_socket_t *so = gdb->session;
-			uint32_t i;
+			char buf[4];
 
 			gdb->checksum_calc = 0;
 			for (i = 1; i < gdb->outbuf->app.size; i++)
 			{
 				gdb->checksum_calc += gdb->outbuf->app.buffer[i];
 			}
-			*ptr++ = '#';
-			*ptr++ = u82hex(gdb->checksum_calc >> 4);
-			*ptr++ = u82hex(gdb->checksum_calc >> 0);
-			gdb->outbuf->app.size += 3;
+			buf[0] = '#';
+			u8tohex(gdb->checksum_calc, &buf[1]);
+			strcat(replybuf, buf);
+			gdb->outbuf->app.size = strlen(replybuf);
 			vsfip_tcp_async_send(so, &so->remote_sockaddr, gdb->outbuf);
 		}
 	}
-
-	return VSFERR_NONE;
 
 fail_connected:
 	gdb->caller_pt.user_data = &gdb->target;
@@ -254,10 +543,11 @@ fail_socket_connect:
 	vsfip_close(gdb->so);
 	gdb->so = NULL;
 fail_socket:
-	return gdb->errcode;
+	// start again
+	vsfgdb_start(gdb);
 
 	vsfsm_pt_end(pt);
-	return VSFERR_NONE;
+	return gdb->errcode;
 }
 
 vsf_err_t vsfgdb_start(struct vsfgdb_t *gdb)

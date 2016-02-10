@@ -24,7 +24,9 @@ struct vsfgdb_reg_t
 {
 	uint8_t idx;
 	uint8_t size;
-	uint64_t reg;
+	uint8_t dirty;
+	uint8_t reserved;
+	uint64_t value;
 };
 
 struct vsfgdb_breakpoint_t
@@ -37,6 +39,19 @@ struct vsfgdb_watchpoint_t
 {
 	bool enabled;
 	uint64_t addr;
+};
+
+enum vsfgdb_wptype_t
+{
+	VSFGDB_WPTYPE_WRITE			= (int)'2',
+	VSFGDB_WPTYPE_READ			= (int)'3',
+	VSFGDB_WPTYPE_ACCESS		= (int)'4',
+};
+
+enum vsfgdb_bptype_t
+{
+	VSFGDB_BPTYPE_SOFT			= '0',
+	VSFGDB_BPTYPE_HARD			= '1',
 };
 
 struct vsfgdb_target_op_t
@@ -57,7 +72,8 @@ struct vsfgdb_target_op_t
 	vsf_err_t (*breakpoint)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							uint64_t addr, bool enable);
 	vsf_err_t (*watchpoint)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							uint64_t addr, bool enable);
+							uint64_t addr, enum vsfgdb_wptype_t type,
+							bool enable);
 	vsf_err_t (*step)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*cont)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 };
@@ -99,7 +115,14 @@ struct vsfgdb_t
 	uint8_t checksum_calc;
 	uint8_t checksum_size;
 	uint64_t addr;
-	uint64_t len;
+	uint32_t len;
+	union
+	{
+		enum vsfgdb_wptype_t wptype;
+		enum vsfgdb_bptype_t bptype;
+		char type;
+	} ztype;
+	uint8_t *ptr;
 
 	vsf_err_t errcode;
 };
