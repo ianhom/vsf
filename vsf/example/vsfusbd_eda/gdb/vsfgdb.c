@@ -165,23 +165,8 @@ static void vsfgdb_on_session_input(void *param, struct vsfip_buffer_t *buf)
 		gdb->checksum += chartou8(*ptr++) << ((2 - gdb->checksum_size) << 2);
 		if (2 == gdb->checksum_size)
 		{
-			struct vsfip_socket_t *so = gdb->session;
-
-			buf->app.size = 1;
-			if (gdb->checksum == gdb->checksum_calc)
-			{
-				buf->app.buffer[0] = '+';
-				if (!vsfip_tcp_async_send(so, &so->remote_sockaddr, buf))
-				{
-					gdb->idle = false;
-					vsfsm_post_evt(&gdb->sm, VSFGDB_EVT_RSP_PACKET);
-				}
-			}
-			else
-			{
-				buf->app.buffer[0] = '-';
-				vsfip_tcp_async_send(so, &so->remote_sockaddr, buf);
-			}
+			gdb->idle = !(gdb->checksum == gdb->checksum_calc);
+			vsfsm_sem_post(&gdb->rspsem);
 			break;
 		}
 	}
@@ -257,7 +242,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	while (!gdb->exit)
 	{
 		// wait for rsp packet
-		vsfsm_pt_wfe(pt, VSFGDB_EVT_RSP_PACKET);
+		if (vsfsm_sem_pend(&gdb->rspsem, pt->sm))
+		{
+			vsfsm_pt_wfe(pt, VSFGDB_EVT_RSP_PACKET);
+		}
 
 		gdb->outbuf = VSFIP_TCPBUF_GET(VSFIP_CFG_TCP_MSS);
 		if (NULL == gdb->outbuf)
@@ -267,6 +255,11 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		gdb->replybuf = (char*)&gdb->outbuf->app.buffer[gdb->outbuf->app.size];
 		gdb->replylen = 0;
+		vsfgdb_add_reply(gdb, gdb->idle ? "-" : "+");
+		if (gdb->idle)
+		{
+			goto reply;
+		}
 		vsfgdb_add_reply(gdb, "$");
 
 		// rsp parser
@@ -405,18 +398,14 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				goto reply;
 			}
 
-			if (VSFGDB_BPTYPE_SOFT == gdb->ztype.bptype)
+			if (gdb->ztype.bptype <= VSFGDB_BPTYPE_HARD)
 			{
-				// software breakpoint
-			}
-			else if (VSFGDB_BPTYPE_HARD == gdb->ztype.bptype)
-			{
-				// hardware breakpoing
+				// '0' for software bp, '1' for hardware breakpoing
 				gdb->caller_pt.user_data = &gdb->target;
 				gdb->caller_pt.state = 0;
 				vsfsm_pt_entry(pt);
 				err = gdb->target.op->breakpoint(&gdb->caller_pt, evt,
-										gdb->addr, false);
+								gdb->addr, gdb->len, gdb->ztype.bptype, false);
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
@@ -432,7 +421,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				gdb->caller_pt.state = 0;
 				vsfsm_pt_entry(pt);
 				err = gdb->target.op->watchpoint(&gdb->caller_pt, evt,
-										gdb->addr, gdb->ztype.wptype, false);
+								gdb->addr, gdb->len, gdb->ztype.wptype, false);
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
@@ -452,18 +441,14 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				goto reply;
 			}
 
-			if (VSFGDB_BPTYPE_SOFT == gdb->ztype.bptype)
+			if (gdb->ztype.bptype <= VSFGDB_BPTYPE_HARD)
 			{
-				// software breakpoint
-			}
-			else if (VSFGDB_BPTYPE_HARD == gdb->ztype.bptype)
-			{
-				// hardware breakpoing
+				// '0' for software bp, '1' for hardware breakpoing
 				gdb->caller_pt.user_data = &gdb->target;
 				gdb->caller_pt.state = 0;
 				vsfsm_pt_entry(pt);
 				err = gdb->target.op->breakpoint(&gdb->caller_pt, evt,
-										gdb->addr, true);
+								gdb->addr, gdb->len, gdb->ztype.bptype, true);
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
@@ -479,7 +464,7 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				gdb->caller_pt.state = 0;
 				vsfsm_pt_entry(pt);
 				err = gdb->target.op->watchpoint(&gdb->caller_pt, evt,
-										gdb->addr, gdb->ztype.wptype, true);
+								gdb->addr, gdb->len, gdb->ztype.wptype, true);
 				if (err > 0) return err; else if (err < 0)
 				{
 					gdb->exit = true;
@@ -489,16 +474,10 @@ static vsf_err_t vsfgdb_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfgdb_add_reply(gdb, "OK");
 			}
 		}
-		else if ('c' == gdb->cmd)
+		else if (('c' == gdb->cmd) || ('C' == gdb->cmd))
 		{
 		}
-		else if ('C' == gdb->cmd)
-		{
-		}
-		else if ('s' == gdb->cmd)
-		{
-		}
-		else if ('S' == gdb->cmd)
+		else if (('s' == gdb->cmd) || ('S' == gdb->cmd))
 		{
 		}
 		else if ('k' == gdb->cmd)
@@ -563,6 +542,7 @@ vsf_err_t vsfgdb_start(struct vsfgdb_t *gdb)
 	gdb->target.regs = (struct vsfgdb_reg_t *)\
 		vsf_bufmgr_malloc(gdb->target.regnum * sizeof(struct vsfgdb_reg_t));
 
+	vsfsm_sem_init(&gdb->rspsem, 0, VSFGDB_EVT_RSP_PACKET);
 	gdb->pt.thread = vsfgdb_thread;
 	gdb->pt.user_data = gdb;
 	return vsfsm_pt_init(&gdb->sm, &gdb->pt);

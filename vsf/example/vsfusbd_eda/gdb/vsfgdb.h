@@ -29,16 +29,28 @@ struct vsfgdb_reg_t
 	uint64_t value;
 };
 
-struct vsfgdb_breakpoint_t
+struct vsfgdb_hwbp_t
 {
 	bool enabled;
 	uint64_t addr;
+	uint32_t size;
 };
 
-struct vsfgdb_watchpoint_t
+// software breadpoint is a list because can allocate more if needed
+struct vsfgdb_swbp_t
 {
 	bool enabled;
 	uint64_t addr;
+	uint32_t size;
+	uint64_t orig;
+	struct vsfgdb_swbp_t *next;
+};
+
+struct vsfgdb_wp_t
+{
+	bool enabled;
+	uint64_t addr;
+	uint32_t size;
 };
 
 enum vsfgdb_wptype_t
@@ -70,10 +82,11 @@ struct vsfgdb_target_op_t
 							uint64_t addr, uint32_t size, uint8_t *buf);
 
 	vsf_err_t (*breakpoint)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							uint64_t addr, bool enable);
+							uint64_t addr, uint32_t size,
+							enum vsfgdb_bptype_t type, bool enable);
 	vsf_err_t (*watchpoint)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							uint64_t addr, enum vsfgdb_wptype_t type,
-							bool enable);
+							uint64_t addr, uint32_t size,
+							enum vsfgdb_wptype_t type, bool enable);
 	vsf_err_t (*step)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*cont)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 };
@@ -82,12 +95,14 @@ struct vsfgdb_target_t
 {
 	struct vsfgdb_target_op_t *op;
 	uint8_t regnum;
-	uint8_t bpnum;
+	uint8_t swbpnum;
+	uint8_t hwbpnum;
 	uint8_t wpnum;
 
 	// private
 	struct vsfgdb_reg_t *regs;
-	struct vsfgdb_breakpoint_t *bps;
+	struct vsfgdb_swbp_t *swbps;
+	struct vsfgdb_hwbp_t *hwbps;
 	struct vsfgdb_watchpoint_t *wps;
 };
 
@@ -102,6 +117,7 @@ struct vsfgdb_t
 	struct vsfsm_pt_t pt;
 	struct vsfsm_t sm;
 	struct vsfsm_pt_t caller_pt;
+	struct vsfsm_sem_t rspsem;
 	struct vsfip_socket_t *so;
 	struct vsfip_socket_t *session;
 	struct vsfip_buffer_t *outbuf;
