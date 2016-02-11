@@ -520,6 +520,11 @@ fail_connected:
 fail_target_init:
 	gdb->caller_pt.state = 0;
 	vsfsm_pt_entry(pt);
+	err = vsfip_tcp_close(&gdb->caller_pt, evt, gdb->session);
+	if (err > 0) return err;
+
+	gdb->caller_pt.state = 0;
+	vsfsm_pt_entry(pt);
 	err = vsfip_tcp_close(&gdb->caller_pt, evt, gdb->so);
 	if (err > 0) return err;
 fail_socket_connect:

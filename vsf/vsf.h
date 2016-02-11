@@ -77,6 +77,7 @@ struct vsf_shell_api_t
 #include "stack/tcpip/proto/dhcp/vsfip_dhcpd.h"
 #include "stack/tcpip/proto/dns/vsfip_dnsc.h"
 #include "stack/tcpip/proto/http/vsfip_httpc.h"
+#include "stack/tcpip/proto/telnet/vsfip_telnetd.h"
 struct vsf_tcpip_api_t
 {
 	struct vsfip_t local;
