@@ -2138,6 +2138,12 @@
               <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\http\vsfip_httpc.c</name>
             </file>
           </group>
+          <group>
+            <name>telnet</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\telnet\vsfip_telnetd.c</name>
+            </file>
+          </group>
         </group>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\vsfip.c</name>
