@@ -44,11 +44,17 @@ void vsfusbd_RNDIS_on_tx_finish(void *param)
 			tmpbuf->buf.buffer -= sizeof(struct rndis_data_packet_t);
 			tmpbuf->buf.size += sizeof(struct rndis_data_packet_t);
 			packet = (struct rndis_data_packet_t *)tmpbuf->buf.buffer;
-			memset(packet, 0, sizeof(*packet));
 			packet->head.MessageType.value = RNDIS_PACKET_MSG;
 			packet->head.MessageLength = tmpbuf->buf.size;
 			packet->DataOffset = sizeof(*packet) - sizeof(packet->head);
 			packet->DataLength = tmpbuf->buf.size - sizeof(*packet);
+			packet->OOBDataOffset = 0;
+			packet->OOBDataLength = 0;
+			packet->NumOOBDataElements = 0;
+			packet->PerPacketInfoOffset = 0;
+			packet->PerPacketInfoLength = 0;
+			packet->VcHandle = 0;
+			packet->Reserved = 0;
 
 			rndis_param->tx_buffer = tmpbuf;
 			STREAM_WRITE(bufstream, &tmpbuf->buf);

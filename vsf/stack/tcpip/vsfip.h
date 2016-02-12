@@ -242,7 +242,6 @@ struct vsfip_socket_t
 
 	struct vsfip_sockaddr_t local_sockaddr;
 	struct vsfip_sockaddr_t remote_sockaddr;
-	struct vsfip_netif_t *netif;
 
 	struct vsfip_pcb_t pcb;
 	struct vsfsm_sem_t input_sem;

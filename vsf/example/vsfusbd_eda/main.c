@@ -108,6 +108,17 @@ struct vsfapp_t
 		VSFPOOL_DEFINE(socket_pool, struct vsfip_socket_t, APPCFG_VSFIP_SOCKET_NUM);
 		VSFPOOL_DEFINE(tcppcb_pool, struct vsfip_tcppcb_t, APPCFG_VSFIP_TCPPCB_NUM);
 		uint8_t buffer_mem[APPCFG_VSFIP_BUFFER_NUM][VSFIP_BUFFER_SIZE];
+
+		struct
+		{
+			struct vsfip_telnetd_t telnetd;
+			struct vsfip_telnetd_session_t sessions[1];
+
+			struct vsf_fifostream_t stream_tx;
+			struct vsf_fifostream_t stream_rx;
+			uint8_t txbuff[65];
+			uint8_t rxbuff[65];
+		} telnetd;
 	} vsfip;
 
 	struct vsfsm_pt_t pt;
@@ -217,9 +228,20 @@ struct vsfapp_t
 	.usbd.rndis.param.netif.gateway.size			= 4,
 	.usbd.rndis.param.netif.gateway.addr.s_addr		= 0x01202020,
 
+	.vsfip.telnetd.telnetd.port						= 23,
+	.vsfip.telnetd.telnetd.session_num				= dimof(app.vsfip.telnetd.sessions),
+	.vsfip.telnetd.stream_tx.stream.op				= &fifostream_op,
+	.vsfip.telnetd.stream_tx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.txbuff,
+	.vsfip.telnetd.stream_tx.mem.buffer.size		= sizeof(app.vsfip.telnetd.txbuff),
+	.vsfip.telnetd.stream_rx.stream.op				= &fifostream_op,
+	.vsfip.telnetd.stream_rx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.rxbuff,
+	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
+
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
-	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
-	.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
+//	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
+//	.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
+	.shell.stream_tx						= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_tx,
+	.shell.stream_rx						= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_rx,
 #endif
 
 	.sm.init_state.evt_handler				= app_evt_handler,
@@ -387,6 +409,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		VSFPOOL_INIT(&app.vsfip.socket_pool, struct vsfip_socket_t, APPCFG_VSFIP_SOCKET_NUM);
 		VSFPOOL_INIT(&app.vsfip.tcppcb_pool, struct vsfip_tcppcb_t, APPCFG_VSFIP_TCPPCB_NUM);
 		vsfip_init((struct vsfip_mem_op_t *)&app_vsfip_mem_op);
+		vsfip_telnetd_start(&app.vsfip.telnetd.telnetd);
 
 		// shell init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);

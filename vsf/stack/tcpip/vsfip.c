@@ -410,13 +410,13 @@ static uint16_t vsfip_proto_checksum(struct vsfip_socket_t *socket,
 										struct vsfip_buffer_t *buf)
 {
 	uint32_t checksum = vsfip_checksum(buf->buf.buffer, buf->buf.size);
-	struct vsfip_sockaddr_t *local_addr = &socket->local_sockaddr;
-	struct vsfip_sockaddr_t *remote_addr = &socket->remote_sockaddr;
+	struct vsfip_ipaddr_t *local_addr = &buf->netif->ipaddr;
+	struct vsfip_ipaddr_t *remote_addr = &socket->remote_sockaddr.sin_addr;
 
-	checksum += GET_BE_U16(&local_addr->sin_addr.addr.s_addr_buf[0]);
-	checksum += GET_BE_U16(&local_addr->sin_addr.addr.s_addr_buf[2]);
-	checksum += GET_BE_U16(&remote_addr->sin_addr.addr.s_addr_buf[0]);
-	checksum += GET_BE_U16(&remote_addr->sin_addr.addr.s_addr_buf[2]);
+	checksum += GET_BE_U16(&local_addr->addr.s_addr_buf[0]);
+	checksum += GET_BE_U16(&local_addr->addr.s_addr_buf[2]);
+	checksum += GET_BE_U16(&remote_addr->addr.s_addr_buf[0]);
+	checksum += GET_BE_U16(&remote_addr->addr.s_addr_buf[2]);
 	checksum += socket->protocol;
 	checksum += buf->buf.size;
 	checksum = (checksum & 0xFFFF) + (checksum >> 16);
@@ -594,6 +594,7 @@ release_buf:
 static vsf_err_t vsfip_add_ip4head(struct vsfip_socket_t *socket)
 {
 	struct vsfip_ippcb_t *pcb = &socket->pcb.ippcb;
+	struct vsfip_buffer_t *buffer;
 	struct vsfip_ip4head_t *ip4head;
 	uint16_t offset;
 	uint16_t checksum;
@@ -604,9 +605,10 @@ static vsf_err_t vsfip_add_ip4head(struct vsfip_socket_t *socket)
 		return VSFERR_FAIL;
 	}
 
-	pcb->buf->buf.buffer -= sizeof(struct vsfip_ip4head_t);
-	pcb->buf->buf.size += sizeof(struct vsfip_ip4head_t);
-	pcb->buf->iphead.ip4head = (struct vsfip_ip4head_t *)pcb->buf->buf.buffer;
+	buffer = pcb->buf;
+	buffer->buf.buffer -= sizeof(struct vsfip_ip4head_t);
+	buffer->buf.size += sizeof(struct vsfip_ip4head_t);
+	buffer->iphead.ip4head = (struct vsfip_ip4head_t *)buffer->buf.buffer;
 	ip4head = pcb->buf->iphead.ip4head;
 	ip4head->ver_hl = 0x45;		// IPv4 and 5 dwrod header len
 	ip4head->tos = 0;
@@ -618,7 +620,7 @@ static vsf_err_t vsfip_add_ip4head(struct vsfip_socket_t *socket)
 	offset += pcb->xfed_len;
 	ip4head->offset = SYS_TO_BE_U16(offset);
 	ip4head->checksum = SYS_TO_BE_U16(0);
-	ip4head->ipsrc = socket->local_sockaddr.sin_addr.addr.s_addr;
+	ip4head->ipsrc = buffer->netif->ipaddr.addr.s_addr;
 	ip4head->ipdest = socket->remote_sockaddr.sin_addr.addr.s_addr;
 	checksum = ~vsfip_checksum((uint8_t *)ip4head, sizeof(*ip4head));
 	ip4head->checksum = SYS_TO_BE_U16(checksum);
@@ -716,7 +718,6 @@ static struct vsfip_socket_t* vsfip_childsocket(
 		new_socket->can_rx = father->can_rx;
 		new_socket->tx_timeout_ms = father->tx_timeout_ms;
 		new_socket->rx_timeout_ms = father->rx_timeout_ms;
-		new_socket->netif = vsfip_ip_route(&sockaddr->sin_addr);
 		memcpy(&new_socket->remote_sockaddr, sockaddr,
 					sizeof(struct vsfip_sockaddr_t));
 		memcpy(&new_socket->local_sockaddr, &father->local_sockaddr,
@@ -843,10 +844,6 @@ vsf_err_t vsfip_listen(struct vsfip_socket_t *socket, uint8_t backlog)
 {
 	socket->can_rx = true;
 
-	//set listen netif
-	socket->netif = vsfip_ip_route(&socket->local_sockaddr.sin_addr);
-	socket->local_sockaddr.sin_addr = socket->netif->ipaddr;
-
 	if (socket->protocol == IPPROTO_TCP)
 	{
 		struct vsfip_tcppcb_t *tcppcb = socket->pcb.protopcb;
@@ -874,13 +871,18 @@ static void vsfip_proto_input(struct vsfip_socket_t *list,
 {
 	struct vsfip_ip4head_t *iphead = buf->iphead.ip4head;
 	struct vsfip_socket_t *socket = list, *child;
-	struct vsfip_sockaddr_t *remote_addr;
+	struct vsfip_sockaddr_t *remote_addr, *local_addr;
 	uint32_t remote_ipaddr = iphead->ipsrc;
 
 	// find the socket
 	while (socket != NULL)
 	{
-		if (socket->local_sockaddr.sin_port == port->dst)
+		local_addr = &socket->local_sockaddr;
+		// if port match and
+		// 		local addr is ADDR_ANY or local addr match ipdest in iphead
+		if ((local_addr->sin_port == port->dst) &&
+			(!local_addr->sin_addr.addr.s_addr ||
+				(local_addr->sin_addr.addr.s_addr == iphead->ipdest)))
 		{
 			if (socket->listener.backlog == 0)
 			{
@@ -994,14 +996,12 @@ vsf_err_t vsfip_udp_async_send(struct vsfip_socket_t *socket,
 	}
 	socket->remote_sockaddr = *sockaddr;
 
-	socket->netif = vsfip_ip_route(&sockaddr->sin_addr);
-	if (NULL == socket->netif)
+	buf->netif = vsfip_ip_route(&sockaddr->sin_addr);
+	if (NULL == buf->netif)
 	{
 		err = VSFERR_FAIL;
 		goto cleanup;
 	}
-	socket->local_sockaddr.sin_addr = socket->netif->ipaddr;
-	buf->netif = socket->netif;
 
 	// allocate local port if not set
 	if ((0 == socket->local_sockaddr.sin_port) &&
@@ -1269,7 +1269,11 @@ static vsf_err_t vsfip_tcp_sendflags(struct vsfip_socket_t *socket,
 	{
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
-	buffer->netif = socket->netif;
+	buffer->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
+	if (NULL == buffer->netif)
+	{
+		return VSFERR_FAIL;
+	}
 	return vsfip_tcp_send_do(socket, buffer, flags);
 }
 
@@ -1718,13 +1722,6 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 	socket->remote_sockaddr = *sockaddr;
 
-	socket->netif = vsfip_ip_route(&sockaddr->sin_addr);
-	if (NULL == socket->netif)
-	{
-		return VSFERR_FAIL;
-	}
-	socket->local_sockaddr.sin_addr = socket->netif->ipaddr;
-
 	// allocate local port if not set
 	if ((0 == socket->local_sockaddr.sin_port) &&
 		vsfip_bind(socket, vsfip_get_port(IPPROTO_TCP)))
@@ -1849,7 +1846,11 @@ vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 		return VSFERR_NOT_READY;
 	}
 
-	buf->netif = socket->netif;
+	buf->netif = vsfip_ip_route(&sockaddr->sin_addr);
+	if (NULL == buf->netif)
+	{
+		return VSFERR_FAIL;
+	}
 	buf->retry = VSFIP_TCP_RETRY;
 	buf->ttl = socket->tx_timeout_ms;
 	vsfq_append(&socket->outq, &buf->proto_node);

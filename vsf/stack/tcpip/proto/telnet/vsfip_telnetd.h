@@ -45,6 +45,7 @@ struct vsfip_telnetd_session_t
 struct vsfip_telnetd_t
 {
 	uint16_t port;
+	uint32_t session_num;
 
 	// private
 	struct vsfsm_pt_t pt;
@@ -55,7 +56,6 @@ struct vsfip_telnetd_t
 	struct vsfip_socket_t *cur_session;
 	struct vsfip_sockaddr_t sockaddr;
 
-	uint32_t session_num;
 	struct vsfip_telnetd_session_t sessions[0];
 };
 
