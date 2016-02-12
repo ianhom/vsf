@@ -371,27 +371,30 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				break;
 			}
 			
-			if ('\r' == shell->ch)
+			if (shell->echo)
 			{
-				vsfshell_printf(output_pt, VSFSHELL_LINEEND);
-			}
-			else if ('\b' == shell->ch)
-			{
-				if (shell->tbuffer.position)
+				if ('\r' == shell->ch)
 				{
-					vsfshell_printf(output_pt, "\b \b");
-					shell->tbuffer.position--;
+					vsfshell_printf(output_pt, VSFSHELL_LINEEND);
 				}
-				continue;
-			}
-			else if (//!((shell->ch >= ' ') && (shell->ch <= '~')) ||
-				(shell->tbuffer.position >= shell->tbuffer.buffer.size - 1))
-			{
-				continue;
-			}
-			else
-			{
-				vsfshell_printf(output_pt, "%c", shell->ch);
+				else if ('\b' == shell->ch)
+				{
+					if (shell->tbuffer.position)
+					{
+						vsfshell_printf(output_pt, "\b \b");
+						shell->tbuffer.position--;
+					}
+					continue;
+				}
+				else if (//!((shell->ch >= ' ') && (shell->ch <= '~')) ||
+					(shell->tbuffer.position >= shell->tbuffer.buffer.size - 1))
+				{
+					continue;
+				}
+				else
+				{
+					vsfshell_printf(output_pt, "%c", shell->ch);
+				}
 			}
 			
 			if ('\r' == shell->ch)

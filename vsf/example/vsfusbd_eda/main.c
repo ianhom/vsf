@@ -240,8 +240,10 @@ struct vsfapp_t
 	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
 
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
+//	.shell.echo								= true,
 //	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 //	.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
+	.shell.echo								= false,
 	.shell.stream_tx						= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_tx,
 	.shell.stream_rx						= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_rx,
 #endif

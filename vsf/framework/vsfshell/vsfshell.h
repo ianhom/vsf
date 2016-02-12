@@ -36,6 +36,7 @@ struct vsfshell_handler_t
 
 struct vsfshell_t
 {
+	bool echo;
 	struct vsf_stream_t *stream_tx;
 	struct vsf_stream_t *stream_rx;
 	
