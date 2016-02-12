@@ -36,6 +36,7 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
+	session->caller_txpt.sm = pt->sm;
 	while (!session->disconnect)
 	{
 		len = stream_get_data_size(session->stream_tx);
@@ -100,6 +101,7 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
+	session->caller_rxpt.sm = pt->sm;
 	while (!session->disconnect)
 	{
 		session->caller_rxpt.state = 0;
@@ -139,6 +141,7 @@ static vsf_err_t vsfip_telnetd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
+	telnetd->caller_pt.sm = pt->sm;
 	telnetd->so = vsfip_socket(AF_INET, IPPROTO_TCP);
 	if (NULL == telnetd->so)
 	{
@@ -176,17 +179,17 @@ static vsf_err_t vsfip_telnetd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 				session->stream_rx->callback_tx.param = session;
 				session->stream_rx->callback_tx.on_inout =
-											vsfip_telnetd_session_stream_on_in;
+											vsfip_telnetd_session_stream_on_out;
 				session->stream_tx->callback_rx.param = session;
 				session->stream_tx->callback_rx.on_inout =
-											vsfip_telnetd_session_stream_on_out;
+											vsfip_telnetd_session_stream_on_in;
 				stream_connect_tx(session->stream_rx);
 				stream_connect_rx(session->stream_tx);
 
 				vsfsm_sem_init(&session->stream_tx_sem, 0,
 											VSFIP_TELNETD_EVT_STREAM_IN);
 				vsfsm_sem_init(&session->stream_rx_sem, 0,
-							   				VSFIP_TELNETD_EVT_STREAM_OUT);
+												VSFIP_TELNETD_EVT_STREAM_OUT);
 
 				session->txpt.thread = vsfip_telnetd_session_tx_thread;
 				session->txpt.user_data = session;
@@ -196,6 +199,15 @@ static vsf_err_t vsfip_telnetd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				vsfsm_pt_init(&session->rxsm, &session->rxpt);
 				break;
 			}
+		}
+		if (i == telnetd->session_num)
+		{
+			telnetd->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsfip_tcp_close(&telnetd->caller_pt, evt,
+										telnetd->cur_session);
+			if (err > 0) return err;
+			vsfip_close(telnetd->cur_session);
 		}
 	}
 
@@ -209,9 +221,6 @@ fail_socket_connect:
 
 vsf_err_t vsfip_telnetd_start(struct vsfip_telnetd_t *telnetd)
 {
-	memset(telnetd->sessions, 0,
-			sizeof(telnetd->sessions[0]) * telnetd->session_num);
-
 	telnetd->pt.thread = vsfip_telnetd_thread;
 	telnetd->pt.user_data = telnetd;
 	return vsfsm_pt_init(&telnetd->sm, &telnetd->pt);

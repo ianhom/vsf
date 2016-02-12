@@ -230,6 +230,8 @@ struct vsfapp_t
 
 	.vsfip.telnetd.telnetd.port						= 23,
 	.vsfip.telnetd.telnetd.session_num				= dimof(app.vsfip.telnetd.sessions),
+	.vsfip.telnetd.sessions[0].stream_tx			= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_tx,
+	.vsfip.telnetd.sessions[0].stream_rx			= (struct vsf_stream_t *)&app.vsfip.telnetd.stream_rx,
 	.vsfip.telnetd.stream_tx.stream.op				= &fifostream_op,
 	.vsfip.telnetd.stream_tx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.txbuff,
 	.vsfip.telnetd.stream_tx.mem.buffer.size		= sizeof(app.vsfip.telnetd.txbuff),
@@ -409,12 +411,17 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		VSFPOOL_INIT(&app.vsfip.socket_pool, struct vsfip_socket_t, APPCFG_VSFIP_SOCKET_NUM);
 		VSFPOOL_INIT(&app.vsfip.tcppcb_pool, struct vsfip_tcppcb_t, APPCFG_VSFIP_TCPPCB_NUM);
 		vsfip_init((struct vsfip_mem_op_t *)&app_vsfip_mem_op);
+
+		// telnet stream innit
+		STREAM_INIT(&app.vsfip.telnetd.stream_rx);
+		STREAM_INIT(&app.vsfip.telnetd.stream_tx);
 		vsfip_telnetd_start(&app.vsfip.telnetd.telnetd);
 
-		// shell init
+		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);
 		vsfusbd_device_init(&app.usbd.device);
+
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 		vsfshell_init(&app.shell);
 #endif
