@@ -46,10 +46,12 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			continue;
 		}
 
+	retry_alloc_buf:
 		session->outbuf = VSFIP_TCPBUF_GET(len);
 		if (NULL == session->outbuf)
 		{
-			break;
+			vsfsm_pt_delay(pt, 5);
+			goto retry_alloc_buf;
 		}
 
 		session->outbuf->app.size =
@@ -66,22 +68,21 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 						&session->so->remote_sockaddr, session->outbuf, false);
 		if (err > 0) return err; else if (err < 0)
 		{
+			session->disconnect = true;
+
+			// close tcp socket
+			session->caller_txpt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsfip_tcp_close(&session->caller_txpt, evt, session->so);
+			if (err > 0) return err;
+
+			// close socket no matter if tcp closed OK or not
+			vsfip_close(session->so);
+			session->connected = false;
 			break;
 		}
 	}
 
-	session->disconnect = true;
-
-	// close tcp socket
-	session->caller_txpt.state = 0;
-	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_close(&session->caller_txpt, evt, session->so);
-	if (err > 0) return err;
-
-	// close socket no matter if tcp closed OK or not
-	vsfip_close(session->so);
-	session->connected = false;
-	
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 }
@@ -110,6 +111,17 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 								&session->so->remote_sockaddr, &session->inbuf);
 		if (err > 0) return err; else if (err < 0)
 		{
+			session->disconnect = true;
+
+			// close tcp socket
+			session->caller_rxpt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsfip_tcp_close(&session->caller_rxpt, evt, session->so);
+			if (err > 0) return err;
+
+			// close socket no matter if tcp closed OK or not
+			vsfip_close(session->so);
+			session->connected = false;
 			break;
 		}
 
