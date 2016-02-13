@@ -418,7 +418,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				shell->prompted = true;
 				break;
 			}
-			else
+			else if (shell->ch != '\n')
 			{
 				cmd[shell->tbuffer.position++] = shell->ch;
 			}
