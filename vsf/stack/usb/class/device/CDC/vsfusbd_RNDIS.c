@@ -66,25 +66,34 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 {
 	struct vsfusbd_RNDIS_param_t *rndis_param =
 						(struct vsfusbd_RNDIS_param_t *)param;
+	struct vsfip_buffer_t *rxbuf = rndis_param->rx_buffer;
 
-	if (rndis_param->rx_buffer != NULL)
+	if (rxbuf != NULL)
 	{
-		if (rndis_param->netif_inited)
+		rxbuf->buf.size = STREAM_GET_DATA_SIZE(&rndis_param->rx_bufstream);
+		if (rxbuf->buf.size > 0)
 		{
-			struct rndis_data_packet_t *packet = (struct rndis_data_packet_t *)\
-											rndis_param->rx_buffer->buf.buffer;
+			if (rndis_param->netif_inited)
+			{
+				struct rndis_data_packet_t *packet =
+							(struct rndis_data_packet_t *)rxbuf->buf.buffer;
 
-			rndis_param->rx_buffer->buf.buffer +=
-						sizeof(struct rndis_msghead_t) + packet->DataOffset;
-			rndis_param->rx_buffer->buf.size = packet->DataLength;
-			rndis_param->rx_buffer->netif = &rndis_param->netif;
-			vsfip_eth_input(rndis_param->rx_buffer);
+				rxbuf->buf.buffer +=
+							sizeof(struct rndis_msghead_t) + packet->DataOffset;
+				rxbuf->buf.size = packet->DataLength;
+				rxbuf->netif = &rndis_param->netif;
+				vsfip_eth_input(rxbuf);
+			}
+			else
+			{
+				vsfip_buffer_release(rxbuf);
+			}
+			rndis_param->rx_buffer = NULL;
 		}
 		else
 		{
-			vsfip_buffer_release(rndis_param->rx_buffer);
+			return;
 		}
-		rndis_param->rx_buffer = NULL;
 	}
 
 	rndis_param->rx_buffer = vsfip_buffer_get(VSFIP_BUFFER_SIZE);
