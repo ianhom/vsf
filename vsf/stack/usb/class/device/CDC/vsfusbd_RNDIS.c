@@ -78,11 +78,18 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 				struct rndis_data_packet_t *packet =
 							(struct rndis_data_packet_t *)rxbuf->buf.buffer;
 
-				rxbuf->buf.buffer +=
+				if (rxbuf->buf.size == (packet->DataLength + sizeof(*packet)))
+				{
+					rxbuf->buf.buffer +=
 							sizeof(struct rndis_msghead_t) + packet->DataOffset;
-				rxbuf->buf.size = packet->DataLength;
-				rxbuf->netif = &rndis_param->netif;
-				vsfip_eth_input(rxbuf);
+					rxbuf->buf.size = packet->DataLength;
+					rxbuf->netif = &rndis_param->netif;
+					vsfip_eth_input(rxbuf);
+				}
+				else
+				{
+					vsfip_buffer_release(rxbuf);
+				}
 			}
 			else
 			{
