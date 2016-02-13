@@ -277,14 +277,14 @@ static void buffer_stream_init(struct vsf_stream_t *stream)
 static uint32_t buffer_stream_get_data_length(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
-	return bufstream->mem.read ?
-					bufstream->mem.buffer.size - bufstream->mem.pos : 0;
+	return !bufstream->mem.read ? bufstream->mem.pos :
+						bufstream->mem.buffer.size - bufstream->mem.pos;
 }
 
 static uint32_t buffer_stream_get_avail_length(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
-	return bufstream->mem.read ? 0 :
+	return bufstream->mem.read ? bufstream->mem.pos :
 						bufstream->mem.buffer.size - bufstream->mem.pos;
 }
 
