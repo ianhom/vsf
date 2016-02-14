@@ -29,7 +29,7 @@ ROOTFUNC void PendSV_Handler(void)
 	}
 }
 
-vsf_err_t nuc505_interface_pendsv(void (*on_pendsv)(void *), void *param)
+vsf_err_t nuc505_interface_pendsv_config(void (*on_pendsv)(void *), void *param)
 {
 	nuc505_pendsv.on_pendsv = on_pendsv;
 	nuc505_pendsv.param = param;

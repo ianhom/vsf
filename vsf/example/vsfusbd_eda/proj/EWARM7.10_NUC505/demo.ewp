@@ -1911,14 +1911,38 @@
   <group>
     <name>vsf</name>
     <group>
-      <name>dal</name>
-      <excluded>
-        <configuration>Release</configuration>
-      </excluded>
+      <name>component</name>
+      <group>
+        <name>buffer</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\buffer\buffer.c</name>
+        </file>
+      </group>
+      <group>
+        <name>file</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
+        </file>
+      </group>
+      <group>
+        <name>list</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
+        </file>
+      </group>
+      <group>
+        <name>mal</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfmal.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfscsi.c</name>
+        </file>
+      </group>
       <group>
         <name>stream</name>
         <file>
-          <name>$PROJ_DIR$\..\..\..\..\dal\stream\stream.c</name>
+          <name>$PROJ_DIR$\..\..\..\..\component\stream\stream.c</name>
         </file>
       </group>
     </group>
@@ -2114,6 +2138,57 @@
     <group>
       <name>stack</name>
       <group>
+        <name>tcpip</name>
+        <group>
+          <name>netif</name>
+          <group>
+            <name>eth</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\eth\vsfip_eth.c</name>
+            </file>
+          </group>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\netif\vsfip_netif.c</name>
+          </file>
+        </group>
+        <group>
+          <name>proto</name>
+          <group>
+            <name>dhcp</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcp_common.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpc.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dhcp\vsfip_dhcpd.c</name>
+            </file>
+          </group>
+          <group>
+            <name>dns</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\dns\vsfip_dnsc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>http</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\http\vsfip_httpc.c</name>
+            </file>
+          </group>
+          <group>
+            <name>telnet</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\proto\telnet\vsfip_telnetd.c</name>
+            </file>
+          </group>
+        </group>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\stack\tcpip\vsfip.c</name>
+        </file>
+      </group>
+      <group>
         <name>usb</name>
         <group>
           <name>class</name>
@@ -2127,52 +2202,22 @@
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_CDCACM.c</name>
               </file>
-            </group>
-            <group>
-              <name>HID</name>
               <file>
-                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\HID\vsfusbd_HID.c</name>
-              </file>
-            </group>
-          </group>
-          <group>
-            <name>host</name>
-            <group>
-              <name>HID</name>
-              <file>
-                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HID\vsfusbh_HID.c</name>
-                <excluded>
-                  <configuration>Debug</configuration>
-                </excluded>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\CDC\vsfusbd_RNDIS.c</name>
               </file>
             </group>
             <group>
-              <name>HUB</name>
+              <name>MSC</name>
               <file>
-                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HUB\vsfusbh_HUB.c</name>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\device\MSC\vsfusbd_MSC_BOT.c</name>
               </file>
             </group>
           </group>
         </group>
         <group>
           <name>core</name>
-          <group>
-            <name>hcd</name>
-            <group>
-              <name>ohci</name>
-              <excluded>
-                <configuration>Debug</configuration>
-              </excluded>
-              <file>
-                <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\hcd\ohci\vsfohci.c</name>
-              </file>
-            </group>
-          </group>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbd.c</name>
-          </file>
-          <file>
-            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbh.c</name>
           </file>
         </group>
       </group>
@@ -2186,25 +2231,12 @@
         </file>
       </group>
       <group>
-        <name>buffer</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\buffer\buffer.c</name>
-        </file>
-      </group>
-      <group>
         <name>fakefat32</name>
         <excluded>
-          <configuration>Debug</configuration>
           <configuration>Release</configuration>
         </excluded>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\fakefat32\fakefat32.c</name>
-        </file>
-      </group>
-      <group>
-        <name>list</name>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\list\list.c</name>
         </file>
       </group>
       <group>
@@ -2232,6 +2264,9 @@
   <group>
     <name>vsf_cfg</name>
     <file>
+      <name>$PROJ_DIR$\vsf_cfg.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\vsf_cfg\vsfip_cfg.h</name>
     </file>
     <file>
@@ -2240,15 +2275,21 @@
     <file>
       <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
     </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbh_cfg.h</name>
-    </file>
   </group>
   <file>
     <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\..\..\fakefat32_fs.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\httpd_fs.h</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\..\..\main.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\usbd_desc.h</name>
   </file>
 </project>
 
