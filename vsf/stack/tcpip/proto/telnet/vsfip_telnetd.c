@@ -43,6 +43,8 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (!len && vsfsm_sem_pend(&session->stream_tx_sem, pt->sm))
 		{
 			vsfsm_pt_wfe(pt, VSFIP_TELNETD_EVT_STREAM_IN);
+			if (session->disconnect)
+				break;
 			continue;
 		}
 
@@ -51,6 +53,8 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (NULL == session->outbuf)
 		{
 			vsfsm_pt_delay(pt, 5);
+			if (session->disconnect)
+				break;
 			goto retry_alloc_buf;
 		}
 
@@ -69,19 +73,18 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (err > 0) return err; else if (err < 0)
 		{
 			session->disconnect = true;
-
-			// close tcp socket
-			session->caller_txpt.state = 0;
-			vsfsm_pt_entry(pt);
-			err = vsfip_tcp_close(&session->caller_txpt, evt, session->so);
-			if (err > 0) return err;
-
-			// close socket no matter if tcp closed OK or not
-			vsfip_close(session->so);
-			session->connected = false;
-			break;
 		}
 	}
+
+	// close tcp socket
+	session->caller_txpt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_tcp_close(&session->caller_txpt, evt, session->so);
+	if (err > 0) return err;
+
+	// close socket no matter if tcp closed OK or not
+	vsfip_close(session->so);
+	session->connected = false;
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -112,16 +115,8 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (err > 0) return err; else if (err < 0)
 		{
 			session->disconnect = true;
-
-			// close tcp socket
-			session->caller_rxpt.state = 0;
-			vsfsm_pt_entry(pt);
-			err = vsfip_tcp_close(&session->caller_rxpt, evt, session->so);
-			if (err > 0) return err;
-
-			// close socket no matter if tcp closed OK or not
-			vsfip_close(session->so);
-			session->connected = false;
+			// fake on_in event, just to wakeup tx_thread to exit
+			vsfip_telnetd_session_stream_on_in(session);
 			break;
 		}
 
@@ -138,8 +133,6 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		vsfip_buffer_release(session->inbuf);
 	}
-
-	session->disconnect = true;
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
