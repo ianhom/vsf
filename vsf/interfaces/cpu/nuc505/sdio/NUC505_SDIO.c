@@ -2,7 +2,7 @@
 #include "app_cfg.h"
 #include "interfaces.h"
 
-//#if IFS_SDIO_EN
+#if IFS_SDIO_EN
 
 #include "NUC505Series.h"
 #include "core.h"
@@ -313,5 +313,5 @@ ROOTFUNC void SDH_IRQHandler(void)
 	SD->TOUT = 0;
 }
 
-//#endif
+#endif
 
