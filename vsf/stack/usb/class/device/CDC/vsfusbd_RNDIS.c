@@ -73,26 +73,26 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 		rxbuf->buf.size = STREAM_GET_DATA_SIZE(&rndis_param->rx_bufstream);
 		if (rxbuf->buf.size > 0)
 		{
-			if (rndis_param->netif_inited)
-			{
-				struct rndis_data_packet_t *packet =
+			struct rndis_data_packet_t *packet =
 							(struct rndis_data_packet_t *)rxbuf->buf.buffer;
 
-				if (rxbuf->buf.size == (packet->DataLength + sizeof(*packet)))
-				{
-					rxbuf->buf.buffer +=
+			if (rndis_param->netif_inited &&
+				(rxbuf->buf.size >= packet->head.MessageLength) &&
+				(packet->head.MessageLength ==
+					(packet->DataLength + sizeof(*packet))))
+			{
+				rxbuf->buf.buffer +=
 							sizeof(struct rndis_msghead_t) + packet->DataOffset;
-					rxbuf->buf.size = packet->DataLength;
-					rxbuf->netif = &rndis_param->netif;
-					vsfip_eth_input(rxbuf);
-				}
-				else
-				{
-					vsfip_buffer_release(rxbuf);
-				}
+				rxbuf->buf.size = packet->DataLength;
+				rxbuf->netif = &rndis_param->netif;
+				vsfip_eth_input(rxbuf);
 			}
 			else
 			{
+				// code here is just for BUG fix
+				// 		as tests, under such conditions, will reach nop here
+				if (rndis_param->netif_inited)
+					asm("nop");
 				vsfip_buffer_release(rxbuf);
 			}
 			rndis_param->rx_buffer = NULL;
