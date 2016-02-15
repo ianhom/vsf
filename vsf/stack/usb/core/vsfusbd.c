@@ -785,7 +785,11 @@ vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	}
 	transact->data_size -= pkg_size;
 
-	if (transact->data_size)
+	if ((pkg_size < ep_size) || !transact->data_size)
+	{
+		transact->idle = true;
+	}
+	else
 	{
 		free_size = stream_get_free_size(transact->stream) - pkg_size;
 		ep_size = device->drv->ep.get_OUT_epsize(ep);
@@ -795,10 +799,6 @@ vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 		{
 			device->drv->ep.enable_OUT(ep);
 		}
-	}
-	else
-	{
-		transact->idle = true;
 	}
 
 	if (pkg_size > 0)
