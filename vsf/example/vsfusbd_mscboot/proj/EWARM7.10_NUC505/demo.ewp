@@ -2234,19 +2234,7 @@
     </file>
   </group>
   <file>
-    <name>$PROJ_DIR$\..\..\app_hw_cfg.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\..\..\fakefat32_fs.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\..\..\httpd_fs.h</name>
-  </file>
-  <file>
     <name>$PROJ_DIR$\..\..\main.c</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\..\..\usbd_desc.h</name>
   </file>
 </project>
 

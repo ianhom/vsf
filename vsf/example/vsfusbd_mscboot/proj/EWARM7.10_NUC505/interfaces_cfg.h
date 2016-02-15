@@ -19,7 +19,7 @@
 #	define CORE_CLKEN						(NUC505_CLK_HXT | NUC505_CLK_LIRC | NUC505_CLK_PLL)
 #endif
 #ifndef CORE_HCLKSRC
-#	define CORE_HCLKSRC						NUC505_CLK_PLL
+#	define CORE_HCLKSRC						NUC505_HCLKSRC_PLLFOUT
 #endif
 #ifndef OSC_FREQ_HZ
 #	define OSC_FREQ_HZ						(12 * 1000 * 1000)

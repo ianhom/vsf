@@ -104,6 +104,25 @@ static void vsfusbd_stream_on_out(void *p)
 	vsfsm_post_evt_pending(&device->sm, VSFUSBD_STREAM_OUTEP(transact->ep));
 }
 
+static void vsfusbd_transact_out(struct vsfusbd_device_t *device,
+									struct vsfusbd_transact_t *transact)
+{
+	struct interface_usbd_t *drv = device->drv; 
+
+	if (transact->idle)
+	{
+		uint16_t ep_size = drv->ep.get_OUT_epsize(transact->ep);
+		uint16_t pkg_size = min(ep_size, transact->data_size);
+		uint32_t free_size = stream_get_free_size(transact->stream);
+
+		transact->idle = free_size < pkg_size;
+		if (!transact->idle)
+		{
+			drv->ep.enable_OUT(transact->ep);
+		}
+	}
+}
+
 vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 								struct vsfusbd_transact_t *transact)
 {
@@ -120,7 +139,7 @@ vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 		stream->callback_tx.on_disconnect = vsfusbd_stream_on_disconnect_OUT;
 		stream->callback_tx.on_inout = vsfusbd_stream_on_out;
 		stream_connect_tx(stream);
-		vsfusbd_stream_on_out(transact);
+		vsfusbd_transact_out(device, transact);
 	}
 	else
 	{
@@ -846,22 +865,14 @@ static vsf_err_t vsfusbd_on_IN(void *p, uint8_t ep)
 {
 	struct vsfusbd_device_t *device = (struct vsfusbd_device_t *)p;
 	struct vsfsm_t *sm = &device->sm;
-	if (device->IN_handler[ep] != NULL)
-	{
-		return vsfsm_post_evt_pending(sm, VSFUSBD_INTEVT_INEP(ep));
-	}
-	return VSFERR_NOT_SUPPORT;
+	return vsfsm_post_evt_pending(sm, VSFUSBD_INTEVT_INEP(ep));
 }
 
 static vsf_err_t vsfusbd_on_OUT(void *p, uint8_t ep)
 {
 	struct vsfusbd_device_t *device = (struct vsfusbd_device_t *)p;
 	struct vsfsm_t *sm = &device->sm;
-	if (device->OUT_handler[ep] != NULL)
-	{
-		return vsfsm_post_evt_pending(sm, VSFUSBD_INTEVT_OUTEP(ep));
-	}
-	return VSFERR_NOT_SUPPORT;
+	return vsfsm_post_evt_pending(sm, VSFUSBD_INTEVT_OUTEP(ep));
 }
 
 vsf_err_t vsfusbd_on_UNDERFLOW(void *p, uint8_t ep)
@@ -1218,18 +1229,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				vsfusbd_ep_cancel_recv(device, transact);
 				break;
 			case VSFUSBD_STREAM_OUT:
-				if (transact->idle)
-				{
-					uint16_t ep_size = drv->ep.get_OUT_epsize(transact->ep);
-					uint16_t pkg_size = min(ep_size, transact->data_size);
-					uint32_t free_size = stream_get_free_size(transact->stream);
-
-					transact->idle = free_size < pkg_size;
-					if (!transact->idle)
-					{
-						drv->ep.enable_OUT(transact->ep);
-					}
-				}
+				vsfusbd_transact_out(device, transact);
 				break;
 			case VSFUSBD_INTEVT_OUT:
 				device->OUT_handler[ep](device, ep);

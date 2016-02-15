@@ -19,7 +19,7 @@
 #	define CORE_CLKEN						(NUC505_CLK_HXT | NUC505_CLK_LIRC | NUC505_CLK_PLL)
 #endif
 #ifndef CORE_HCLKSRC
-#	define CORE_HCLKSRC						NUC505_CLK_PLL
+#	define CORE_HCLKSRC						NUC505_HCLKSRC_PLLFOUT
 #endif
 #ifndef OSC_FREQ_HZ
 #	define OSC_FREQ_HZ						(12 * 1000 * 1000)
@@ -43,7 +43,7 @@
 #	define HCLK_FREQ_HZ						CPU_FREQ_HZ
 #endif
 #ifndef PCLK_FREQ_HZ
-#	define PCLK_FREQ_HZ						(96 * 1000 * 1000)
+#	define PCLK_FREQ_HZ						(12 * 1000 * 1000)
 #endif
 #ifndef CORE_VECTOR_TABLE
 #	define CORE_VECTOR_TABLE				(0x00000000)
@@ -96,18 +96,18 @@
 #	define USART02_TX_ENABLE				0
 #	define USART02_RX_ENABLE				0
 
-#define IFS_CONST_EN						1
+#define IFS_CONST_EN						0
 #define IFS_FLASH_EN						0
 #define IFS_USART_EN						0
-#define IFS_SPI_EN							1
+#define IFS_SPI_EN							0
 #define IFS_ADC_EN							0
 #define IFS_GPIO_EN							1
 #define IFS_I2C_EN							0
 #define IFS_PWM_EN							0
 #define IFS_MICROWIRE_EN					0
 #define IFS_TIMER_EN						0
-#define IFS_EINT_EN							1
+#define IFS_EINT_EN							0
 #define IFS_EBI_EN							0
-#define IFS_SDIO_EN							1
+#define IFS_SDIO_EN							0
 #define IFS_USBD_EN							1
 #define IFS_OHCI_EN							0
