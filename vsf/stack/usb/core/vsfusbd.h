@@ -113,8 +113,8 @@ struct vsfusbd_config_t
 
 	// private
 	uint8_t configuration_value;
-	int8_t ep_OUT_iface_map[VSFUSBD_CFG_MAX_OUT_EP + 1];
-	int8_t ep_IN_iface_map[VSFUSBD_CFG_MAX_IN_EP + 1];
+	int8_t ep_OUT_iface_map[16];
+	int8_t ep_IN_iface_map[16];
 };
 
 struct vsfusbd_device_t
@@ -163,13 +163,11 @@ struct vsfusbd_device_t
 	uint8_t feature;
 	struct vsfusbd_ctrl_handler_t ctrl_handler;
 
-	struct vsfusbd_transact_t *IN_transact[VSFUSBD_CFG_MAX_IN_EP + 1];
-	struct vsfusbd_transact_t *OUT_transact[VSFUSBD_CFG_MAX_OUT_EP + 1];
+	struct vsfusbd_transact_t *IN_transact[16];
+	struct vsfusbd_transact_t *OUT_transact[16];
 
-	vsf_err_t (*IN_handler[VSFUSBD_CFG_MAX_IN_EP + 1])(
-										struct vsfusbd_device_t*, uint8_t);
-	vsf_err_t (*OUT_handler[VSFUSBD_CFG_MAX_OUT_EP + 1])(
-										struct vsfusbd_device_t*, uint8_t);
+	vsf_err_t (*IN_handler[16])(struct vsfusbd_device_t*, uint8_t);
+	vsf_err_t (*OUT_handler[16])(struct vsfusbd_device_t*, uint8_t);
 };
 
 vsf_err_t vsfusbd_device_get_descriptor(struct vsfusbd_device_t *device,
