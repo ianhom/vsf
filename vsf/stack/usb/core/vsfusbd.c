@@ -766,7 +766,8 @@ vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = device->OUT_transact[ep];
-	uint16_t pkg_size, ep_size, next_pkg_size;
+	uint16_t ep_size = device->drv->ep.get_OUT_epsize(ep);
+	uint16_t pkg_size, next_pkg_size;
 	uint32_t free_size;
 	uint8_t buff[64];
 
@@ -792,7 +793,6 @@ vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	else
 	{
 		free_size = stream_get_free_size(transact->stream) - pkg_size;
-		ep_size = device->drv->ep.get_OUT_epsize(ep);
 		next_pkg_size = min(transact->data_size, ep_size);
 		transact->idle = (free_size < next_pkg_size);
 		if (!transact->idle)
