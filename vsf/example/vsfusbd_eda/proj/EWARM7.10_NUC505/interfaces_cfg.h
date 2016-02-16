@@ -43,7 +43,7 @@
 #	define HCLK_FREQ_HZ						CPU_FREQ_HZ
 #endif
 #ifndef PCLK_FREQ_HZ
-#	define PCLK_FREQ_HZ						(12 * 1000 * 1000)
+#	define PCLK_FREQ_HZ						(96 * 1000 * 1000)
 #endif
 #ifndef CORE_VECTOR_TABLE
 #	define CORE_VECTOR_TABLE				(0x00000000)
