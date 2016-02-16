@@ -68,7 +68,7 @@ static uint16_t EP_Cfg_Ptr = 0x1000;
 static uint16_t max_ctl_ep_size = 64;
 
 // true if data direction in setup packet is device to host
-static bool nuc505_setup_status_IN;
+static bool nuc505_setup_status_IN, nuc505_status_out = false;
 
 #define NUC505_USBD_EPIN					0x10
 #define NUC505_USBD_EPOUT					0x00
@@ -761,7 +761,7 @@ uint16_t nuc505_usbd_ep_get_OUT_count(uint8_t idx)
 
 	if (0 == idx)
 	{
-		return USBD->CEPRXCNT;
+		return nuc505_status_out ? 0 : USBD->CEPRXCNT;
 	}
 	else if (index > 1)
 	{
@@ -875,6 +875,7 @@ void USB_Istr(void)
 		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
 
+			nuc505_status_out = false;
 			if (nuc505_usbd_callback.on_out != NULL)
 			{
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
@@ -893,6 +894,7 @@ void USB_Istr(void)
 			}
 			else
 			{
+				nuc505_status_out = true;
 				if (nuc505_usbd_callback.on_out != NULL)
 				{
 					nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
