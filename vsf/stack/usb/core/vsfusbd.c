@@ -1212,6 +1212,13 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			struct vsfusbd_transact_t *transact = (evt & VSFUSBD_EVT_DIR_MASK) ?
 							device->IN_transact[ep] : device->OUT_transact[ep];
 
+			// not error and transact not valid
+			if (!((evt & VSFUSBD_EVT_ERR_MASK) == VSFUSBD_INTEVT_ERR) &&
+				(NULL == transact))
+			{
+				break;
+			}
+
 			switch (evt & VSFUSBD_EVT_EVT_MASK)
 			{
 			case VSFUSBD_STREAM_CLOSE_IN:

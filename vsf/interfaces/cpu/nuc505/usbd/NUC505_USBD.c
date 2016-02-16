@@ -864,16 +864,6 @@ void USB_Istr(void)
 		IrqSt = USBD->CEPINTSTS;
 		IrqSt &= USBD->CEPINTEN;
 
-		if (IrqSt & USBD_CEPINTSTS_SETUPPKIF_Msk) {
-			USBD->CEPINTSTS = USBD_CEPINTSTS_SETUPPKIF_Msk;
-
-			if (nuc505_usbd_callback.on_setup != NULL)
-			{
-				nuc505_usbd_callback.on_setup(\
-						nuc505_usbd_callback.param);
-			}
-		}
-
 		if (IrqSt & USBD_CEPINTSTS_TXPKIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_TXPKIF_Msk;
 
@@ -907,6 +897,16 @@ void USB_Istr(void)
 				{
 					nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
 				}
+			}
+		}
+
+		if (IrqSt & USBD_CEPINTSTS_SETUPPKIF_Msk) {
+			USBD->CEPINTSTS = USBD_CEPINTSTS_SETUPPKIF_Msk;
+
+			if (nuc505_usbd_callback.on_setup != NULL)
+			{
+				nuc505_usbd_callback.on_setup(\
+						nuc505_usbd_callback.param);
 			}
 		}
 	}
