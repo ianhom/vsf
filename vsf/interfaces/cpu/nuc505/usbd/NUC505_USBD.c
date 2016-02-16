@@ -61,7 +61,7 @@
 #include "NUC505_USBD.h"
 #include "NUC505Series.h"
 
-#define NUC505_USBD_EP_NUM					(6 + 2)
+#define NUC505_USBD_EP_NUM					12
 const uint8_t nuc505_usbd_ep_num = NUC505_USBD_EP_NUM;
 struct interface_usbd_callback_t nuc505_usbd_callback;
 static uint16_t EP_Cfg_Ptr = 0x1000;
@@ -253,11 +253,10 @@ static void nuc505_usbd_set_eptype(uint8_t ep, uint32_t type)
 
 vsf_err_t nuc505_usbd_ep_set_type(uint8_t idx, enum interface_usbd_eptype_t type)
 {
-	int8_t index_in, index_out;
+	int8_t index_in = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index_out = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	uint32_t eptype;
 
-	index_in = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
-	index_out = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index_in < 0) && (index_out < 0))
 	{
 		return VSFERR_FAIL;
@@ -313,10 +312,7 @@ vsf_err_t nuc505_usbd_ep_switch_IN_buffer(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_set_IN_epsize(uint8_t idx, uint16_t epsize)
 {
-	int8_t index, index_out;
-
-	index_out = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
-	index = nuc505_usbd_get_free_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_get_free_ep(idx | NUC505_USBD_EPIN);
 	if (index < 0)
 	{
 		return VSFERR_FAIL;
@@ -337,6 +333,8 @@ vsf_err_t nuc505_usbd_ep_set_IN_epsize(uint8_t idx, uint16_t epsize)
 	}
 	else if (index > 1)
 	{
+		int8_t index_out = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+
 		index -= 2;
 		if (index_out < 0)
 		{
@@ -372,9 +370,7 @@ vsf_err_t nuc505_usbd_ep_set_IN_epsize(uint8_t idx, uint16_t epsize)
 
 uint16_t nuc505_usbd_ep_get_IN_epsize(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return 0;
@@ -394,9 +390,7 @@ uint16_t nuc505_usbd_ep_get_IN_epsize(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_set_IN_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -421,9 +415,7 @@ vsf_err_t nuc505_usbd_ep_set_IN_stall(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_clear_IN_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -447,9 +439,7 @@ vsf_err_t nuc505_usbd_ep_clear_IN_stall(uint8_t idx)
 
 bool nuc505_usbd_ep_is_IN_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return true;
@@ -469,9 +459,7 @@ bool nuc505_usbd_ep_is_IN_stall(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_reset_IN_toggle(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -497,9 +485,7 @@ vsf_err_t nuc505_usbd_ep_toggle_IN_toggle(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_set_IN_count(uint8_t idx, uint16_t size)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -529,10 +515,9 @@ vsf_err_t nuc505_usbd_ep_set_IN_count(uint8_t idx, uint16_t size)
 vsf_err_t nuc505_usbd_ep_write_IN_buffer(uint8_t idx, uint8_t *buffer,
 											uint16_t size)
 {
-	int8_t index;
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	uint32_t i;
 
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -575,10 +560,7 @@ vsf_err_t nuc505_usbd_ep_switch_OUT_buffer(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_set_OUT_epsize(uint8_t idx, uint16_t epsize)
 {
-	int8_t index, index_in;
-
-	index_in = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
-	index = nuc505_usbd_get_free_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_get_free_ep(idx | NUC505_USBD_EPOUT);
 	if (index < 0)
 	{
 		return VSFERR_FAIL;
@@ -591,6 +573,8 @@ vsf_err_t nuc505_usbd_ep_set_OUT_epsize(uint8_t idx, uint16_t epsize)
 	}
 	else if (index > 1)
 	{
+		int8_t index_in = nuc505_usbd_ep(idx | NUC505_USBD_EPIN);
+
 		index -= 2;
 		if (index_in < 0)
 		{
@@ -626,9 +610,7 @@ vsf_err_t nuc505_usbd_ep_set_OUT_epsize(uint8_t idx, uint16_t epsize)
 
 uint16_t nuc505_usbd_ep_get_OUT_epsize(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return 0;
@@ -648,9 +630,7 @@ uint16_t nuc505_usbd_ep_get_OUT_epsize(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_set_OUT_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -675,9 +655,7 @@ vsf_err_t nuc505_usbd_ep_set_OUT_stall(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_clear_OUT_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -701,9 +679,7 @@ vsf_err_t nuc505_usbd_ep_clear_OUT_stall(uint8_t idx)
 
 bool nuc505_usbd_ep_is_OUT_stall(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return true;
@@ -723,9 +699,7 @@ bool nuc505_usbd_ep_is_OUT_stall(uint8_t idx)
 
 vsf_err_t nuc505_usbd_ep_reset_OUT_toggle(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -751,9 +725,7 @@ vsf_err_t nuc505_usbd_ep_toggle_OUT_toggle(uint8_t idx)
 
 uint16_t nuc505_usbd_ep_get_OUT_count(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return 0;
@@ -774,10 +746,9 @@ uint16_t nuc505_usbd_ep_get_OUT_count(uint8_t idx)
 vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 											uint16_t size)
 {
-	int8_t index;
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	uint32_t i;
 
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
@@ -806,9 +777,7 @@ vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 
 vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 {
-	int8_t index;
-
-	index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
+	int8_t index = nuc505_usbd_ep(idx | NUC505_USBD_EPOUT);
 	if ((index < 0) || (index >= NUC505_USBD_EP_NUM))
 	{
 		return VSFERR_FAIL;
