@@ -842,7 +842,20 @@ void USB_Istr(void)
 		// IMPORTANT:
 		// 		the OUT ep of NUC505 has no flow control, so the order of
 		// 		checking the interrupt flash MUST be as follow:
-		// 		STATUS -->> SETUP -->> IN0/OUT0
+		// 		IN0 -->> STATUS -->> SETUP -->> OUT0
+		// consider this:
+		// 		SETUP -->> IN0 -->> STATUS -->> SETUP -->> OUT0 -->> STATUS
+		// 		           ------------------------------------
+		//		in some condition, the under line interrupt MAYBE in one routine
+		if (IrqSt & USBD_CEPINTSTS_TXPKIF_Msk) {
+			USBD->CEPINTSTS = USBD_CEPINTSTS_TXPKIF_Msk;
+
+			if (nuc505_usbd_callback.on_in != NULL)
+			{
+				nuc505_usbd_callback.on_in(nuc505_usbd_callback.param, 0);
+			}
+		}
+
 		if (IrqSt & USBD_CEPINTSTS_STSDONEIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_STSDONEIF_Msk;
 
@@ -872,14 +885,6 @@ void USB_Istr(void)
 			}
 		}
 
-		if (IrqSt & USBD_CEPINTSTS_TXPKIF_Msk) {
-			USBD->CEPINTSTS = USBD_CEPINTSTS_TXPKIF_Msk;
-
-			if (nuc505_usbd_callback.on_in != NULL)
-			{
-				nuc505_usbd_callback.on_in(nuc505_usbd_callback.param, 0);
-			}
-		}
 		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
 
