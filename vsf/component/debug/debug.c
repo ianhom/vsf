@@ -18,10 +18,10 @@ uint32_t debug(const char *format, ...)
 	struct vsf_buffer_t buffer;
 	uint32_t size_avail, size_out, i, colon;
 	uint8_t *ptr;
-	
+
 	if (debug_stream == NULL)
 		return 0;
-	
+
 	size_avail = stream_get_free_size(debug_stream);
 	if (size_avail < 3)
 		return 0;
@@ -30,10 +30,10 @@ uint32_t debug(const char *format, ...)
 	va_start(ap, format);
 	size_out = vsnprintf((char *)debug_info, VSFCFG_DEBUG_INFO_PARSE_LEN, format, ap);
 	va_end(ap);
-	
+
 	if (size_out < 3)
 		return 0;
-	
+
 	ptr = debug_info;
 	i = 0;
 	colon = 0;
@@ -46,14 +46,14 @@ uint32_t debug(const char *format, ...)
 			 i = ptr - debug_info + 1;
 		ptr++;
 	}
-	
+
 	size_avail = min(size_avail, size_out - i);
 	debug_info[i + size_avail - 2] = '\r';
 	debug_info[i + size_avail - 1] = '\n';
 
 	buffer.buffer = debug_info + i;
 	buffer.size = size_avail;
-	
+
 	return stream_write(debug_stream, &buffer);
 }
 

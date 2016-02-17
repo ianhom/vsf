@@ -1207,51 +1207,50 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 		break;
 	default:
+		// not error and transact not valid
+		if ((evt & VSFUSBD_EVT_ERR_MASK) == VSFUSBD_INTEVT_ERR)
+		{
+			if (device->callback.on_ERROR != NULL)
+			{
+				enum interface_usbd_error_t type =
+								(enum interface_usbd_error_t)(evt & 0xFF);
+				device->callback.on_ERROR(device, type);
+			}
+		}
+		else
 		{
 			uint8_t ep = evt & VSFUSBD_EVT_EP_MASK;
 			struct vsfusbd_transact_t *transact = (evt & VSFUSBD_EVT_DIR_MASK) ?
 							device->IN_transact[ep] : device->OUT_transact[ep];
 
-			// not error and transact not valid
-			if (!((evt & VSFUSBD_EVT_ERR_MASK) == VSFUSBD_INTEVT_ERR) &&
-				(NULL == transact))
+			if (transact != NULL)
 			{
-				break;
-			}
-
-			switch (evt & VSFUSBD_EVT_EVT_MASK)
-			{
-			case VSFUSBD_STREAM_CLOSE_IN:
-				vsfusbd_ep_cancel_send(device, transact);
-				break;
-			case VSFUSBD_STREAM_IN:
-				if (!transact->idle)
+				switch (evt & VSFUSBD_EVT_EVT_MASK)
 				{
+				case VSFUSBD_STREAM_CLOSE_IN:
+					vsfusbd_ep_cancel_send(device, transact);
+					break;
+				case VSFUSBD_STREAM_IN:
+					if (!transact->idle)
+					{
+						break;
+					}
+				case VSFUSBD_INTEVT_IN:
+					device->IN_handler[ep](device, ep);
+					break;
+				case VSFUSBD_STREAM_CLOSE_OUT:
+					vsfusbd_ep_cancel_recv(device, transact);
+					break;
+					case VSFUSBD_STREAM_OUT:
+				vsfusbd_transact_out(device, transact);
+					break;
+				case VSFUSBD_INTEVT_OUT:
+					device->OUT_handler[ep](device, ep);
 					break;
 				}
-			case VSFUSBD_INTEVT_IN:
-				device->IN_handler[ep](device, ep);
-				break;
-			case VSFUSBD_STREAM_CLOSE_OUT:
-				vsfusbd_ep_cancel_recv(device, transact);
-				break;
-			case VSFUSBD_STREAM_OUT:
-				vsfusbd_transact_out(device, transact);
-				break;
-			case VSFUSBD_INTEVT_OUT:
-				device->OUT_handler[ep](device, ep);
-				break;
-			default:
-				if (((evt & VSFUSBD_EVT_ERR_MASK) == VSFUSBD_INTEVT_ERR) &&
-					(device->callback.on_ERROR != NULL))
-				{
-					enum interface_usbd_error_t type =
-							(enum interface_usbd_error_t)(evt & 0xFF);
-					device->callback.on_ERROR(device, type);
-				}
 			}
-			break;
 		}
+		break;
 	}
 	return NULL;
 }
