@@ -68,7 +68,7 @@ static uint16_t EP_Cfg_Ptr = 0x1000;
 static uint16_t max_ctl_ep_size = 64;
 
 // true if data direction in setup packet is device to host
-static bool nuc505_setup_status_IN, nuc505_status_out = false;
+static volatile bool nuc505_setup_status_IN, nuc505_status_out = false;
 
 #define NUC505_USBD_EPIN					0x10
 #define NUC505_USBD_EPOUT					0x00
@@ -833,24 +833,10 @@ void USB_Istr(void)
 		IrqSt = USBD->CEPINTSTS;
 		IrqSt &= USBD->CEPINTEN;
 
-		if (IrqSt & USBD_CEPINTSTS_TXPKIF_Msk) {
-			USBD->CEPINTSTS = USBD_CEPINTSTS_TXPKIF_Msk;
-
-			if (nuc505_usbd_callback.on_in != NULL)
-			{
-				nuc505_usbd_callback.on_in(nuc505_usbd_callback.param, 0);
-			}
-		}
-		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
-			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
-
-			nuc505_status_out = false;
-			if (nuc505_usbd_callback.on_out != NULL)
-			{
-				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
-			}
-		}
-
+		// IMPORTANT:
+		// 		the OUT ep of NUC505 has no flow control, so the order of
+		// 		checking the interrupt flash MUST be as follow:
+		// 		STATUS -->> SETUP -->> IN0/OUT0
 		if (IrqSt & USBD_CEPINTSTS_STSDONEIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_STSDONEIF_Msk;
 
@@ -876,8 +862,25 @@ void USB_Istr(void)
 
 			if (nuc505_usbd_callback.on_setup != NULL)
 			{
-				nuc505_usbd_callback.on_setup(\
-						nuc505_usbd_callback.param);
+				nuc505_usbd_callback.on_setup(nuc505_usbd_callback.param);
+			}
+		}
+
+		if (IrqSt & USBD_CEPINTSTS_TXPKIF_Msk) {
+			USBD->CEPINTSTS = USBD_CEPINTSTS_TXPKIF_Msk;
+
+			if (nuc505_usbd_callback.on_in != NULL)
+			{
+				nuc505_usbd_callback.on_in(nuc505_usbd_callback.param, 0);
+			}
+		}
+		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
+			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
+
+			nuc505_status_out = false;
+			if (nuc505_usbd_callback.on_out != NULL)
+			{
+				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
 			}
 		}
 	}
