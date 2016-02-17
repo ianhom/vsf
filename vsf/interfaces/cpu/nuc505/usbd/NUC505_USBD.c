@@ -733,7 +733,13 @@ uint16_t nuc505_usbd_ep_get_OUT_count(uint8_t idx)
 
 	if (0 == idx)
 	{
-		return nuc505_status_out ? 0 : USBD->CEPRXCNT;
+		// some ugly fix because NUC505 not have IN0/OUT0 for status stage
+		if (nuc505_status_out)
+		{
+			nuc505_status_out = false;
+			return 0;
+		}
+		return USBD->CEPRXCNT;
 	}
 	else if (index > 1)
 	{
@@ -877,7 +883,6 @@ void USB_Istr(void)
 		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
 			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
 
-			nuc505_status_out = false;
 			if (nuc505_usbd_callback.on_out != NULL)
 			{
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
