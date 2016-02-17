@@ -2,12 +2,8 @@
 #define VSFUSBH_HCD_TYPE_NUC400			2
 #define VSFUSBH_HCD_TYPE_STM32F7_HS		3
 
-
-#define	VSFUSBH_ENABLE					1
 #define VSFUSBH_HCD_TYPE				VSFUSBH_HCD_TYPE_NUC505
 
-
-#if VSFUSBH_ENABLE
 
 #define USB_MAXINTERFACES				4
 #define USB_MAXENDPOINTS				8
@@ -48,5 +44,3 @@
 	#endif
 
 #endif
-
-#endif // VSFUSBH_ENABLE
