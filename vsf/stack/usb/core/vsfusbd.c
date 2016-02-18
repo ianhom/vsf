@@ -1237,19 +1237,24 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					{
 						break;
 					}
-				case VSFUSBD_INTEVT_IN:
-					device->IN_handler[ep](device, ep);
-					break;
 				case VSFUSBD_STREAM_CLOSE_OUT:
 					vsfusbd_ep_cancel_recv(device, transact);
 					break;
-					case VSFUSBD_STREAM_OUT:
-				vsfusbd_transact_out(device, transact);
-					break;
-				case VSFUSBD_INTEVT_OUT:
-					device->OUT_handler[ep](device, ep);
+				case VSFUSBD_STREAM_OUT:
+					vsfusbd_transact_out(device, transact);
 					break;
 				}
+			}
+			switch (evt & VSFUSBD_EVT_EVT_MASK)
+			{
+			case VSFUSBD_INTEVT_IN:
+				if (device->IN_handler[ep] != NULL)
+					device->IN_handler[ep](device, ep);
+				break;
+			case VSFUSBD_INTEVT_OUT:
+				if (device->OUT_handler[ep] != NULL)
+					device->OUT_handler[ep](device, ep);
+				break;
 			}
 		}
 		break;
