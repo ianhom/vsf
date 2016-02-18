@@ -31,12 +31,24 @@
 #include "framework/vsfsm/vsfsm.h"
 #include "framework/vsftimer/vsftimer.h"
 
+#ifdef VSFCFG_BUFFER
 #include "component/buffer/buffer.h"
+#endif
+#ifdef VSFCFG_STREAM
 #include "component/stream/stream.h"
+#endif
+#ifdef VSFCFG_MAL
 #include "component/mal/vsfmal.h"
+#ifdef VSFCFG_SCSI
 #include "component/mal/vsfscsi.h"
+#endif
+#endif
+#ifdef VSFCFG_FILE
 #include "component/file/vsfile.h"
+#endif
+#ifdef CSFCFG_DEBUG
 #include "component/debug/debug.h"
+#endif
 
 #define VSF_API_VERSION						0x00000001
 
@@ -172,7 +184,9 @@ struct vsf_tcpip_api_t
 #include "stack/usb/class/device/CDC/vsfusbd_RNDIS.h"
 #endif
 #include "stack/usb/class/device/HID/vsfusbd_HID.h"
+#ifdef VSFCFG_SCSI
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
+#endif
 struct vsf_usbd_api_t
 {
 	vsf_err_t (*init)(struct vsfusbd_device_t*);
@@ -228,6 +242,7 @@ struct vsf_usbd_api_t
 #endif
 		} rndis;
 #endif
+#ifdef VSFCFG_SCSI
 		struct
 		{
 #if defined(VSFCFG_MODULE_USBD)
@@ -236,6 +251,7 @@ struct vsf_usbd_api_t
 			struct vsfusbd_class_protocol_t *protocol;
 #endif
 		} mscbot;
+#endif
 	} classes;
 };
 #endif
@@ -332,13 +348,16 @@ struct vsf_t
 		uint32_t (*get_event_pending)(void);
 		vsf_err_t (*sm_init)(struct vsfsm_t*);
 		vsf_err_t (*sm_fini)(struct vsfsm_t*);
+#if VSFSM_CFG_PT_EN
 		vsf_err_t (*pt_init)(struct vsfsm_t*, struct vsfsm_pt_t*);
+#endif
 		vsf_err_t (*post_evt)(struct vsfsm_t*, vsfsm_evt_t);
 		vsf_err_t (*post_evt_pending)(struct vsfsm_t*, vsfsm_evt_t);
 
 		void (*enter_critical)(void);
 		void (*leave_critical)(void);
 
+#if VSFSM_CFG_SYNC_EN
 		struct
 		{
 			vsf_err_t (*init)(struct vsfsm_sync_t*, uint32_t, uint32_t,
@@ -347,6 +366,7 @@ struct vsf_t
 			vsf_err_t (*increase)(struct vsfsm_sync_t*);
 			vsf_err_t (*decrease)(struct vsfsm_sync_t*, struct vsfsm_t*);
 		} sync;
+#endif
 
 		struct
 		{
@@ -381,6 +401,7 @@ struct vsf_t
 
 	struct
 	{
+#ifdef VSFCFG_BUFFER
 		struct
 		{
 			struct
@@ -416,7 +437,9 @@ struct vsf_t
 				void (*free)(struct vsfpool_t*, void*);
 			} pool;
 		} buffer;
+#endif
 
+#ifdef VSFCFG_STREAM
 		struct
 		{
 			vsf_err_t (*init)(struct vsf_stream_t*);
@@ -434,7 +457,9 @@ struct vsf_t
 			const struct vsf_stream_op_t *mbufstream_op;
 			const struct vsf_stream_op_t *bufstream_op;
 		} stream;
+#endif
 
+#ifdef VSFCFG_MAL
 		struct
 		{
 			vsf_err_t (*init)(struct vsfsm_pt_t*, vsfsm_evt_t);
@@ -454,6 +479,7 @@ struct vsf_t
 				vsf_err_t (*write)(struct vsf_malstream_t*, uint64_t, uint32_t);
 			} malstream;
 
+#ifdef VSFCFG_SCSI
 			struct
 			{
 				vsf_err_t (*init)(struct vsfscsi_device_t*);
@@ -463,8 +489,11 @@ struct vsf_t
 
 				const struct vsfscsi_lun_op_t *mal2scsi_op;
 			} scsi;
+#endif
 		} mal;
+#endif
 
+#ifdef VSFCFG_FILE
 		struct
 		{
 			vsf_err_t (*init)(void);
@@ -502,6 +531,7 @@ struct vsf_t
 
 			const struct vsfile_fsop_t *memfs_op;
 		} file;
+#endif
 	} component;
 
 	struct
@@ -665,7 +695,9 @@ struct vsf_t
 #define vsfsm_get_event_pending			vsf.framework.get_event_pending
 #define vsfsm_init						vsf.framework.sm_init
 #define vsfsm_fini						vsf.framework.sm_fini
+#if VSFSM_CFG_PT_EN
 #define vsfsm_pt_init					vsf.framework.pt_init
+#endif
 #define vsfsm_post_evt					vsf.framework.post_evt
 #define vsfsm_post_evt_pending			vsf.framework.post_evt_pending
 
@@ -674,10 +706,12 @@ struct vsf_t
 #undef vsf_leave_critical
 #define vsf_leave_critical				vsf.framework.leave_critical
 
+#if VSFSM_CFG_SYNC_EN
 #define vsfsm_sync_init					vsf.framework.sync.init
 #define vsfsm_sync_cancel				vsf.framework.sync.cancel
 #define vsfsm_sync_increase				vsf.framework.sync.increase
 #define vsfsm_sync_decrease				vsf.framework.sync.decrease
+#endif
 
 #define vsftimer_init					vsf.framework.timer.init
 #define vsftimer_create					vsf.framework.timer.create
@@ -706,6 +740,7 @@ struct vsf_t
 #endif
 #endif
 
+#ifdef VSFCFG_STREAM
 #define stream_init						vsf.component.stream.init
 #define stream_fini						vsf.component.stream.fini
 #define stream_read						vsf.component.stream.read
@@ -719,7 +754,9 @@ struct vsf_t
 #define fifostream_op					(*vsf.component.stream.fifostream_op)
 #define mbufstream_op					(*vsf.component.stream.mbufstream_op)
 #define bufstream_op					(*vsf.component.stream.bufstream_op)
+#endif
 
+#ifdef VSFCFG_MAL
 #define vsfmal_init						vsf.component.mal.init
 #define vsfmal_fini						vsf.component.mal.fini
 #define vsfmal_erase_all				vsf.component.mal.erase_all
@@ -729,13 +766,16 @@ struct vsf_t
 #define vsf_malstream_init				vsf.component.mal.malstream.init
 #define vsf_malstream_read				vsf.component.mal.malstream.read
 #define vsf_malstream_write				vsf.component.mal.malstream.write
-
+#ifdef VSFCFG_SCSI
 #define vsfscsi_init					vsf.component.mal.scsi.init
 #define vsfscsi_execute					vsf.component.mal.scsi.execute
 #define vsfscsi_cancel_transact			vsf.component.mal.scsi.cancel_transact
 #define vsfscsi_release_transact		vsf.component.mal.scsi.release_transact
 #define vsf_mal2scsi_op					(*vsf.component.mal.scsi.mal2scsi_op)
+#endif
+#endif
 
+#ifdef VSFCFG_FILE
 #define vsfile_init						vsf.component.file.init
 #define vsfile_mount					vsf.component.file.mount
 #define vsfile_unmount					vsf.component.file.unmount
@@ -752,7 +792,9 @@ struct vsf_t
 #define vsfile_dummy_file				vsf.component.file.dummy_file
 #define vsfile_dummy_rw					vsf.component.file.dummy_rw
 #define vsfile_memfs_op					(*vsf.component.file.memfs_op)
+#endif
 
+#ifdef VSFCFG_BUFFER
 #define vsfq_init						vsf.component.buffer.queue.init
 #define vsfq_append						vsf.component.buffer.queue.append
 #define vsfq_remove						vsf.component.buffer.queue.remove
@@ -773,6 +815,7 @@ struct vsf_t
 #define vsfpool_init					vsf.component.buffer.pool.init
 #define vsfpool_alloc					vsf.component.buffer.pool.alloc
 #define vsfpool_free					vsf.component.buffer.pool.free
+#endif
 
 #define BIT_REVERSE_U8					vsf.tool.bittool.bit_reverse_u8
 #define BIT_REVERSE_U16					vsf.tool.bittool.bit_reverse_u16

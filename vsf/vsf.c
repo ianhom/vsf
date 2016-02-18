@@ -172,15 +172,19 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.framework.get_event_pending = vsfsm_get_event_pending,
 	.framework.sm_init = vsfsm_init,
 	.framework.sm_fini = vsfsm_fini,
+#if VSFSM_CFG_PT_EN
 	.framework.pt_init = vsfsm_pt_init,
+#endif
 	.framework.post_evt = vsfsm_post_evt,
 	.framework.post_evt_pending = vsfsm_post_evt_pending,
 	.framework.enter_critical = vsfsm_enter_critical_internal,
 	.framework.leave_critical = vsfsm_leave_critical_internal,
+#if VSFSM_CFG_SYNC_EN
 	.framework.sync.init = vsfsm_sync_init,
 	.framework.sync.cancel = vsfsm_sync_cancel,
 	.framework.sync.increase = vsfsm_sync_increase,
 	.framework.sync.decrease = vsfsm_sync_decrease,
+#endif
 	.framework.timer.init = vsftimer_init,
 	.framework.timer.create = vsftimer_create,
 	.framework.timer.free = vsftimer_free,
@@ -204,6 +208,7 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 #endif
 #endif
 
+#ifdef VSFCFG_BUFFER
 	.component.buffer.queue.init = vsfq_init,
 	.component.buffer.queue.append = vsfq_append,
 	.component.buffer.queue.remove = vsfq_remove,
@@ -221,6 +226,8 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.buffer.pool.init = vsfpool_init,
 	.component.buffer.pool.alloc = vsfpool_alloc,
 	.component.buffer.pool.free = vsfpool_free,
+#endif
+#ifdef VSFCFG_STREAM
 	.component.stream.init = stream_init,
 	.component.stream.fini = stream_fini,
 	.component.stream.read = stream_read,
@@ -234,6 +241,8 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.stream.fifostream_op = &fifostream_op,
 	.component.stream.mbufstream_op = &mbufstream_op,
 	.component.stream.bufstream_op = &bufstream_op,
+#endif
+#ifdef VSFCFG_MAL
 	.component.mal.init = vsfmal_init,
 	.component.mal.fini = vsfmal_fini,
 	.component.mal.erase_all = vsfmal_erase_all,
@@ -243,11 +252,15 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.mal.malstream.init = vsf_malstream_init,
 	.component.mal.malstream.read = vsf_malstream_read,
 	.component.mal.malstream.write = vsf_malstream_write,
+#ifdef VSFCFG_SCSI
 	.component.mal.scsi.init = vsfscsi_init,
 	.component.mal.scsi.execute = vsfscsi_execute,
 	.component.mal.scsi.cancel_transact = vsfscsi_cancel_transact,
 	.component.mal.scsi.release_transact = vsfscsi_release_transact,
 	.component.mal.scsi.mal2scsi_op = &vsf_mal2scsi_op,
+#endif
+#endif
+#ifdef VSFCFG_FILE
 	.component.file.init = vsfile_init,
 	.component.file.mount = vsfile_mount,
 	.component.file.unmount = vsfile_unmount,
@@ -264,6 +277,7 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.file.dummy_file = vsfile_dummy_file,
 	.component.file.dummy_rw = vsfile_dummy_rw,
 	.component.file.memfs_op = &vsfile_memfs_op,
+#endif
 
 	.tool.bittool.bit_reverse_u8 = BIT_REVERSE_U8,
 	.tool.bittool.bit_reverse_u16 = BIT_REVERSE_U16,
@@ -312,7 +326,9 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.stack.usb.device.classes.rndis.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISControl_class,
 	.stack.usb.device.classes.rndis.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISData_class,
 #endif
+#ifdef VSFCFG_SCSI
 	.stack.usb.device.classes.mscbot.protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_MSCBOT_class,
+#endif
 #endif
 #endif
 
