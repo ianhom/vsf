@@ -67,8 +67,8 @@ struct vsfusbd_HID_report_t
 	uint8_t idle_cnt;
 };
 
-#define VSFUSBD_DESC_HID_REPORT(ptr, size, func)			\
-	{USB_HID_DT_REPORT, 0, 0, {(uint8_t*)(ptr), (size)}, (func)}
+#define VSFUSBD_DESC_HID_REPORT(ptr, size)			\
+	{USB_HID_DT_REPORT, 0, 0, {(uint8_t*)(ptr), (size)}}
 
 enum vsfusbd_HID_output_state_t
 {
