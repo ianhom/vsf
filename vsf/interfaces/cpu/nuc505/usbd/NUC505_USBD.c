@@ -899,7 +899,7 @@ void USB_Istr(void)
 	if (IrqStL & (~3))
 	{
 		int i;
-		for (i = 0; i < 12; i++)
+		for (i = 0; i < NUC505_USBD_EP_NUM; i++)
 		{
 			if (IrqStL & (1 << (i + 2)))
 			{

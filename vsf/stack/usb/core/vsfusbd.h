@@ -165,6 +165,7 @@ struct vsfusbd_device_t
 
 	struct vsfusbd_transact_t *IN_transact[16];
 	struct vsfusbd_transact_t *OUT_transact[16];
+	uint32_t transact_out_miss;
 
 	vsf_err_t (*IN_handler[16])(struct vsfusbd_device_t*, uint8_t);
 	vsf_err_t (*OUT_handler[16])(struct vsfusbd_device_t*, uint8_t);

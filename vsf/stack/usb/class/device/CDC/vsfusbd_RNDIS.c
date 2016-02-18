@@ -89,10 +89,6 @@ void vsfusbd_RNDIS_on_rx_finish(void *param)
 			}
 			else
 			{
-				// code here is just for BUG fix
-				// 		as tests, under such conditions, will reach nop here
-				if (rndis_param->netif_inited)
-					asm("nop");
 				vsfip_buffer_release(rxbuf);
 			}
 			rndis_param->rx_buffer = NULL;

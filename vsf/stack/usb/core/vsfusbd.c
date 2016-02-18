@@ -107,18 +107,27 @@ static void vsfusbd_stream_on_out(void *p)
 static void vsfusbd_transact_out(struct vsfusbd_device_t *device,
 									struct vsfusbd_transact_t *transact)
 {
+	uint8_t ep = transact->ep;
 	struct interface_usbd_t *drv = device->drv; 
 
-	if (transact->idle)
+	// if system runs slow(or heavy payload), and USB transacts too fast
+	// 		(especially for NUC505, which has no flow control on OUT ep)
+	// maybe out packet will be unprocessed, so process now
+	if (device->transact_out_miss & (1 << ep))
 	{
-		uint16_t ep_size = drv->ep.get_OUT_epsize(transact->ep);
+		device->transact_out_miss &= ~(1 << ep);
+		device->OUT_handler[ep](device, ep);
+	}
+	else if (transact->idle)
+	{
+		uint16_t ep_size = drv->ep.get_OUT_epsize(ep);
 		uint16_t pkg_size = min(ep_size, transact->data_size);
 		uint32_t free_size = stream_get_free_size(transact->stream);
 
 		transact->idle = free_size < pkg_size;
 		if (!transact->idle)
 		{
-			drv->ep.enable_OUT(transact->ep);
+			drv->ep.enable_OUT(ep);
 		}
 	}
 }
@@ -1042,6 +1051,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 			memset(device->IN_transact, 0, sizeof(device->IN_transact));
 			memset(device->OUT_transact, 0,sizeof(device->OUT_transact));
+			device->transact_out_miss = 0;
 
 			device->configured = false;
 			device->configuration = 0;
@@ -1220,10 +1230,18 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		else
 		{
 			uint8_t ep = evt & VSFUSBD_EVT_EP_MASK;
-			struct vsfusbd_transact_t *transact = (evt & VSFUSBD_EVT_DIR_MASK) ?
-							device->IN_transact[ep] : device->OUT_transact[ep];
+			uint8_t dir_in = evt & VSFUSBD_EVT_DIR_IN;
+			struct vsfusbd_transact_t *transact =
+					dir_in ? device->IN_transact[ep] : device->OUT_transact[ep];
 
-			if (transact != NULL)
+			if (NULL == transact)
+			{
+				if (!dir_in)
+				{
+					device->transact_out_miss |= 1 << ep;
+				}
+			}
+			else
 			{
 				switch (evt & VSFUSBD_EVT_EVT_MASK)
 				{
