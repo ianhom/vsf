@@ -64,11 +64,12 @@
 #define NUC505_USBD_EP_NUM					12
 const uint8_t nuc505_usbd_ep_num = NUC505_USBD_EP_NUM;
 struct interface_usbd_callback_t nuc505_usbd_callback;
-static uint16_t EP_Cfg_Ptr = 0x1000;
+static uint16_t EP_Cfg_Ptr;
 static uint16_t max_ctl_ep_size = 64;
 
 // true if data direction in setup packet is device to host
 static volatile bool nuc505_setup_status_IN, nuc505_status_out = false;
+static volatile uint16_t nuc505_outrdy = 0;
 
 #define NUC505_USBD_EPIN					0x10
 #define NUC505_USBD_EPOUT					0x00
@@ -762,9 +763,15 @@ vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 
 	if (0 == idx)
 	{
-		for (i = 0; i < size; i++)
+		if (!nuc505_setup_status_IN)
 		{
-			buffer[i] = USBD->CEPDAT_BYTE;
+			for (i = 0; i < size; i++)
+			{
+				buffer[i] = USBD->CEPDAT_BYTE;
+			}
+			nuc505_outrdy &= ~1;
+			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
+			USBD->CEPINTEN |= USBD_CEPINTEN_RXPKIEN_Msk;
 		}
 		return VSFERR_NONE;
 	}
@@ -776,6 +783,9 @@ vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 		{
 			buffer[i] = NUC505_USBD_EP_REG(index, EPDAT_BYTE);
 		}
+		nuc505_outrdy &= ~(1 << idx);
+		NUC505_USBD_EP_REG(index, EPINTSTS) = USBD_EPINTSTS_RXPKIF_Msk;
+		NUC505_USBD_EP_REG(index, EPINTEN) |= USBD_EPINTEN_RXPKIEN_Msk;
 		return VSFERR_NONE;
 	}
 	return VSFERR_BUG;
@@ -795,12 +805,25 @@ vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 		{
 			USBD->CEPCTL = USB_CEPCTL_NAKCLR;
 		}
+		else if (nuc505_outrdy & 1)
+		{
+			if (nuc505_usbd_callback.on_out != NULL)
+			{
+				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
+			}
+		}
 		return VSFERR_NONE;
 	}
 	else if (index > 1)
 	{
 		index -= 2;
-		NUC505_USBD_EP_REG(index, EPCFG) |= USB_EP_CFG_VALID;
+		if (nuc505_outrdy & (1 << idx))
+		{
+			if (nuc505_usbd_callback.on_out != NULL)
+			{
+				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, idx);
+			}
+		}
 		return VSFERR_NONE;
 	}
 	return VSFERR_BUG;
@@ -808,7 +831,7 @@ vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 
 void USB_Istr(void)
 {
-	static uint32_t IrqStL, IrqSt;
+	uint32_t IrqStL, IrqSt;
 
 	IrqStL = USBD->GINTSTS;
 	IrqStL &= USBD->GINTEN;
@@ -824,6 +847,10 @@ void USB_Istr(void)
 		IrqSt &= USBD->BUSINTEN;
 
 		if (IrqSt & USBD_BUSINTSTS_RSTIF_Msk) {
+			nuc505_outrdy = 0;
+			max_ctl_ep_size = 64;
+			nuc505_status_out = false;
+
 			if (nuc505_usbd_callback.on_reset != NULL)
 			{
 				nuc505_usbd_callback.on_reset(\
@@ -886,8 +913,9 @@ void USB_Istr(void)
 		}
 
 		if (IrqSt & USBD_CEPINTSTS_RXPKIF_Msk) {
-			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
+			USBD->CEPINTEN &= ~USBD_CEPINTEN_RXPKIEN_Msk;
 
+			nuc505_outrdy |= 1;
 			if (nuc505_usbd_callback.on_out != NULL)
 			{
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
@@ -899,30 +927,33 @@ void USB_Istr(void)
 	if (IrqStL & (~3))
 	{
 		int i;
+		uint8_t ep;
+		void *param = nuc505_usbd_callback.param;
+
 		for (i = 0; i < NUC505_USBD_EP_NUM; i++)
 		{
+			ep = nuc505_usbd_epaddr[i + 2] & 0x0F;
 			if (IrqStL & (1 << (i + 2)))
 			{
 				IrqSt = NUC505_USBD_EP_REG(i, EPINTSTS);
+				IrqSt &= NUC505_USBD_EP_REG(i, EPINTEN);
 
 				if (IrqSt & USBD_EPINTSTS_TXPKIF_Msk)
 				{
 					NUC505_USBD_EP_REG(i, EPINTSTS) = USBD_EPINTSTS_TXPKIF_Msk;
 					if (nuc505_usbd_callback.on_in != NULL)
 					{
-						nuc505_usbd_callback.on_in(\
-								nuc505_usbd_callback.param,\
-								nuc505_usbd_epaddr[i + 2] & 0x0F);
+						nuc505_usbd_callback.on_in(param, ep);
 					}
 				}
 				if (IrqSt & USBD_EPINTSTS_RXPKIF_Msk)
 				{
-					NUC505_USBD_EP_REG(i, EPINTSTS) = USBD_EPINTSTS_RXPKIF_Msk;
+					NUC505_USBD_EP_REG(i, EPINTEN) &= ~USBD_EPINTEN_RXPKIEN_Msk;
+
+					nuc505_outrdy |= 1 << ep;
 					if (nuc505_usbd_callback.on_out != NULL)
 					{
-						nuc505_usbd_callback.on_out(\
-								nuc505_usbd_callback.param,\
-								nuc505_usbd_epaddr[i + 2] & 0x0F);
+						nuc505_usbd_callback.on_out(param, ep);
 					}
 				}
 			}
