@@ -227,12 +227,12 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 							(report->idle_cnt >= report->idle))))
 				{
 					param->bufstream.mem.buffer = report->buffer;
-					stream_init(&param->stream);
-					stream_connect_tx(&param->stream);
+					STREAM_INIT(&param->bufstream);
+					STREAM_CONNECT_TX(&param->bufstream);
 
 					transact->ep = param->ep_in;
 					transact->data_size = report->buffer.size;
-					transact->stream = &param->stream;
+					transact->stream = (struct vsf_stream_t *)&param->bufstream;
 					transact->zlp = false;
 					transact->cb.on_finish = vsfusbd_HID_INREPORT_callback;
 					transact->cb.param = param;
