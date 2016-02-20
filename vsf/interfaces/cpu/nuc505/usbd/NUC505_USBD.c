@@ -61,7 +61,7 @@
 #include "NUC505_USBD.h"
 #include "NUC505Series.h"
 
-#define NUC505_USBD_EP_NUM					12
+#define NUC505_USBD_EP_NUM					(12 + 2)
 const uint8_t nuc505_usbd_ep_num = NUC505_USBD_EP_NUM;
 struct interface_usbd_callback_t nuc505_usbd_callback;
 static uint16_t EP_Cfg_Ptr;
@@ -949,7 +949,7 @@ void USB_Istr(void)
 		uint8_t ep;
 		void *param = nuc505_usbd_callback.param;
 
-		for (i = 0; i < NUC505_USBD_EP_NUM; i++)
+		for (i = 0; i < NUC505_USBD_EP_NUM - 2; i++)
 		{
 			ep = nuc505_usbd_epaddr[i + 2] & 0x0F;
 			if (IrqStL & (1 << (i + 2)))
