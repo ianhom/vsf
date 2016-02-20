@@ -69,7 +69,7 @@ static uint16_t max_ctl_ep_size = 64;
 
 // true if data direction in setup packet is device to host
 static volatile bool nuc505_setup_status_IN, nuc505_status_out = false;
-static volatile uint16_t nuc505_outrdy = 0;
+static volatile uint16_t nuc505_outrdy = 0, nuc505_outen = 0;
 
 #define NUC505_USBD_EPIN					0x10
 #define NUC505_USBD_EPOUT					0x00
@@ -96,7 +96,7 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 		USBD->EP[0].EPMPS= 0;
 	}
 
-	if (1)
+	if (0)
 	{
 		// Enable USB FULL SPEED
 		USBD->OPER = 0;
@@ -121,7 +121,7 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 	USBD->GINTEN |= USBD_GINTEN_USBIEN_Msk | USBD_GINTEN_CEPIEN_Msk;
 	// Enable BUS interrupt
 	USBD->BUSINTEN = USBD_BUSINTEN_RSTIEN_Msk;
-	USBD->CEPINTEN = USBD_CEPINTEN_SETUPPKIEN_Msk | USBD_CEPINTEN_RXPKIEN_Msk |
+	USBD->CEPINTEN = USBD_CEPINTEN_SETUPPKIEN_Msk |
 					USBD_CEPINTEN_TXPKIEN_Msk | USBD_CEPINTEN_STSDONEIEN_Msk;
 	NVIC_EnableIRQ(USBD_IRQn);
 	return VSFERR_NONE;
@@ -291,7 +291,6 @@ vsf_err_t nuc505_usbd_ep_set_type(uint8_t idx, enum interface_usbd_eptype_t type
 		index_out -= 2;
 		nuc505_usbd_set_eptype(index_out, eptype);
 		USBD->GINTEN |= USBD_GINTEN_EPAIEN_Msk << index_out;
-		NUC505_USBD_EP_REG(index_out, EPINTEN) = USBD_EPINTEN_RXPKIEN_Msk;
 	}
 	return VSFERR_NONE;
 }
@@ -771,7 +770,6 @@ vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 			}
 			nuc505_outrdy &= ~1;
 			USBD->CEPINTSTS = USBD_CEPINTSTS_RXPKIF_Msk;
-			USBD->CEPINTEN |= USBD_CEPINTEN_RXPKIEN_Msk;
 		}
 		return VSFERR_NONE;
 	}
@@ -785,7 +783,6 @@ vsf_err_t nuc505_usbd_ep_read_OUT_buffer(uint8_t idx, uint8_t *buffer,
 		}
 		nuc505_outrdy &= ~(1 << idx);
 		NUC505_USBD_EP_REG(index, EPINTSTS) = USBD_EPINTSTS_RXPKIF_Msk;
-		NUC505_USBD_EP_REG(index, EPINTEN) |= USBD_EPINTEN_RXPKIEN_Msk;
 		return VSFERR_NONE;
 	}
 	return VSFERR_BUG;
@@ -812,6 +809,11 @@ vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
 			}
 		}
+		else
+		{
+			nuc505_outen |= 1 << idx;
+			USBD->CEPINTEN |= USBD_CEPINTEN_RXPKIEN_Msk;
+		}
 		return VSFERR_NONE;
 	}
 	else if (index > 1)
@@ -823,6 +825,11 @@ vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 			{
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, idx);
 			}
+		}
+		else
+		{
+			nuc505_outen |= 1 << idx;
+			NUC505_USBD_EP_REG(index, EPINTEN) |= USBD_EPINTEN_RXPKIEN_Msk;
 		}
 		return VSFERR_NONE;
 	}
@@ -916,8 +923,9 @@ void USB_Istr(void)
 			USBD->CEPINTEN &= ~USBD_CEPINTEN_RXPKIEN_Msk;
 
 			nuc505_outrdy |= 1;
-			if (nuc505_usbd_callback.on_out != NULL)
+			if ((nuc505_outen & 1) && (nuc505_usbd_callback.on_out != NULL))
 			{
+				nuc505_outen &= ~1;
 				nuc505_usbd_callback.on_out(nuc505_usbd_callback.param, 0);
 			}
 		}
@@ -951,8 +959,10 @@ void USB_Istr(void)
 					NUC505_USBD_EP_REG(i, EPINTEN) &= ~USBD_EPINTEN_RXPKIEN_Msk;
 
 					nuc505_outrdy |= 1 << ep;
-					if (nuc505_usbd_callback.on_out != NULL)
+					if ((nuc505_outen & (1 << ep)) &&
+						(nuc505_usbd_callback.on_out != NULL))
 					{
+						nuc505_outen &= ~(1 << ep);
 						nuc505_usbd_callback.on_out(param, ep);
 					}
 				}
