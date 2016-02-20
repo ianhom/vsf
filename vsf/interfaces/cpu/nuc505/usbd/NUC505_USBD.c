@@ -117,12 +117,13 @@ vsf_err_t nuc505_usbd_init(uint32_t int_priority)
 	__asm("nop");
 	__asm("nop");
 
-	// Enable USB interrupt
-	USBD->GINTEN |= USBD_GINTEN_USBIEN_Msk | USBD_GINTEN_CEPIEN_Msk;
+	USBD->GINTEN = 0;
 	// Enable BUS interrupt
 	USBD->BUSINTEN = USBD_BUSINTEN_RSTIEN_Msk;
 	USBD->CEPINTEN = USBD_CEPINTEN_SETUPPKIEN_Msk |
 					USBD_CEPINTEN_TXPKIEN_Msk | USBD_CEPINTEN_STSDONEIEN_Msk;
+	// Enable USB interrupt
+	USBD->GINTEN = USBD_GINTEN_USBIEN_Msk | USBD_GINTEN_CEPIEN_Msk;
 	NVIC_EnableIRQ(USBD_IRQn);
 	return VSFERR_NONE;
 }
@@ -854,6 +855,8 @@ void USB_Istr(void)
 		IrqSt &= USBD->BUSINTEN;
 
 		if (IrqSt & USBD_BUSINTSTS_RSTIF_Msk) {
+			int i;
+
 			nuc505_outrdy = 0;
 			max_ctl_ep_size = 64;
 			nuc505_status_out = false;
@@ -864,7 +867,15 @@ void USB_Istr(void)
 						nuc505_usbd_callback.param);
 			}
 			USBD->BUSINTSTS = USBD_BUSINTSTS_RSTIF_Msk;
-			USBD->CEPINTSTS = 0x1ffc;
+			USBD->CEPINTSTS = ~USBD_CEPINTSTS_SETUPPKIF_Msk;
+
+			for (i = 0; i < NUC505_USBD_EP_NUM - 2; i++)
+			{
+				NUC505_USBD_EP_REG(i, EPRSPCTL) = USBD_EPRSPCTL_FLUSH_Msk;
+				NUC505_USBD_EP_REG(i, EPINTSTS) = 0x1FFF;
+				NUC505_USBD_EP_REG(i, EPINTEN) = 0;
+				NUC505_USBD_EP_REG(i, EPCFG) = 0;
+			}
 		}
 	}
 

@@ -1043,6 +1043,8 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 			memset(device->IN_transact, 0, sizeof(device->IN_transact));
 			memset(device->OUT_transact, 0,sizeof(device->OUT_transact));
+			memset(device->IN_handler, 0, sizeof(device->IN_handler));
+			memset(device->OUT_handler, 0, sizeof(device->OUT_handler));
 
 			device->configured = false;
 			device->configuration = 0;
