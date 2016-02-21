@@ -17,74 +17,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <ctype.h>
+#ifndef __VSFFAT_H_INCLUDED__
+#define __VSFFAT_H_INCLUDED__
 
-#include "debug.h"
-
-#ifdef VSFCFG_DEBUG
-
-#define VSFCFG_DEBUG_INFO_PARSE_LEN 	(VSFCFG_DEBUG_INFO_LEN + 100)
-static uint8_t debug_info[VSFCFG_DEBUG_INFO_PARSE_LEN];
-
-static struct vsf_stream_t *debug_stream = NULL;
-
-uint32_t debug(const char *format, ...)
+struct vsfile_fatfs_param_t
 {
-	va_list ap;
-	struct vsf_buffer_t buffer;
-	uint32_t size_avail, size_out, i, colon;
-	uint8_t *ptr;
+	struct vsfmal_t *mal;
 
-	if (debug_stream == NULL)
-		return 0;
+	// protected
+	uint8_t sectors_per_cluster;
+	uint8_t fat_size;
+	uint32_t fat_sector[2];
+	uint32_t root_sector;
 
-	size_avail = stream_get_free_size(debug_stream);
-	if (size_avail < 3)
-		return 0;
+	// private
+	struct vsfsm_crit_t crit;
+};
 
-	// TODO: manual parse format
-	va_start(ap, format);
-	size_out = vsnprintf((char *)debug_info, VSFCFG_DEBUG_INFO_PARSE_LEN, format, ap);
-	va_end(ap);
-
-	if (size_out < 3)
-		return 0;
-
-	ptr = debug_info;
-	i = 0;
-	colon = 0;
-	while (ptr < debug_info + size_out - 3)
-	{
-		if ((*ptr == ':') && (colon++ > 0))
-			break;
-
-		if ((*ptr == '/') || (*ptr == '\\'))
-			 i = ptr - debug_info + 1;
-		ptr++;
-	}
-
-	size_avail = min(size_avail, size_out - i);
-	debug_info[i + size_avail - 2] = '\r';
-	debug_info[i + size_avail - 1] = '\n';
-
-	buffer.buffer = debug_info + i;
-	buffer.size = size_avail;
-
-	return stream_write(debug_stream, &buffer);
-}
-
-void debug_init(struct vsf_stream_t *stream)
+struct vsfile_fatfile_t
 {
-	debug_stream = stream;
-}
+	struct vsfile_t file;
 
-void debug_fini(void)
-{
-	debug_stream = NULL;
-}
+	struct vsfile_fatfs_param_t *fs_param;
+	uint32_t first_cluster;
+};
 
+#ifndef VSFCFG_STANDALONE_MODULE
+extern const struct vsfile_fsop_t fatfs_op;
 #endif
 
+#endif	// __VSFFAT_H_INCLUDED__
