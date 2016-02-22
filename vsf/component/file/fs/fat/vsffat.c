@@ -31,3 +31,77 @@ PACKED_HEAD struct PACKED_MID fatfs_record_t
 	uint16_t FstClusLO;
 }; PACKED_TAIL
 
+vsf_err_t fatfs_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								struct vsfile_t *dir)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir, char *name)
+{
+}
+
+vsf_err_t fatfs_getchild_byname(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
+					struct vsfile_t **file)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_getchild_byidx(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
+					struct vsfile_t **file)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *rsize)
+{
+	return VSFERR_NONE;
+}
+
+vsf_err_t fatfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file, uint64_t offset,
+					uint32_t size, uint8_t *buff, uint32_t *wsize)
+{
+	return VSFERR_NONE;
+}
+
+#ifndef VSFCFG_STANDALONE_MODULE
+const struct vsfile_fsop_t fatfs_op =
+{
+	// mount / unmount
+	.mount = fatfs_mount,
+	.unmount = vsfile_dummy_unmount,
+	// f_op
+	.f_op.open = fatfs_open,
+	.f_op.close = fatfs_close,
+	.f_op.read = fatfs_read,
+	.f_op.write = fatfs_write,
+	// d_op
+	.d_op.addfile
+	.d_op.getchild_byname = fatfs_getchild_byname,
+	.d_op.getchild_byidx = fatfs_getchild_byidx,
+};
+#endif

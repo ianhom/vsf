@@ -32,6 +32,9 @@ struct vsfile_fatfs_param_t
 
 	// private
 	struct vsfsm_crit_t crit;
+	// resourced below are protected by crit
+	struct uint8_t *sector_buffer;
+	struct vsfsm_pt_t caller_pt;
 };
 
 struct vsfile_fatfile_t
