@@ -26,14 +26,24 @@ struct vsfile_fatfs_param_t
 
 	// protected
 	uint8_t sectors_per_cluster;
-	uint8_t fat_size;
-	uint32_t fat_sector[2];
+	uint8_t fat_bitsize;
+	uint8_t fat_num;
+	union
+	{
+		// FAT starts after reserved sectors
+		uint16_t fat_sector;
+		uint16_t reserved_sectors;
+	};
+	uint32_t fat_size;
+	uint32_t hidden_sectors;
+	uint32_t root_cluster;
 	uint32_t root_sector;
+	uint16_t root_sector_num;		// FAT12 FAT 16 only
 
 	// private
 	struct vsfsm_crit_t crit;
 	// resourced below are protected by crit
-	struct uint8_t *sector_buffer;
+	uint8_t *sector_buffer;
 	struct vsfsm_pt_t caller_pt;
 };
 
@@ -46,7 +56,7 @@ struct vsfile_fatfile_t
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfile_fsop_t fatfs_op;
+extern const struct vsfile_fsop_t vsffat_op;
 #endif
 
 #endif	// __VSFFAT_H_INCLUDED__

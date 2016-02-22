@@ -60,6 +60,7 @@ struct vsfile_dop_t
 struct vsfile_fsop_t
 {
 	// dir in mount is the directory of the vfs under which fs is mounted
+	vsf_err_t (*format)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*mount)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir);
 	vsf_err_t (*unmount)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
