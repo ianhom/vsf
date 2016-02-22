@@ -203,37 +203,31 @@ vsf_err_t nuc505_interface_init(void *p)
 	return VSFERR_NONE;
 }
 
+// tickclk
+#define CM3_SYSTICK_ENABLE				(1 << 0)
+#define CM3_SYSTICK_INT					(1 << 1)
+#define CM3_SYSTICK_CLKSOURCE			(1 << 2)
+#define CM3_SYSTICK_COUNTFLAG			(1 << 16)
+
 static void (*nuc505_tickclk_callback)(void *param) = NULL;
 static void *nuc505_tickclk_param = NULL;
-static volatile uint32_t nuc505_tickcnt = 0;
-
+static uint32_t nuc505_tickcnt = 0;
 vsf_err_t nuc505_tickclk_start(void)
 {
-	TIMER2->CTL |= TIMER_CTL_CNTEN_Msk;
-	TIMER3->CTL |= TIMER_CTL_CNTEN_Msk;
-	nuc505_tickclk_set_interval(1);
+	SysTick->VAL = 0;
+	SysTick->CTRL |= CM3_SYSTICK_ENABLE;
 	return VSFERR_NONE;
 }
 
 vsf_err_t nuc505_tickclk_stop(void)
 {
-	uint32_t cnt;
-	TIMER2->CTL &= ~TIMER_CTL_CNTEN_Msk;
-	TIMER3->CTL &= ~TIMER_CTL_CNTEN_Msk;
-
-	cnt = TIMER2->CNT;
-	if (cnt > 0)
-	{
-		nuc505_tickcnt += (cnt * 100) / 3276;
-		TIMER2->CTL |= TIMER_CTL_RSTCNT_Msk;
-	}
+	SysTick->CTRL &= ~CM3_SYSTICK_ENABLE;
 	return VSFERR_NONE;
 }
 
 static uint32_t nuc505_tickclk_get_count_local(void)
 {
-	uint32_t cnt = TIMER2->CNT;
-	return nuc505_tickcnt + ((cnt * 100) / 3276);
+	return nuc505_tickcnt;
 }
 
 uint32_t nuc505_tickclk_get_count(void)
@@ -247,85 +241,38 @@ uint32_t nuc505_tickclk_get_count(void)
 	return count1;
 }
 
-vsf_err_t nuc505_tickclk_set_callback(void (*callback)(void*), void *param)
+ROOTFUNC void SysTick_Handler(void)
 {
-	if (TIMER3->CTL & TIMER_CTL_CNTEN_Msk)
-	{
-		TIMER3->CTL &= ~TIMER_CTL_CNTEN_Msk;
-		nuc505_tickclk_callback = callback;
-		nuc505_tickclk_param = param;
-		TIMER3->CTL |= TIMER_CTL_CNTEN_Msk;
-	}
-	else
-	{
-		nuc505_tickclk_callback = callback;
-		nuc505_tickclk_param = param;
-	}
-	return VSFERR_NONE;
-}
-
-vsf_err_t nuc505_tickclk_set_interval(uint16_t ms)
-{
-	if (ms == 0)
-		return VSFERR_FAIL;
-
-	TIMER3->CTL &= ~TIMER_CTL_CNTEN_Msk;
-	TIMER3->CTL = TIMER_CTL_RSTCNT_Msk;
-	TIMER3->CTL = TIMER_CTL_INTEN_Msk | (0x1ul << TIMER_CTL_OPMODE_Pos) |
-					TIMER_CTL_WKEN_Msk;
-	TIMER3->CMP = (32768 * ms) / 1000;
-	TIMER3->CTL |= TIMER_CTL_CNTEN_Msk;
-
-	return VSFERR_NONE;
-}
-
-ROOTFUNC void TMR2_IRQHandler(void)
-{
-	nuc505_tickcnt += 500 * 1000;
-	if (nuc505_tickcnt > 0xffffffff - 1200 * 1000)
-		nuc505_interface_reset(NULL);
-	TIMER2->INTSTS = TIMER_INTSTS_TIF_Msk;
-}
-
-ROOTFUNC void TMR3_IRQHandler(void)
-{
+	nuc505_tickcnt++;
 	if (nuc505_tickclk_callback != NULL)
 	{
 		nuc505_tickclk_callback(nuc505_tickclk_param);
 	}
-	//TIMER3->CMP = 32768;
-	TIMER3->INTSTS = TIMER_INTSTS_TIF_Msk;
+}
+
+vsf_err_t nuc505_tickclk_set_callback(void (*callback)(void*), void *param)
+{
+	uint32_t tmp = SysTick->CTRL;
+
+	SysTick->CTRL &= ~CM3_SYSTICK_INT;
+	nuc505_tickclk_callback = callback;
+	nuc505_tickclk_param = param;
+	SysTick->CTRL = tmp;
+	return VSFERR_NONE;
 }
 
 vsf_err_t nuc505_tickclk_init(void)
 {
 	nuc505_tickcnt = 0;
-	NVIC_EnableIRQ(TMR2_IRQn);
-	NVIC_EnableIRQ(TMR3_IRQn);
-
-	TIMER2->CTL = TIMER_CTL_RSTCNT_Msk;
-	TIMER3->CTL = TIMER_CTL_RSTCNT_Msk;
-	CLK->APBCLK |= CLK_APBCLK_TMR2CKEN_Msk | CLK_APBCLK_TMR3CKEN_Msk;
-
-	CLK->CLKDIV4 &= ~(CLK_CLKDIV4_TMR2SEL_Msk | CLK_CLKDIV4_TMR2DIV_Msk);
-	CLK->CLKDIV5 &= ~(CLK_CLKDIV5_TMR3SEL_Msk | CLK_CLKDIV5_TMR3DIV_Msk);
-	TIMER2->CTL = TIMER_CTL_INTEN_Msk | (0x1ul << TIMER_CTL_OPMODE_Pos) |
-					TIMER_CTL_WKEN_Msk;
-
-	TIMER2->CMP = 32768 * 500;
-	TIMER3->CMP = 32768 / 1000;
-
+	SysTick->LOAD = nuc505_info.cpu_freq_hz / 1000;
+	SysTick->CTRL = CM3_SYSTICK_INT | CM3_SYSTICK_CLKSOURCE;
+	NVIC_SetPriority(SysTick_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
 	return VSFERR_NONE;
 }
 
 vsf_err_t nuc505_tickclk_fini(void)
 {
-	NVIC_DisableIRQ(TMR2_IRQn);
-	NVIC_DisableIRQ(TMR3_IRQn);
-	TIMER2->CTL = TIMER_CTL_RSTCNT_Msk;
-	TIMER3->CTL = TIMER_CTL_RSTCNT_Msk;
-	CLK->APBCLK &= ~(CLK_APBCLK_TMR2CKEN_Msk | CLK_APBCLK_TMR3CKEN_Msk);
-	return VSFERR_NONE;
+	return nuc505_tickclk_stop();
 }
 
 uint32_t cortexm_get_pc(void)
