@@ -17,46 +17,34 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __VSFFAT_H_INCLUDED__
-#define __VSFFAT_H_INCLUDED__
+#ifndef __VSF_MALFS_H_INCLUDED__
+#define __VSF_MALFS_H_INCLUDED__
 
-struct vsfile_fatfs_param_t
+#define VSF_MALFS_EVT_CRIT				(VSFSM_EVT_USER + 0)
+#define VSF_MALFS_EVT_IODONE			(VSFSM_EVT_USER + 1)
+#define VSF_MALFS_EVT_IOFAIL			(VSFSM_EVT_USER + 2)
+
+struct vsf_malfs_t
 {
-	struct vsfmal_t *mal;
+	struct vsf_malstream_t malstream;
 
 	// protected
-	uint8_t sectors_per_cluster;
-	uint8_t fat_bitsize;
-	uint8_t fat_num;
-	union
-	{
-		// FAT starts after reserved sectors
-		uint16_t fat_sector;
-		uint16_t reserved_sectors;
-	};
-	uint32_t fat_size;
-	uint32_t hidden_sectors;
-	uint32_t root_cluster;
-	uint32_t root_sector;
-	uint16_t root_sector_num;		// FAT12 FAT 16 only
+	char *volume_name;
+	struct vsfsm_crit_t crit;
+	uint8_t *sector_buffer;
+	struct vsfsm_t *notifier_sm;
 
 	// private
-	struct vsfsm_crit_t crit;
-	// resourced below are protected by crit
-	uint8_t *sector_buffer;
-	struct vsfsm_pt_t caller_pt;
+	struct vsf_mbufstream_t mbufstream;
+	uint8_t *mbufstream_buffer[1];
 };
 
-struct vsfile_fatfile_t
-{
-	struct vsfile_t file;
+vsf_err_t vsf_malfs_init(struct vsf_malfs_t *malfs);
+void vsf_malfs_fini(struct vsf_malfs_t *malfs);
 
-	struct vsfile_fatfs_param_t *fs_param;
-	uint32_t first_cluster;
-};
+vsf_err_t vsf_malfs_read(struct vsf_malfs_t *malfs, uint32_t sector,
+							uint8_t *buff, uint32_t num);
+vsf_err_t vsf_malfs_write(struct vsf_malfs_t *malfs, uint32_t sector,
+							uint8_t *buff, uint32_t num);
 
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfile_fsop_t vsffat_op;
-#endif
-
-#endif	// __VSFFAT_H_INCLUDED__
+#endif	// __VSF_MALFS_H_INCLUDED__
