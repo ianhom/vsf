@@ -305,8 +305,8 @@ vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 			}
 			child = (struct vsfile_t *)((uint32_t)child + memfile->d.child_size);
 		}
-		*file = child;
-		return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+		*file = (!child || !child->name) ? NULL : child;
+		return (NULL == *file) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
 	}
 }
 
