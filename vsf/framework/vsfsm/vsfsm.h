@@ -165,6 +165,12 @@ vsf_err_t vsfsm_pt_init(struct vsfsm_t *sm, struct vsfsm_pt_t *pt);
 #define vsfsm_pt_begin(pt)			switch ((pt)->state) { case 0:
 #define vsfsm_pt_entry(pt)			(pt)->state = __LINE__; case __LINE__:
 // wait for event
+#define vsfsm_pt_wait(pt)			\
+	do {\
+		evt = VSFSM_EVT_INVALID;\
+		vsfsm_pt_entry(pt);\
+		if (VSFSM_EVT_INVALID == evt) return VSFERR_NOT_READY;\
+	} while (0)
 #define vsfsm_pt_wfe(pt, e)			\
 	do {\
 		evt = VSFSM_EVT_INVALID;\
