@@ -730,13 +730,13 @@ const struct vsfile_fsop_t fakefat32_fs_op =
 };
 #endif
 
-static uint32_t fakefat32_mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
+uint32_t fakefat32_mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
 										uint32_t size, enum vsfmal_op_t op)
 {
 	return mal->cap.block_size;
 }
 
-static vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t*)pt->user_data;
 	struct fakefat32_param_t *param = (struct fakefat32_param_t *)mal->param;
@@ -747,12 +747,12 @@ static vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_mal_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+vsf_err_t fakefat32_mal_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 									uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
@@ -955,7 +955,7 @@ static vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 									uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;

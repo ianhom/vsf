@@ -57,7 +57,7 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 	{
 		struct
 		{
-			struct
+			PACKED_HEAD struct PACKED_MID
 			{
 				uint32_t SectorsPerFAT32;
 				uint16_t ExtendedFlag;
@@ -66,7 +66,7 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 				uint16_t FSINFO_SectorNumber;
 				uint16_t BackupBootSector;
 				uint8_t fill[12];
-			} fat32_bpb;
+			} fat32_bpb; PACKED_TAIL
 			struct fatfs_ebpb_t ebpb;
 			uint8_t Bootstrap[420];
 		} fat32;

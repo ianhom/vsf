@@ -78,6 +78,20 @@ struct vsf_malstream_cb_t
 	void *param;
 };
 
+// mim: mal in mal
+struct vsfmim_t
+{
+	struct vsfmal_t mal;
+
+	// private
+	struct vsfmal_t *realmal;
+	uint32_t addr;
+	uint32_t size;
+};
+#ifndef VSFCFG_STANDALONE_MODULE
+extern const struct vsfmal_drv_t vsfmim_drv;
+#endif
+
 // mal stream, IMPORTANT: stream MUST be multibuf_stream
 struct vsf_malstream_t
 {

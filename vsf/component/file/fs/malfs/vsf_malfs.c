@@ -24,9 +24,10 @@ static void vsf_malfs_finish(void *param)
 {
 	struct vsf_malfs_t *malfs = (struct vsf_malfs_t *)param;
 	struct vsf_malstream_t *malstream = &malfs->malstream;
+	vsfsm_evt_t evt = malstream->offset < malstream->size ?
+							VSF_MALFS_EVT_IOFAIL : VSF_MALFS_EVT_IODONE;
 
-	vsfsm_post_evt(malfs->notifier_sm, malstream->offset < malstream->size ?
-								VSF_MALFS_EVT_IOFAIL : VSF_MALFS_EVT_IODONE);
+	vsfsm_post_evt_pending(malfs->notifier_sm, evt);
 }
 
 vsf_err_t vsf_malfs_init(struct vsf_malfs_t *malfs)
@@ -73,7 +74,7 @@ vsf_err_t vsf_malfs_read(struct vsf_malfs_t *malfs, uint32_t sector,
 	}
 
 	malfs->mbufstream_buffer[0] = buff;
-	STREAM_INIT(&malfs->malstream);
+	STREAM_INIT(&malfs->mbufstream);
 	return vsf_malstream_read(&malfs->malstream, sector * bs, num * bs);
 }
 
@@ -89,6 +90,6 @@ vsf_err_t vsf_malfs_write(struct vsf_malfs_t *malfs, uint32_t sector,
 	}
 
 	malfs->mbufstream_buffer[0] = buff;
-	STREAM_INIT(&malfs->malstream);
+	STREAM_INIT(&malfs->mbufstream);
 	return vsf_malstream_write(&malfs->malstream, sector * bs, num * bs);
 }
