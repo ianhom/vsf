@@ -26,4 +26,18 @@ static struct vsfile_memfile_t httpd_root_dir[] =
 	},
 };
 
+static struct vsfile_memfile_t httpd_root[2] =
+{
+	{
+		.file.name = "ROOT",
+		.file.attr = VSFILE_ATTR_DIRECTORY,
+		.file.parent = NULL,
+		.d.child = httpd_root_dir,
+	},
+	{
+		.file.name = NULL,
+		.d.child = NULL,
+	},
+};
+
 #endif		// __HTTPD_FS_H_INCLUDED__

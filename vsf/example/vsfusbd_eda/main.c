@@ -389,7 +389,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			app.caller_pt.state = 0;
 			vsfile_getfile(&app.caller_pt, 0, NULL, "/httpd_root", &file);
 			app.caller_pt.state = 0;
-			app.caller_pt.user_data = httpd_root_dir;
+			app.caller_pt.user_data = httpd_root;
 			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&vsfile_memfs_op, file);
 
 			// tester
