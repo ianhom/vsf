@@ -29,32 +29,48 @@ struct vsfile_fatfile_t
 	uint32_t first_cluster;
 };
 
+enum vsffat_type_t
+{
+	VSFFAT_NONE = 0,
+	VSFFAT_FAT12,
+	VSFFAT_FAT16,
+	VSFFAT_FAT32,
+	VSFFAT_EXFAT,
+};
+
 struct vsffat_t
 {
 	struct vsf_malfs_t malfs;
 
 	// protected
-	uint8_t sectors_per_cluster;
-	uint8_t fat_bitsize;
-	uint8_t fat_num;
+	enum vsffat_type_t type;
+
+	// information parsed from bpb
+	uint8_t clustersize_bits;
+	uint8_t fatnum;
 	union
 	{
 		// FAT starts after reserved sectors
-		uint16_t fat_sector;
-		uint16_t reserved_sectors;
+		uint16_t fatbase;
+		uint16_t reserved_size;
 	};
-	uint32_t fat_size;
-	uint32_t hidden_sectors;
+	uint16_t rootentry;
+	uint16_t fsinfo;
+	uint32_t fatsize;
 	uint32_t root_cluster;
-	uint32_t root_sector;
-	uint16_t root_sector_num;		// FAT12 FAT 16 only
-	char volume_id[11];
+
+	// information calculated
+	uint32_t clusternum;
+	uint32_t database;
+	uint32_t rootbase;
+	uint32_t rootsize;
+	char volid[11];
 
 	// private
 	struct vsfile_fatfile_t root;
 	struct vsfsm_pt_t caller_pt;
 	uint32_t cur_cluster;
-	uint32_t cur_page;
+	uint32_t cur_sector;
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE

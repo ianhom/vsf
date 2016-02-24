@@ -22,30 +22,33 @@
 #include "../vsf_malfs.h"
 #include "vsffat.h"
 
+// Refer to:
+// 1. "Microsoft Extensible Firmware Initiative FAT32 File System Specification"
+
 PACKED_HEAD struct PACKED_MID fatfs_bpb_t
 {
-	uint16_t BytesPerSector;
-	uint8_t SectorsPerCluster;
-	uint16_t ReservedSector;
-	uint8_t NumberOfFAT;
-	uint16_t RootEntries;
-	uint16_t SmallSector;
-	uint8_t MediaDescriptor;
-	uint16_t SectorsPerFAT;
-	uint16_t SectorsPerTrack;
-	uint16_t NumberOfHead;
-	uint32_t HiddenSector;
-	uint32_t LargeSector;
+	uint16_t BytsPerSec;
+	uint8_t SecPerClus;
+	uint16_t RsvdSecCnt;
+	uint8_t NumFATs;
+	uint16_t RootEntCnt;
+	uint16_t TotSec16;
+	uint8_t Media;
+	uint16_t FATSz16;
+	uint16_t SecPerTrk;
+	uint16_t NumHeads;
+	uint32_t HiddSec;
+	uint32_t TotSec32;
 }; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID fatfs_ebpb_t
 {
-	uint8_t PhysicalDriveNumber;
+	uint8_t DrvNum;
 	uint8_t Reserved;
-	uint8_t ExtendedBootSignature;
-	uint32_t VolumeSerialNumber;
-	uint8_t VolumeLabel[11];
-	uint8_t SystemID[8];
+	uint8_t BootSig;
+	uint32_t VolID;
+	uint8_t VolLab[11];
+	uint8_t FilSysType[8];
 }; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID fatfs_dbr_t
@@ -59,14 +62,14 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 		{
 			PACKED_HEAD struct PACKED_MID
 			{
-				uint32_t SectorsPerFAT32;
-				uint16_t ExtendedFlag;
-				uint16_t FileSystemVersion;
-				uint32_t RootClusterNumber;
-				uint16_t FSINFO_SectorNumber;
-				uint16_t BackupBootSector;
-				uint8_t fill[12];
-			} fat32_bpb; PACKED_TAIL
+				uint32_t FATSz32;
+				uint16_t ExtFlags;
+				uint16_t FSVer;
+				uint32_t RootClus;
+				uint16_t FSInfo;
+				uint16_t BkBootSec;
+				uint8_t Reserved[12];
+			} bpb; PACKED_TAIL
 			struct fatfs_ebpb_t ebpb;
 			uint8_t Bootstrap[420];
 		} fat32;
@@ -95,8 +98,8 @@ PACKED_HEAD struct PACKED_MID fatfs_dentry_t
 	uint32_t FileSize;
 }; PACKED_TAIL
 
-static vsf_err_t vsffat_get_fat_entry(struct vsffat_t *fatfs, uint32_t cluster,
-										uint32_t *page, uint32_t *offset)
+static vsf_err_t vsffat_get_fat_entry(struct vsffat_t *fat, uint32_t cluster,
+										uint32_t *sector, uint32_t *offset)
 {
 	return VSFERR_NONE;
 }
@@ -107,14 +110,114 @@ static vsf_err_t vsffat_get_next_cluster(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-static bool vsffat_is_cluster_eof(struct vsffat_t *fatfs, uint32_t cluster)
+static bool vsffat_is_cluster_eof(struct vsffat_t *fat, uint32_t cluster)
 {
 	return true;
 }
 
-static uint32_t vsffat_cluster_page(struct vsffat_t *fatfs, uint32_t cluster)
+static uint32_t vsffat_clus2sec(struct vsffat_t *fat, uint32_t cluster)
 {
-	return 0;
+	return fat->database +
+			(cluster - fat->root_cluster) >> fat->clustersize_bits;
+}
+
+static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
+{
+	uint16_t BytsPerSec;
+	uint32_t tmp32;
+	uint8_t *ptr = (uint8_t *)dbr;
+	int i;
+
+	for (i = 0; i < 53; i++) if (*ptr++) break;
+	if (i < 53)
+	{
+		// normal FAT12, FAT16, FAT32
+		uint32_t sectornum, clusternum;
+
+		// BytsPerSec MUST the same as mal blocksize, and MUST following value:
+		// 		512, 1024, 2048, 4096
+		BytsPerSec = dbr->bpb.BytsPerSec;
+		if ((BytsPerSec != fat->malfs.malstream.mal->cap.block_size) ||
+			((BytsPerSec != 512) && (BytsPerSec != 1024) &&
+				(BytsPerSec != 2048) && (BytsPerSec != 4096)))
+			return VSFERR_FAIL;
+
+		// SecPerClus MUST be power of 2
+		tmp32 = dbr->bpb.SecPerClus;
+		fat->clustersize_bits = tmp32 & (tmp32 - 1);
+		if (!tmp32 || !fat->clustersize_bits)
+			return VSFERR_FAIL;
+
+		// RsvdSecCnt CANNOT be 0
+		fat->reserved_size = dbr->bpb.RsvdSecCnt;
+		if (!fat->reserved_size)
+			return VSFERR_FAIL;
+
+		// NumFATs CANNOT be 0
+		fat->fatnum = dbr->bpb.NumFATs;
+		if (!fat->fatnum)
+			return VSFERR_FAIL;
+
+		sectornum = dbr->bpb.TotSec16;
+		if (!sectornum)
+			sectornum = dbr->bpb.TotSec32;
+		if (!sectornum)
+			return VSFERR_FAIL;
+
+		fat->fatsize = dbr->bpb.FATSz16 ?
+						dbr->bpb.FATSz16 : dbr->fat32.bpb.FATSz32;
+		if (!fat->fatsize)
+			return VSFERR_FAIL;
+
+		tmp32 = fat->rootentry = dbr->bpb.RootEntCnt;
+		if (tmp32)
+			tmp32 = ((tmp32 >> 5) + BytsPerSec - 1) / BytsPerSec;
+		fat->rootsize = tmp32;
+		// calculate base
+		fat->rootbase = fat->fatbase + fat->fatnum * fat->fatsize;
+		fat->database = fat->rootbase + fat->rootsize;
+		// calculate cluster number: note that cluster starts from root_cluster
+		clusternum = (sectornum - fat->reserved_size) >> fat->clustersize_bits;
+
+		// for FAT32 RootEntCnt MUST be 0
+		if (!fat->rootentry)
+		{
+			// FAT32
+			fat->type = VSFFAT_FAT32;
+
+			// for FAT32, TotSec16 and FATSz16 MUST be 0
+			if (dbr->bpb.FATSz16 || dbr->bpb.TotSec16)
+				return VSFERR_FAIL;
+
+			fat->fsinfo = dbr->fat32.bpb.FSInfo;
+
+			// RootClus CANNOT be less than 2
+			fat->root_cluster = dbr->fat32.bpb.RootClus;
+			if (fat->root_cluster < 2)
+			{
+				return VSFERR_NONE;
+			
+			}
+
+			fat->clusternum = fat->root_cluster + clusternum;
+		}
+		else
+		{
+			// FAT12 or FAT16
+			fat->type = (clusternum < 4085) ? VSFFAT_FAT12 : VSFFAT_FAT16;
+
+			// root has no cluster
+			fat->root_cluster = 0;
+			fat->clusternum = fat->root_cluster + clusternum;
+		}
+	}
+	else
+	{
+		// bpb all 0, exFAT
+		fat->type = VSFFAT_EXFAT;
+	}
+
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -122,17 +225,11 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 {
 	struct vsffat_t *fatfs = (struct vsffat_t *)pt->user_data;
 	struct vsf_malfs_t *malfs = &fatfs->malfs;
-	uint32_t pagesize = malfs->malstream.mal->cap.block_size;
-	struct fatfs_dbr_t *dbr;
 	struct fatfs_dentry_t *dentry;
 	vsf_err_t err = VSFERR_NONE;
 
 	vsfsm_pt_begin(pt);
 
-	if (pagesize < 512)
-	{
-		return VSFERR_INVALID_PARAMETER;
-	}
 	err = vsf_malfs_init(malfs);
 	if (err) goto fail;
 
@@ -150,30 +247,14 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 
 	// parse DBR
-	dbr = (struct fatfs_dbr_t *)malfs->sector_buffer;
-	fatfs->sectors_per_cluster = dbr->bpb.SectorsPerCluster;
-	fatfs->fat_bitsize = 32;		// we test on FAT32 first
-	fatfs->fat_num = dbr->bpb.NumberOfFAT;
-	fatfs->reserved_sectors = dbr->bpb.ReservedSector;
-	// for FAT32, SectorsPerFAT MUST be 0
-	switch (fatfs->fat_bitsize)
+	fatfs->type = VSFFAT_NONE;
+	err = vsffat_parse_dbr(fatfs, (struct fatfs_dbr_t *)malfs->sector_buffer);
+	if (err)
 	{
-	case 12: case 16:
-		fatfs->fat_size = dbr->bpb.SectorsPerFAT;
-		fatfs->root_cluster = 2;
-		fatfs->root_sector_num = 32;
-		break;
-	case 32:
-		fatfs->fat_size = dbr->fat32.fat32_bpb.SectorsPerFAT32;
-		fatfs->root_cluster = dbr->fat32.fat32_bpb.RootClusterNumber;
-		fatfs->root_sector_num = 0;
-		break;
+		goto fail_crit;
 	}
-	fatfs->hidden_sectors = dbr->bpb.HiddenSector;
-	// ROOT follows FAT
-	fatfs->root_sector = fatfs->fat_sector + fatfs->fat_num * fatfs->fat_size;
 
-	vsf_malfs_read(malfs, fatfs->root_sector, malfs->sector_buffer, 1);
+	vsf_malfs_read(malfs, fatfs->rootbase, malfs->sector_buffer, 1);
 	vsfsm_pt_wait(pt);
 	vsfsm_crit_leave(&malfs->crit);
 	if (VSF_MALFS_EVT_IOFAIL == evt)
@@ -183,25 +264,25 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	// check volume_id
 	dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
-	fatfs->volume_id[0] = '\0';
+	fatfs->volid[0] = '\0';
 	if (VSFILE_ATTR_VOLUMID == dentry->Attr)
 	{
 		int i;
 
-		memcpy(fatfs->volume_id, dentry->Name, 11);
+		memcpy(fatfs->volid, dentry->Name, 11);
 		for (i = 10; i >= 0; i--)
 		{
-			if (fatfs->volume_id[i] != ' ')
+			if (fatfs->volid[i] != ' ')
 			{
 				break;
 			}
-			fatfs->volume_id[i] = '\0';
+			fatfs->volid[i] = '\0';
 		}
 	}
-	malfs->volume_name = fatfs->volume_id;
+	malfs->volume_name = fatfs->volid;
 
 	// initialize root
-	fatfs->root.file.name = fatfs->volume_id;
+	fatfs->root.file.name = fatfs->volid;
 	fatfs->root.file.size = 0;
 	fatfs->root.file.attr = VSFILE_ATTR_DIRECTORY;
 	fatfs->root.file.op = (struct vsfile_fsop_t *)&vsffat_op;
@@ -261,12 +342,21 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 		vsfsm_pt_wfe(pt, VSF_MALFS_EVT_CRIT);
 	}
 	malfs->notifier_sm = pt->sm;
+
 	fatfs->cur_cluster = fatdir->first_cluster;
-	fatfs->cur_page = vsffat_cluster_page(fatfs, fatfs->cur_cluster);
+	if (!fatfs->cur_cluster)
+	{
+		// it's ROOT for FAT12 and FAT16
+		fatfs->cur_sector = fatfs->rootbase;
+	}
+	else
+	{
+		fatfs->cur_sector = vsffat_clus2sec(fatfs, fatfs->cur_cluster);
+	}
 
 	while (1)
 	{
-		vsf_malfs_read(malfs, fatfs->cur_page, malfs->sector_buffer, 1);
+		vsf_malfs_read(malfs, fatfs->cur_sector, malfs->sector_buffer, 1);
 		vsfsm_pt_wait(pt);
 		if (VSF_MALFS_EVT_IOFAIL == evt)
 		{
@@ -278,10 +368,10 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 		// TODO: try to search file equal to name
 		// TODO: if found, allocate and initialize file structure
 
-		if (fatfs->cur_page % fatfs->sectors_per_cluster)
+		if (fatfs->cur_sector & ((1 << fatfs->clustersize_bits) - 1))
 		{
-			// not found in current page, find next page
-			fatfs->cur_page++;
+			// not found in current sector, find next sector
+			fatfs->cur_sector++;
 		}
 		else
 		{
@@ -301,7 +391,7 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 				break;
 			}
 
-			fatfs->cur_page = vsffat_cluster_page(fatfs, fatfs->cur_cluster);
+			fatfs->cur_sector = vsffat_clus2sec(fatfs, fatfs->cur_cluster);
 		}
 	}
 
