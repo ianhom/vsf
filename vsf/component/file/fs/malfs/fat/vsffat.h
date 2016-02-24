@@ -20,6 +20,8 @@
 #ifndef __VSFFAT_H_INCLUDED__
 #define __VSFFAT_H_INCLUDED__
 
+#include "../vsf_malfs.h"
+
 struct vsffat_t;
 struct vsfile_fatfile_t
 {
@@ -70,17 +72,33 @@ struct vsffat_t
 	// for getchild_byname, getchild_byidx, read and write
 	uint32_t cur_cluster;
 	uint32_t cur_sector;
-	// for read and write
-	uint64_t cur_offset;
-	uint32_t cur_size;
-	uint32_t cur_run_size;
-	uint32_t cur_run_sector;
-	uint32_t remain_size;
+	union
+	{
+		// for read and write
+		struct
+		{
+			uint64_t cur_offset;
+			uint32_t cur_size;
+			uint32_t cur_run_size;
+			uint32_t cur_run_sector;
+			uint32_t remain_size;
+		};
+		// for getchild_byname, getchild_byidx
+		struct
+		{
+			uint32_t cur_index;
+			uint8_t *cur_name_pos;
+		};
+	};
+
 	// for vsffat_get_FATentry
 	uint32_t readbit;
 	uint32_t cur_fatsector;
 	// for vsffat_alloc_cluschain
 };
+
+// helper
+bool vsffat_is_LFN(char *name);
 
 #ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfile_fsop_t vsffat_op;

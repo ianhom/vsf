@@ -17,9 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <ctype.h>
 #include "vsf.h"
-
-#include "../vsf_malfs.h"
 #include "vsffat.h"
 
 // Refer to:
@@ -132,6 +131,41 @@ static uint32_t vsffat_clus2sec(struct vsffat_t *fat, uint32_t cluster)
 {
 	cluster -= fat->root_cluster ? fat->root_cluster : 2;
 	return fat->database + (cluster >> fat->clustersize_bits);
+}
+
+bool vsffat_is_LFN(char *name)
+{
+	char *ext = NULL;
+	bool has_lower = false, has_upper = false;
+	uint32_t i, name_len = 0, ext_len = 0;
+
+	if (name != NULL)
+	{
+		name_len = strlen(name);
+		ext = vsfile_getfileext(name);
+	}
+	if (ext != NULL)
+	{
+		ext_len = strlen(ext);
+		name_len -= ext_len + 1;	// 1 more byte for dot
+	}
+	if ((name_len > 8) || (ext_len > 3))
+	{
+		return true;
+	}
+
+	for (i = 0; name[i] != '\0'; i++)
+	{
+		if (islower((int)name[i]))
+		{
+			has_lower = true;
+		}
+		if (isupper((int)name[i]))
+		{
+			has_upper = true;
+		}
+	}
+	return has_lower && has_upper;
 }
 
 static vsf_err_t vsffat_get_FATentry(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
