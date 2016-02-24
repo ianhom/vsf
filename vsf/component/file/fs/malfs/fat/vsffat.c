@@ -191,10 +191,12 @@ static vsf_err_t vsffat_get_FATentry(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		startbit += fat->readbit ? 1 : 0;
 		if (fat->cur_fatsector != startbit)
 		{
+			fat->cur_fatsector = startbit;
 			vsf_malfs_read(malfs, startbit, malfs->sector_buffer, 1);
 			vsfsm_pt_wait(pt);
 			if (VSF_MALFS_EVT_IOFAIL == evt)
 			{
+				fat->cur_fatsector = 0;
 				return VSFERR_FAIL;
 			}
 		}
