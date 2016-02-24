@@ -195,17 +195,6 @@ vsf_err_t vsfile_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return dir->op->unmount(pt, evt, dir);
 }
 
-vsf_err_t vsfile_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file)
-{
-	if (!(file->attr & VSFILE_ATTR_ARCHIVE))
-	{
-		return VSFERR_NOT_ACCESSABLE;
-	}
-
-	return file->op->f_op.open(pt, evt, file);
-}
-
 vsf_err_t vsfile_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
@@ -399,7 +388,6 @@ const struct vsfile_fsop_t vsfile_memfs_op =
 	.mount = vsfile_memfs_mount,
 	.unmount = vsfile_dummy_unmount,
 	// f_op
-	.f_op.open = vsfile_dummy_open,
 	.f_op.close = vsfile_dummy_close,
 	.f_op.read = vsfile_memfs_read,
 	.f_op.write = vsfile_memfs_write,
@@ -567,7 +555,6 @@ const struct vsfile_fsop_t vsfile_vfs_op =
 	.mount = vsfile_vfs_mount,
 	.unmount = vsfile_vfs_unmount,
 	// f_op
-	.f_op.open = NULL,
 	.f_op.close = NULL,
 	.f_op.read = NULL,
 	.f_op.write = NULL,

@@ -720,7 +720,6 @@ const struct vsfile_fsop_t fakefat32_fs_op =
 	.mount = fakefat32_fs_mount,
 	.unmount = vsfile_dummy_unmount,
 	// f_op
-	.f_op.open = vsfile_dummy_open,
 	.f_op.close = vsfile_dummy_close,
 	.f_op.read = vsfile_memfs_read,
 	.f_op.write = vsfile_memfs_write,

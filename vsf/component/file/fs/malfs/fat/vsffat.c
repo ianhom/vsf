@@ -183,8 +183,10 @@ static vsf_err_t vsffat_get_FATentry(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
+// if *cluster != 0, then allocate chain from *cluster for data in size
+// if *cluster == 0, then allocate new chain for data in size
 static vsf_err_t vsffat_alloc_cluschain(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-										uint32_t size, uint32_t *ncluster)
+										uint32_t size, uint32_t *cluster)
 {
 	// TODO: implement this for addfile
 	return VSFERR_NOT_SUPPORT;
@@ -519,16 +521,11 @@ vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
 	return VSFERR_NOT_SUPPORT;
 }
 
-vsf_err_t vsffat_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file)
-{
-	return VSFERR_NOT_SUPPORT;
-}
-
 vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
-	return VSFERR_NOT_SUPPORT;
+	vsf_bufmgr_free(file);
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -676,7 +673,6 @@ const struct vsfile_fsop_t vsffat_op =
 	.mount = vsffat_mount,
 	.unmount = vsffat_unmount,
 	// f_op
-	.f_op.open = vsffat_open,
 	.f_op.close = vsffat_close,
 	.f_op.read = vsffat_read,
 	.f_op.write = vsffat_write,
