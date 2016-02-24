@@ -66,8 +66,13 @@ struct vsffat_t
 	// private
 	struct vsfile_fatfile_t root;
 	struct vsfsm_pt_t caller_pt;
+
+	// for getchild_byname and getchild_byidx
 	uint32_t cur_cluster;
 	uint32_t cur_sector;
+	// for vsffat_get_FATentry
+	uint32_t readbit;
+	// for vsffat_alloc_cluschain
 };
 
 #ifndef VSFCFG_STANDALONE_MODULE
