@@ -198,6 +198,11 @@ static struct fakefat32_file_t* fakefat32_get_file_by_cluster(
 	return NULL;
 }
 
+static bool fakefat32_file_is_longname(struct fakefat32_file_t *file)
+{
+	return vsffat_is_LFN(file->memfile.file.name);
+}
+
 static uint32_t fakefat32_calc_longname_len(struct fakefat32_file_t *file)
 {
 	struct vsfile_t *rawfile = &file->memfile.file;
@@ -227,7 +232,7 @@ static uint32_t fakefat32_calc_dir_clusters(struct fakefat32_param_t *param,
 	while (rawfile->name != NULL)
 	{
 		if ((rawfile->attr != VSFILE_ATTR_VOLUMID) &&
-			vsffat_is_LFN(file->memfile.file.name))
+			fakefat32_file_is_longname(file))
 		{
 			// one long name can contain 13 unicode max
 			size += 0x20 * ((fakefat32_calc_longname_len(file) + 12) / 13);
@@ -314,7 +319,7 @@ static void fakefat32_get_shortname(struct fakefat32_file_t* file,
 		return;
 	}
 
-	if (!vsffat_is_LFN(file->memfile.file.name))
+	if (!fakefat32_file_is_longname(file))
 	{
 		uint32_t file_name_len = strlen(rawfile->name);
 		if (ext)
@@ -373,7 +378,7 @@ static vsf_err_t fakefat32_dir_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		}
 
 		if ((rawfile->attr != VSFILE_ATTR_VOLUMID) &&
-			vsffat_is_LFN(file->memfile.file.name))
+			fakefat32_file_is_longname(file))
 		{
 			uint32_t longname_len = fakefat32_calc_longname_len(file);
 			uint8_t longname_entry_num = (uint8_t)((longname_len + 12) / 13);
@@ -414,7 +419,7 @@ static vsf_err_t fakefat32_dir_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		// generate short 8.3 filename
 		fakefat32_get_shortname(file, short_filename);
 
-		if (vsffat_is_LFN(file->memfile.file.name))
+		if (fakefat32_file_is_longname(file))
 		{
 			// process entries for long file name
 			uint32_t longname_len = fakefat32_calc_longname_len(file);

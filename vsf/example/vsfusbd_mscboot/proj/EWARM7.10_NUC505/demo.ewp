@@ -1946,6 +1946,21 @@
       </group>
       <group>
         <name>file</name>
+        <group>
+          <name>fs</name>
+          <group>
+            <name>malfs</name>
+            <group>
+              <name>fat</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\component\file\fs\malfs\fat\vsffat.c</name>
+              </file>
+            </group>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\file\fs\malfs\vsf_malfs.c</name>
+            </file>
+          </group>
+        </group>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
         </file>
@@ -2204,16 +2219,6 @@
         </excluded>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\tool\mal_embflash\mal_embflash.c</name>
-        </file>
-      </group>
-      <group>
-        <name>mal_in_mal</name>
-        <excluded>
-          <configuration>Debug</configuration>
-          <configuration>Release</configuration>
-        </excluded>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\tool\mal_in_mal\mal_in_mal.c</name>
         </file>
       </group>
     </group>
