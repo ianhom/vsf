@@ -46,14 +46,10 @@ struct vsffat_t
 	enum vsffat_type_t type;
 
 	// information parsed from bpb
+	uint8_t sectorsize_bits;
 	uint8_t clustersize_bits;
 	uint8_t fatnum;
-	union
-	{
-		// FAT starts after reserved sectors
-		uint16_t fatbase;
-		uint16_t reserved_size;
-	};
+	uint16_t reserved_size;
 	uint16_t rootentry;
 	uint16_t fsinfo;
 	uint32_t fatsize;
@@ -61,6 +57,7 @@ struct vsffat_t
 
 	// information calculated
 	uint32_t clusternum;
+	uint32_t fatbase;
 	uint32_t database;
 	uint32_t rootbase;
 	uint32_t rootsize;

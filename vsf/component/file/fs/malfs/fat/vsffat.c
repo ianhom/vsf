@@ -43,7 +43,7 @@ PACKED_HEAD struct PACKED_MID fatfs_bpb_t
 
 PACKED_HEAD struct PACKED_MID fatfs_ebpb_t
 {
-	uint8_t DrvNum;
+	uint8_t DrvNo;
 	uint8_t Reserved;
 	uint8_t BootSig;
 	uint32_t VolID;
@@ -55,6 +55,7 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 {
 	uint8_t jmp[3];
 	uint8_t OEM[8];
+	// bpb All0 for exFAT
 	struct fatfs_bpb_t bpb;
 	union
 	{
@@ -78,6 +79,33 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 			struct fatfs_ebpb_t ebpb;
 			uint8_t Bootstrap[448];
 		} fat1216;
+		struct
+		{
+			uint8_t Reserved_All0[28];
+			PACKED_HEAD struct PACKED_MID
+			{
+				uint64_t SecStart;
+				uint64_t SecCount;
+				uint32_t FATSecStart;
+				uint32_t FATSecCount;
+				uint32_t ClusSecStart;
+				uint32_t ClusSecCount;
+				uint32_t RootClus;
+				uint32_t VolSerial;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Minor;
+					uint8_t Major;
+				} Ver; PACKED_TAIL
+				uint16_t VolState;
+				uint8_t SecBits;
+				uint8_t SPCBits;
+				uint8_t NumFATs;
+				uint8_t DrvNo;
+				uint8_t AllocPercnet;
+				uint8_t Reserved_All0[397];
+			} bpb; PACKED_TAIL
+		} exfat;
 	};
 	uint16_t Magic;
 }; PACKED_TAIL
@@ -128,52 +156,47 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 	uint8_t *ptr = (uint8_t *)dbr;
 	int i;
 
+	if (dbr->Magic != SYS_TO_BE_U16(0x55AA))
+		return VSFERR_FAIL;
+
 	for (i = 0; i < 53; i++) if (*ptr++) break;
 	if (i < 53)
 	{
 		// normal FAT12, FAT16, FAT32
 		uint32_t sectornum, clusternum;
 
-		// BytsPerSec MUST the same as mal blocksize, and MUST following value:
-		// 		512, 1024, 2048, 4096
-		BytsPerSec = dbr->bpb.BytsPerSec;
-		if ((BytsPerSec != fat->malfs.malstream.mal->cap.block_size) ||
-			((BytsPerSec != 512) && (BytsPerSec != 1024) &&
-				(BytsPerSec != 2048) && (BytsPerSec != 4096)))
-			return VSFERR_FAIL;
-
-		// SecPerClus MUST be power of 2
+		BytsPerSec = LE_TO_SYS_U16(dbr->bpb.BytsPerSec);
+		fat->sectorsize_bits = BytsPerSec & (BytsPerSec - 1);
 		tmp32 = dbr->bpb.SecPerClus;
 		fat->clustersize_bits = tmp32 & (tmp32 - 1);
-		if (!tmp32 || !fat->clustersize_bits)
-			return VSFERR_FAIL;
-
-		// RsvdSecCnt CANNOT be 0
-		fat->reserved_size = dbr->bpb.RsvdSecCnt;
-		if (!fat->reserved_size)
-			return VSFERR_FAIL;
-
-		// NumFATs CANNOT be 0
+		fat->reserved_size = LE_TO_SYS_U16(dbr->bpb.RsvdSecCnt);
 		fat->fatnum = dbr->bpb.NumFATs;
-		if (!fat->fatnum)
-			return VSFERR_FAIL;
-
-		sectornum = dbr->bpb.TotSec16;
+		sectornum = LE_TO_SYS_U16(dbr->bpb.TotSec16);
 		if (!sectornum)
-			sectornum = dbr->bpb.TotSec32;
-		if (!sectornum)
-			return VSFERR_FAIL;
+			sectornum = LE_TO_SYS_U32(dbr->bpb.TotSec32);
+		fat->fatsize = dbr->bpb.FATSz16 ? LE_TO_SYS_U16(dbr->bpb.FATSz16) :
+										LE_TO_SYS_U32(dbr->fat32.bpb.FATSz32);
 
-		fat->fatsize = dbr->bpb.FATSz16 ?
-						dbr->bpb.FATSz16 : dbr->fat32.bpb.FATSz32;
-		if (!fat->fatsize)
+		// BytsPerSec MUST the same as mal blocksize, and MUST following value:
+		// 		512, 1024, 2048, 4096
+		// SecPerClus MUST be power of 2
+		// RsvdSecCnt CANNOT be 0
+		// NumFATs CANNOT be 0
+		if (((BytsPerSec != fat->malfs.malstream.mal->cap.block_size) ||
+				((BytsPerSec != 512) && (BytsPerSec != 1024) &&
+					(BytsPerSec != 2048) && (BytsPerSec != 4096))) ||
+			(!dbr->bpb.SecPerClus || !fat->clustersize_bits) ||
+			!fat->reserved_size || !fat->fatnum || !sectornum || !fat->fatsize)
+		{
 			return VSFERR_FAIL;
+		}
 
-		tmp32 = fat->rootentry = dbr->bpb.RootEntCnt;
+		tmp32 = fat->rootentry = LE_TO_SYS_U16(dbr->bpb.RootEntCnt);
 		if (tmp32)
 			tmp32 = ((tmp32 >> 5) + BytsPerSec - 1) / BytsPerSec;
 		fat->rootsize = tmp32;
 		// calculate base
+		fat->fatbase = fat->reserved_size;
 		fat->rootbase = fat->fatbase + fat->fatnum * fat->fatsize;
 		fat->database = fat->rootbase + fat->rootsize;
 		// calculate cluster number: note that cluster starts from root_cluster
@@ -189,14 +212,13 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 			if (dbr->bpb.FATSz16 || dbr->bpb.TotSec16)
 				return VSFERR_FAIL;
 
-			fat->fsinfo = dbr->fat32.bpb.FSInfo;
+			fat->fsinfo = LE_TO_SYS_U16(dbr->fat32.bpb.FSInfo);
 
 			// RootClus CANNOT be less than 2
-			fat->root_cluster = dbr->fat32.bpb.RootClus;
+			fat->root_cluster = LE_TO_SYS_U32(dbr->fat32.bpb.RootClus);
 			if (fat->root_cluster < 2)
 			{
-				return VSFERR_NONE;
-			
+				return VSFERR_FAIL;
 			}
 
 			fat->clusternum = fat->root_cluster + clusternum;
@@ -208,13 +230,33 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 
 			// root has no cluster
 			fat->root_cluster = 0;
-			fat->clusternum = fat->root_cluster + clusternum;
+			fat->clusternum = clusternum + 2;
 		}
 	}
 	else
 	{
 		// bpb all 0, exFAT
 		fat->type = VSFFAT_EXFAT;
+
+		fat->sectorsize_bits = dbr->exfat.bpb.SecBits;
+		fat->clustersize_bits = dbr->exfat.bpb.SPCBits;
+		fat->reserved_size = 0;
+		fat->fatnum = dbr->exfat.bpb.NumFATs;
+		fat->fatsize = LE_TO_SYS_U32(dbr->exfat.bpb.FATSecCount);
+		fat->rootentry = 0;
+		fat->rootsize = 0;
+		fat->fatbase = LE_TO_SYS_U32(dbr->exfat.bpb.FATSecStart);
+		fat->rootbase = LE_TO_SYS_U32(dbr->exfat.bpb.ClusSecStart);
+		fat->database = fat->rootbase;
+		fat->root_cluster = LE_TO_SYS_U32(dbr->exfat.bpb.RootClus);
+		fat->clusternum = LE_TO_SYS_U32(dbr->exfat.bpb.ClusSecCount) + 2;
+
+		// SecBits CANNOT be smaller than 9, which is 512 byte
+		// RootClus CANNOT be less than 2
+		if ((fat->sectorsize_bits < 9) || (fat->root_cluster < 2))
+		{
+			return VSFERR_FAIL;
+		}
 	}
 
 	return VSFERR_NONE;
