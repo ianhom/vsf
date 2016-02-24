@@ -155,11 +155,14 @@ static vsf_err_t vsffat_get_FATentry(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		startbit = fat->fatbase + (startbit >> (fat->sectorsize_bits + 3));
 		startbit += fat->readbit ? 1 : 0;
-		vsf_malfs_read(malfs, startbit, malfs->sector_buffer, 1);
-		vsfsm_pt_wait(pt);
-		if (VSF_MALFS_EVT_IOFAIL == evt)
+		if (fat->cur_fatsector != startbit)
 		{
-			return VSFERR_FAIL;
+			vsf_malfs_read(malfs, startbit, malfs->sector_buffer, 1);
+			vsfsm_pt_wait(pt);
+			if (VSF_MALFS_EVT_IOFAIL == evt)
+			{
+				return VSFERR_FAIL;
+			}
 		}
 
 		if (fat->readbit)
@@ -187,19 +190,24 @@ static vsf_err_t vsffat_alloc_cluschain(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NOT_SUPPORT;
 }
 
-// for FAT12, from 0x002 to 0xFEF
-// for FAT16, from 0x0002 to 0xFFEF
-// for FAT32, from 0x?0000002 to 0x?FFFFFEF
-// for EXFAT, from 0x?0000002 to 0x?FFFFFEF
-// for other value(free cluster, reserved cluster, bad cluster, last cluster),
-// 		will return false
+// true for data entry and last cluster entry
 static bool vsffat_FATentry_valid(struct vsffat_t *fat, uint32_t cluster)
 {
 	uint8_t fatbit = vsffat_FAT_bitsize[(int)fat->type];
 	uint32_t mask = (1 << fatbit) - 1;
 
 	cluster &= (32 == fatbit) ? 0x0FFFFFFF : mask;
-	return (cluster >= 2) && (cluster <= (mask - 0x10));
+	return (cluster >= 2) && (cluster <= mask);
+}
+
+// true for last cluster entry
+static bool vsffat_FATentry_EOF(struct vsffat_t *fat, uint32_t cluster)
+{
+	uint8_t fatbit = vsffat_FAT_bitsize[(int)fat->type];
+	uint32_t mask = (1 << fatbit) - 1;
+
+	cluster &= (32 == fatbit) ? 0x0FFFFFFF : mask;
+	return (cluster >= (mask - 8)) && (cluster <= mask);
 }
 
 static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
@@ -318,12 +326,14 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
-	struct vsffat_t *fatfs = (struct vsffat_t *)pt->user_data;
-	struct vsf_malfs_t *malfs = &fatfs->malfs;
+	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
+	struct vsf_malfs_t *malfs = &fat->malfs;
 	struct fatfs_dentry_t *dentry;
 	vsf_err_t err = VSFERR_NONE;
 
 	vsfsm_pt_begin(pt);
+
+	fat->cur_fatsector = 0;
 
 	err = vsf_malfs_init(malfs);
 	if (err) goto fail;
@@ -342,14 +352,14 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 
 	// parse DBR
-	fatfs->type = VSFFAT_NONE;
-	err = vsffat_parse_dbr(fatfs, (struct fatfs_dbr_t *)malfs->sector_buffer);
+	fat->type = VSFFAT_NONE;
+	err = vsffat_parse_dbr(fat, (struct fatfs_dbr_t *)malfs->sector_buffer);
 	if (err)
 	{
 		goto fail_crit;
 	}
 
-	vsf_malfs_read(malfs, fatfs->rootbase, malfs->sector_buffer, 1);
+	vsf_malfs_read(malfs, fat->rootbase, malfs->sector_buffer, 1);
 	vsfsm_pt_wait(pt);
 	vsfsm_crit_leave(&malfs->crit);
 	if (VSF_MALFS_EVT_IOFAIL == evt)
@@ -359,31 +369,31 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	// check volume_id
 	dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
-	fatfs->volid[0] = '\0';
+	fat->volid[0] = '\0';
 	if (VSFILE_ATTR_VOLUMID == dentry->Attr)
 	{
 		int i;
 
-		memcpy(fatfs->volid, dentry->Name, 11);
+		memcpy(fat->volid, dentry->Name, 11);
 		for (i = 10; i >= 0; i--)
 		{
-			if (fatfs->volid[i] != ' ')
+			if (fat->volid[i] != ' ')
 			{
 				break;
 			}
-			fatfs->volid[i] = '\0';
+			fat->volid[i] = '\0';
 		}
 	}
-	malfs->volume_name = fatfs->volid;
+	malfs->volume_name = fat->volid;
 
 	// initialize root
-	fatfs->root.file.name = fatfs->volid;
-	fatfs->root.file.size = 0;
-	fatfs->root.file.attr = VSFILE_ATTR_DIRECTORY;
-	fatfs->root.file.op = (struct vsfile_fsop_t *)&vsffat_op;
-	fatfs->root.file.parent = NULL;
-	fatfs->root.fat = fatfs;
-	fatfs->root.first_cluster = fatfs->root_cluster;
+	fat->root.file.name = fat->volid;
+	fat->root.file.size = 0;
+	fat->root.file.attr = VSFILE_ATTR_DIRECTORY;
+	fat->root.file.op = (struct vsfile_fsop_t *)&vsffat_op;
+	fat->root.file.parent = NULL;
+	fat->root.fat = fat;
+	fat->root.first_cluster = fat->root_cluster;
 
 	vsfsm_pt_end(pt);
 	return err;
@@ -397,29 +407,29 @@ fail:
 vsf_err_t vsffat_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
-	struct vsffat_t *fatfs = (struct vsffat_t *)pt->user_data;
-	vsf_malfs_fini(&fatfs->malfs);
+	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
+	vsf_malfs_fini(&fat->malfs);
 	return VSFERR_NONE;
 }
 
 vsf_err_t vsffat_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 vsf_err_t vsffat_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
-	struct vsffat_t *fatfs = (struct vsffat_t *)pt->user_data;
-	struct vsf_malfs_t *malfs = &fatfs->malfs;
+	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
+	struct vsf_malfs_t *malfs = &fat->malfs;
 	struct vsfile_fatfile_t *fatdir;
 	struct fatfs_dentry_t *dentry;
 	vsf_err_t err = VSFERR_NONE;
@@ -438,25 +448,26 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 	}
 	malfs->notifier_sm = pt->sm;
 
-	fatfs->cur_cluster = fatdir->first_cluster;
-	if (!fatfs->cur_cluster)
+	fat->cur_cluster = fatdir->first_cluster;
+	if (!fat->cur_cluster)
 	{
 		// it MUST be root for FAT12 and FAT16
-		if ((fatfs->type != VSFFAT_FAT12) && (fatfs->type != VSFFAT_FAT16))
+		if ((fat->type != VSFFAT_FAT12) && (fat->type != VSFFAT_FAT16))
 		{
 			err = VSFERR_FAIL;
 			goto exit;
 		}
-		fatfs->cur_sector = fatfs->rootbase;
+		fat->cur_sector = fat->rootbase;
 	}
 	else
 	{
-		fatfs->cur_sector = vsffat_clus2sec(fatfs, fatfs->cur_cluster);
+		fat->cur_sector = vsffat_clus2sec(fat, fat->cur_cluster);
 	}
 
 	while (1)
 	{
-		vsf_malfs_read(malfs, fatfs->cur_sector, malfs->sector_buffer, 1);
+		fat->cur_fatsector = 0;
+		vsf_malfs_read(malfs, fat->cur_sector, malfs->sector_buffer, 1);
 		vsfsm_pt_wait(pt);
 		if (VSF_MALFS_EVT_IOFAIL == evt)
 		{
@@ -468,30 +479,31 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 		// TODO: try to search file equal to name
 		// TODO: if found, allocate and initialize file structure
 
-		if ((!fatfs->cur_cluster && (fatfs->cur_sector < fatfs->rootsize)) ||
-			(fatfs->cur_sector & ((1 << fatfs->clustersize_bits) - 1)))
+		if ((!fat->cur_cluster && (fat->cur_sector < fat->rootsize)) ||
+			(fat->cur_sector & ((1 << fat->clustersize_bits) - 1)))
 		{
 			// not found in current sector, find next sector
-			fatfs->cur_sector++;
+			fat->cur_sector++;
 		}
 		else
 		{
 			// not found in current cluster, find next cluster if exists
-			fatfs->caller_pt.sm = pt->sm;
-			fatfs->caller_pt.user_data = fatfs;
-			fatfs->caller_pt.state = 0;
+			fat->caller_pt.sm = pt->sm;
+			fat->caller_pt.user_data = fat;
+			fat->caller_pt.state = 0;
 			vsfsm_pt_entry(pt);
-			err = vsffat_get_FATentry(&fatfs->caller_pt, evt,
-									fatfs->cur_cluster, &fatfs->cur_cluster);
+			err = vsffat_get_FATentry(&fat->caller_pt, evt,
+									fat->cur_cluster, &fat->cur_cluster);
 			if (err > 0) return err; else if (err < 0) break;
 
-			if (!vsffat_FATentry_valid(fatfs, fatfs->cur_cluster))
+			if (!vsffat_FATentry_valid(fat, fat->cur_cluster) ||
+				vsffat_FATentry_EOF(fat, fat->cur_cluster))
 			{
 				err = VSFERR_NOT_AVAILABLE;
 				break;
 			}
 
-			fatfs->cur_sector = vsffat_clus2sec(fatfs, fatfs->cur_cluster);
+			fat->cur_sector = vsffat_clus2sec(fat, fat->cur_cluster);
 		}
 	}
 exit:
@@ -504,33 +516,157 @@ vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 vsf_err_t vsffat_open(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
-	return VSFERR_NONE;
+	struct vsfile_fatfile_t *fatfile = (struct vsfile_fatfile_t *)file;
+	struct vsffat_t *fat = fatfile->fat;
+	struct vsf_malfs_t *malfs = &fat->malfs;
+	uint32_t clustersize = 1 << (fat->clustersize_bits + fat->sectorsize_bits);
+	uint8_t *pbuf;
+	vsf_err_t err = VSFERR_NONE;
+
+	vsfsm_pt_begin(pt);
+
+	if (vsfsm_crit_enter(&malfs->crit, pt->sm))
+	{
+		vsfsm_pt_wfe(pt, VSF_MALFS_EVT_CRIT);
+	}
+	malfs->notifier_sm = pt->sm;
+
+	// locate the first cluster for access
+	fat->cur_cluster = fatfile->first_cluster;
+	fat->cur_offset = 0;
+	while ((fat->cur_offset + clustersize) <= offset)
+	{
+		fat->caller_pt.sm = pt->sm;
+		fat->caller_pt.user_data = fat;
+		fat->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsffat_get_FATentry(&fat->caller_pt, evt,
+							fat->cur_cluster, &fat->cur_cluster);
+		if (err > 0) return err; else if (err < 0)
+		{
+			err = VSFERR_FAIL;
+			goto exit;
+		}
+		if (!vsffat_FATentry_valid(fat, fat->cur_cluster))
+		{
+			err = VSFERR_FAIL;
+			goto exit;
+		}
+
+		fat->cur_offset += clustersize;
+		continue;
+	}
+
+	fat->cur_size = 0;
+	fat->remain_size = size;
+	fat->cur_sector = vsffat_clus2sec(fat, fat->cur_cluster);
+	fat->cur_sector += (offset & (clustersize - 1)) >> fat->sectorsize_bits;
+	fat->cur_offset = offset & ~((1 << fat->sectorsize_bits) - 1); 
+	while (fat->remain_size)
+	{
+		if (fat->cur_offset != offset)
+		{
+			// read first non-page-aligned data
+			fat->cur_run_size = offset & ((1 << fat->sectorsize_bits) - 1);
+			fat->cur_run_sector = 1;
+			pbuf = malfs->sector_buffer;
+			fat->cur_fatsector = 0;
+		}
+		else if (fat->remain_size < (1 << fat->sectorsize_bits))
+		{
+			// read last non-page-aligned data
+			fat->cur_run_size = fat->remain_size;
+			fat->cur_run_sector = 1;
+			pbuf = malfs->sector_buffer;
+			fat->cur_fatsector = 0;
+		}
+		else
+		{
+			// read page-aligned data in cluster
+			// get remain sector in clusrer
+			fat->cur_run_sector =
+						fat->cur_sector & ((1 << fat->clustersize_bits) - 1);
+			fat->cur_run_sector = min(fat->cur_run_sector,
+						fat->remain_size >> fat->sectorsize_bits);
+			fat->cur_run_size = fat->cur_run_sector << fat->sectorsize_bits;
+			pbuf = buff + fat->cur_size;
+		}
+		vsf_malfs_read(malfs, fat->cur_sector, pbuf, fat->cur_run_sector);
+		vsfsm_pt_wait(pt);
+		if (VSF_MALFS_EVT_IOFAIL == evt)
+		{
+			err = VSFERR_FAIL;
+			goto exit;
+		}
+
+		if (fat->cur_offset != offset)
+		{
+			uint8_t *src = malfs->sector_buffer;
+			src += (1 << fat->sectorsize_bits) - fat->cur_run_size;
+			memcpy(buff, src, fat->cur_run_size);
+			fat->cur_offset += fat->cur_run_size;
+		}
+		else if (fat->remain_size < (1 << fat->sectorsize_bits))
+		{
+			uint8_t *dst = buff + fat->cur_size;
+			memcpy(dst, malfs->sector_buffer, fat->cur_run_size);
+		}
+		fat->cur_size += fat->cur_run_size;
+		fat->remain_size -= fat->cur_run_size;
+
+		// get next cluster if necessary
+		if (fat->remain_size &&
+			!(fat->cur_sector & ((1 << fat->clustersize_bits) - 1)))
+		{
+			fat->caller_pt.sm = pt->sm;
+			fat->caller_pt.user_data = fat;
+			fat->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsffat_get_FATentry(&fat->caller_pt, evt,
+							fat->cur_cluster, &fat->cur_cluster);
+			if (err > 0) return err; else if (err < 0)
+			{
+				err = VSFERR_FAIL;
+				goto exit;
+			}
+			if (!vsffat_FATentry_valid(fat, fat->cur_cluster))
+			{
+				err = VSFERR_FAIL;
+				goto exit;
+			}
+		}
+	}
+
+exit:
+	vsfsm_crit_leave(&malfs->crit);
+	vsfsm_pt_end(pt);
+	return err;
 }
 
 vsf_err_t vsffat_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {
-	return VSFERR_NONE;
+	return VSFERR_NOT_SUPPORT;
 }
 
 #ifndef VSFCFG_STANDALONE_MODULE

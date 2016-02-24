@@ -67,11 +67,18 @@ struct vsffat_t
 	struct vsfile_fatfile_t root;
 	struct vsfsm_pt_t caller_pt;
 
-	// for getchild_byname and getchild_byidx
+	// for getchild_byname, getchild_byidx, read and write
 	uint32_t cur_cluster;
 	uint32_t cur_sector;
+	// for read and write
+	uint64_t cur_offset;
+	uint32_t cur_size;
+	uint32_t cur_run_size;
+	uint32_t cur_run_sector;
+	uint32_t remain_size;
 	// for vsffat_get_FATentry
 	uint32_t readbit;
+	uint32_t cur_fatsector;
 	// for vsffat_alloc_cluschain
 };
 
