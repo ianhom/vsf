@@ -111,18 +111,103 @@ PACKED_HEAD struct PACKED_MID fatfs_dbr_t
 
 PACKED_HEAD struct PACKED_MID fatfs_dentry_t
 {
-	char Name[11];
-	uint8_t Attr;
-	uint8_t NTRes;
-	uint8_t CrtTimeTenth;
-	uint16_t CrtTime;
-	uint16_t CrtData;
-	uint16_t LstAccData;
-	uint16_t FstClusHI;
-	uint16_t WrtTime;
-	uint16_t WrtData;
-	uint16_t FstClusLO;
-	uint32_t FileSize;
+	union
+	{
+		PACKED_HEAD struct PACKED_MID
+		{
+			char Name[11];
+			uint8_t Attr;
+			uint8_t LCase;
+			uint8_t CrtTimeTenth;
+			uint16_t CrtTime;
+			uint16_t CrtData;
+			uint16_t LstAccData;
+			uint16_t FstClusHI;
+			uint16_t WrtTime;
+			uint16_t WrtData;
+			uint16_t FstClusLO;
+			uint32_t FileSize;
+		} fat;
+		PACKED_HEAD struct PACKED_MID
+		{
+			union
+			{
+				
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t NumExt;
+					uint16_t Chksum;
+					uint16_t Attr;
+					uint16_t Reserved1;
+					uint16_t CrtTime;
+					uint16_t CrtData;
+					uint16_t WrtTime;
+					uint16_t WrtData;
+					uint16_t AccTime;
+					uint16_t AddData;
+					uint8_t CrtTimeMs;
+					uint8_t WrtTimeMs;
+					uint8_t AccTimeMs;
+					uint8_t Reserved2[9];
+				} file;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t Flag;
+					uint16_t Uni[15];
+				} fname;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t Reserved1[3];
+					uint32_t Chksum;
+					uint8_t Reserved2[12];
+					uint32_t FstClu;
+					uint64_t Size;
+				} casetbl;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Order;
+					uint16_t Uni0[5];
+					uint8_t Attr;
+					uint8_t SysID;
+					uint8_t Chksum;
+					uint16_t Uni5[6];
+					uint16_t FstClus;
+					uint16_t Uni11[2];
+				} edir;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t Flag;
+					uint8_t Reserved1;
+					uint8_t NameLen;
+					uint16_t NameHash;
+					uint16_t Reserved2;
+					uint64_t ValidSize;
+					uint32_t Reserved3;
+					uint32_t FstClus;
+					uint64_t Size;
+				} stream;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t Flag;
+					uint8_t Reserved[18];
+					uint32_t FstClus;
+					uint64_t Size;
+				} bmap;
+				PACKED_HEAD struct PACKED_MID
+				{
+					uint8_t Type;
+					uint8_t LblLen;
+					uint16_t Uni[11];
+					uint8_t Reserved[8];
+				} vol;
+			};
+		} exfat;
+	};
 }; PACKED_TAIL
 
 static const uint8_t vsffat_FAT_bitsize[] = {0, 12, 16, 32, 32};
@@ -408,18 +493,25 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	// check volume_id
 	dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
 	fat->volid[0] = '\0';
-	if (VSFILE_ATTR_VOLUMID == dentry->Attr)
+	if (VSFFAT_EXFAT == fat->type)
 	{
-		int i;
-
-		memcpy(fat->volid, dentry->Name, 11);
-		for (i = 10; i >= 0; i--)
+		// TODO: parse VolID for EXFAT
+	}
+	else
+	{
+		if (VSFILE_ATTR_VOLUMID == dentry->fat.Attr)
 		{
-			if (fat->volid[i] != ' ')
+			int i;
+
+			memcpy(fat->volid, dentry->fat.Name, 11);
+			for (i = 10; i >= 0; i--)
 			{
-				break;
+				if (fat->volid[i] != ' ')
+				{
+					break;
+				}
+				fat->volid[i] = '\0';
 			}
-			fat->volid[i] = '\0';
 		}
 	}
 	malfs->volume_name = fat->volid;
