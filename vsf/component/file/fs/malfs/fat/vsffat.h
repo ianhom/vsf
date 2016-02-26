@@ -63,7 +63,6 @@ struct vsffat_t
 	uint32_t database;
 	uint32_t rootbase;
 	uint32_t rootsize;
-	char volid[11];
 
 	// private
 	struct vsfile_fatfile_t root;

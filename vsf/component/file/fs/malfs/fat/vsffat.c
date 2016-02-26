@@ -491,8 +491,8 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	}
 
 	// check volume_id
+	malfs->volume_name = NULL;
 	dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
-	fat->volid[0] = '\0';
 	if (VSFFAT_EXFAT == fat->type)
 	{
 		// TODO: parse VolID for EXFAT
@@ -501,23 +501,27 @@ vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		if (VSFILE_ATTR_VOLUMID == dentry->fat.Attr)
 		{
-			int i;
-
-			memcpy(fat->volid, dentry->fat.Name, 11);
-			for (i = 10; i >= 0; i--)
+			malfs->volume_name = vsf_bufmgr_malloc(12);
+			if (malfs->volume_name != NULL)
 			{
-				if (fat->volid[i] != ' ')
+				int i;
+
+				malfs->volume_name[11] = '\0';
+				memcpy(malfs->volume_name, dentry->fat.Name, 11);
+				for (i = 10; i >= 0; i--)
 				{
-					break;
+					if (malfs->volume_name[i] != ' ')
+					{
+						break;
+					}
+					malfs->volume_name[i] = '\0';
 				}
-				fat->volid[i] = '\0';
 			}
 		}
 	}
-	malfs->volume_name = fat->volid;
 
 	// initialize root
-	fat->root.file.name = fat->volid;
+	fat->root.file.name = malfs->volume_name;
 	fat->root.file.size = 0;
 	fat->root.file.attr = VSFILE_ATTR_DIRECTORY;
 	fat->root.file.op = (struct vsfile_fsop_t *)&vsffat_op;
@@ -554,9 +558,9 @@ vsf_err_t vsffat_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NOT_SUPPORT;
 }
 
-vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file)
+static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir,
+					struct vsfile_t **file, char *name, uint32_t idx)
 {
 	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
 	struct vsf_malfs_t *malfs = &fat->malfs;
@@ -606,7 +610,7 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 		}
 
 		dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
-		// TODO: try to search file equal to name
+		// TODO: try to search file equal to name or idx
 		// TODO: if found, allocate and initialize file structure
 
 		if ((!fat->cur_cluster && (fat->cur_sector < fat->rootsize)) ||
@@ -633,6 +637,8 @@ vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 				break;
 			}
 
+			// remove MSB 4-bit for 32-bit FAT entry
+			fat->cur_cluster &= 0x0FFFFFFF;
 			fat->cur_sector = vsffat_clus2sec(fat, fat->cur_cluster);
 		}
 	}
@@ -642,16 +648,28 @@ exit:
 	return err;
 }
 
+vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
+					struct vsfile_t **file)
+{
+	return vsffat_getchild(pt, evt, dir, file, name, 0);
+}
+
 vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
-	return VSFERR_NOT_SUPPORT;
+	return vsffat_getchild(pt, evt, dir, file, NULL, idx);
 }
 
 vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
+	if (file->name != NULL)
+	{
+		vsf_bufmgr_free(file->name);
+		file->name = NULL;
+	}
 	vsf_bufmgr_free(file);
 	return VSFERR_NONE;
 }
@@ -697,6 +715,8 @@ vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			goto exit;
 		}
 
+		// remove MSB 4-bit for 32-bit FAT entry
+		fat->cur_cluster &= 0x0FFFFFFF;
 		fat->cur_offset += clustersize;
 		continue;
 	}
@@ -778,6 +798,9 @@ vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				err = VSFERR_FAIL;
 				goto exit;
 			}
+
+			// remove MSB 4-bit for 32-bit FAT entry
+			fat->cur_cluster &= 0x0FFFFFFF;
 		}
 	}
 
