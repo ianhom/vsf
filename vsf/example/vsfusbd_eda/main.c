@@ -67,6 +67,9 @@ struct vsfapp_t
 	// mal
 	struct
 	{
+		struct vsfscsi_device_t scsi_dev;
+		struct vsfscsi_lun_t lun[1];
+
 		struct vsf_mal2scsi_t mal2scsi;
 		struct vsfmal_t mal;
 		struct fakefat32_param_t fakefat32;
@@ -92,7 +95,6 @@ struct vsfapp_t
 		struct
 		{
 			struct vsfusbd_MSCBOT_param_t param;
-			struct vsfscsi_lun_t lun[1];
 		} msc;
 		struct vsfusbd_iface_t ifaces[5];
 		struct vsfusbd_config_t config[1];
@@ -174,6 +176,11 @@ struct vsfapp_t
 	.mal.mal2scsi.cparam.revision			= "1.00",
 	.mal.mal2scsi.cparam.type				= SCSI_PDT_DIRECT_ACCESS_BLOCK,
 
+	.mal.lun[0].op							= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
+	.mal.lun[0].param						= &app.mal.mal2scsi,
+	.mal.scsi_dev.max_lun					= 0,
+	.mal.scsi_dev.lun						= app.mal.lun,
+
 	.usbd.rndis.param.CDCACM.CDC.ep_notify	= 1,
 	.usbd.rndis.param.CDCACM.CDC.ep_out		= 2,
 	.usbd.rndis.param.CDCACM.CDC.ep_in		= 2,
@@ -196,10 +203,7 @@ struct vsfapp_t
 	.usbd.cdc.stream_rx.mem.buffer.size		= sizeof(app.usbd.cdc.rxbuff),
 	.usbd.msc.param.ep_in					= 5,
 	.usbd.msc.param.ep_out					= 5,
-	.usbd.msc.param.scsi_dev.max_lun		= 0,
-	.usbd.msc.param.scsi_dev.lun			= app.usbd.msc.lun,
-	.usbd.msc.lun[0].op						= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
-	.usbd.msc.lun[0].param					= &app.mal.mal2scsi,
+	.usbd.msc.param.scsi_dev				= &app.mal.scsi_dev,
 	.usbd.ifaces[0].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISControl_class,
 	.usbd.ifaces[0].protocol_param			= &app.usbd.rndis.param,
 	.usbd.ifaces[1].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISData_class,
@@ -422,6 +426,8 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);
+
+		vsfscsi_init(&app.mal.scsi_dev);
 		vsfusbd_device_init(&app.usbd.device);
 
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)

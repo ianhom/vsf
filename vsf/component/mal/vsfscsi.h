@@ -98,16 +98,16 @@ struct vsfscsi_lun_op_t
 	void (*cancel)(struct vsfscsi_lun_t *lun);
 };
 
+struct vsfscsi_device_t;
 struct vsfscsi_lun_t
 {
 	struct vsfscsi_lun_op_t *op;
 	void *param;
 
+	// private
+	struct vsfscsi_device_t *dev;
 	enum SCSI_sensekey_t sensekey;
 	enum SCSI_asc_t asc;
-
-	// private
-	struct vsfscsi_transact_t transact;
 };
 
 #define SCSI_HANDLER_NAME(title, cmd)			title##_##cmd
@@ -122,6 +122,8 @@ struct vsfscsi_device_t
 {
 	uint8_t max_lun;
 	struct vsfscsi_lun_t *lun;
+
+	struct vsfscsi_transact_t transact;
 };
 
 vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev);

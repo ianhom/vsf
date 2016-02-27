@@ -164,7 +164,6 @@ struct vsfapp_t
 		struct
 		{
 			struct vsfusbd_MSCBOT_param_t param;
-			struct vsfscsi_lun_t lun[1];
 		} msc;
 		struct vsfusbd_iface_t ifaces[1];
 		struct vsfusbd_config_t config[1];
@@ -174,6 +173,9 @@ struct vsfapp_t
 	// mal
 	struct
 	{
+		struct vsfscsi_device_t scsi_dev;
+
+		struct vsfscsi_lun_t lun[1];
 		struct vsf_mal2scsi_t mal2scsi;
 		struct vsfmal_t mal;
 		struct fakefat32_param_t fakefat32;
@@ -217,10 +219,7 @@ struct vsfapp_t
 
 	.usbd.msc.param.ep_in					= 1,
 	.usbd.msc.param.ep_out					= 1,
-	.usbd.msc.param.scsi_dev.max_lun		= 0,
-	.usbd.msc.param.scsi_dev.lun			= app.usbd.msc.lun,
-	.usbd.msc.lun[0].op						= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
-	.usbd.msc.lun[0].param					= &app.mal.mal2scsi,
+	.usbd.msc.param.scsi_dev				= &app.mal.scsi_dev,
 
 	.usbd.ifaces[0].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_MSCBOT_class,
 	.usbd.ifaces[0].protocol_param			= &app.usbd.msc.param,
@@ -256,6 +255,11 @@ struct vsfapp_t
 	.mal.mal2scsi.cparam.product			= "VSFDriver       ",
 	.mal.mal2scsi.cparam.revision			= "1.00",
 	.mal.mal2scsi.cparam.type				= SCSI_PDT_DIRECT_ACCESS_BLOCK,
+
+	.mal.lun[0].op							= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
+	.mal.lun[0].param						= &app.mal.mal2scsi,
+	.mal.scsi_dev.max_lun					= 0,
+	.mal.scsi_dev.lun						= app.mal.lun,
 
 	.mim.mal.drv							= &vsfmim_drv,
 	.mim.realmal							= &app.mal.mal,
@@ -400,6 +404,7 @@ static vsf_err_t app_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 //	if (err > 0) return err; else if (err < 0) return VSFERR_FAIL;
 #endif
 
+	vsfscsi_init(&app.mal.scsi_dev);
 	vsfusbd_device_init(&app.usbd.device);
 
 	if (app.usb_pullup.port != IFS_DUMMY_PORT)

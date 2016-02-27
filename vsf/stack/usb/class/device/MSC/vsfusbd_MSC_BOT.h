@@ -66,10 +66,9 @@ struct vsfusbd_MSCBOT_param_t
 	uint8_t ep_out;
 	uint8_t ep_in;
 
-	struct vsfscsi_device_t scsi_dev;
+	struct vsfscsi_device_t *scsi_dev;
 
 	// no need to initialize below by user
-	struct vsfscsi_transact_t *scsi_transact;
 	struct USBMSC_CBW_t CBW;
 	struct USBMSC_CSW_t CSW;
 	struct vsfusbd_transact_t transact;
