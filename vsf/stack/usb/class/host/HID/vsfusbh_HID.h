@@ -35,9 +35,8 @@ PACKED_HEAD struct PACKED_MID usbh_hid_event_t
 	int32_t pre_value;
 	int32_t cur_value;
 	uint32_t type;
-};
-PACKED_TAIL
-
+}; PACKED_TAIL
+	 
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 #define HID_ITEM_SIZE(x)			((((x)&0x03) == 3)?4:(x)&0x03)
 
@@ -72,8 +71,7 @@ PACKED_HEAD struct PACKED_MID hid_cleass_descriptor_t
 {
 	uint8_t bDescriptorType;
 	uint16_t wDescriptorLength;
-};
-PACKED_TAIL
+}; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID hid_descriptor_t
 {
@@ -84,8 +82,7 @@ PACKED_HEAD struct PACKED_MID hid_descriptor_t
 	uint8_t bNumDescriptors;
 
 	struct hid_cleass_descriptor_t desc[1];
-};
-PACKED_TAIL
+}; PACKED_TAIL
 
 PACKED_HEAD struct PACKED_MID hid_desc_t
 {
@@ -101,8 +98,7 @@ PACKED_HEAD struct PACKED_MID hid_desc_t
 	int usage_min;
 	int usage_max;
 	int usages[16];
-};
-PACKED_TAIL
+}; PACKED_TAIL
 
 struct hid_usage_t
 {
@@ -130,7 +126,7 @@ struct hid_report_t
 
 	uint8_t need_setreport_flag;
 	uint8_t need_ignore;
-
+	
 	uint16_t generic_usage;
 };
 
@@ -147,10 +143,12 @@ struct vsfusbh_hid_t
 
 	struct usb_interface_t *interface;
 	const struct usb_interface_desc_t *intf_desc;
-	struct hid_descriptor_t hid_desc;
+	const struct hid_descriptor_t *hid_desc;
 	struct hid_report_t hid_report;
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 extern const struct vsfusbh_class_drv_t vsfusbh_hid_drv;
+#endif
 
 #endif
