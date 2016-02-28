@@ -46,7 +46,7 @@
 #ifdef VSFCFG_FILE
 #include "component/file/vsfile.h"
 #endif
-#ifdef CSFCFG_DEBUG
+#ifdef VSFCFG_DEBUG
 #include "component/debug/debug.h"
 #endif
 
@@ -260,6 +260,7 @@ struct vsf_usbd_api_t
 #include "stack/usb/core/vsfusbh.h"
 #include "stack/usb/core/hcd/ohci/vsfohci.h"
 #include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
+#include "stack/usb/class/host/HID/vsfusbh_HID.h"
 struct vsf_usbh_api_t
 {
 	vsf_err_t (*init)(struct vsfusbh_t*);

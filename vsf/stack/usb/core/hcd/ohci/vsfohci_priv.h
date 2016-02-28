@@ -24,11 +24,10 @@
  * OHCI config
  *******************************************************/
 #define MAXPSW					1
-#define ED_MAX_NUM				16
 #define TD_MAX_NUM				64
 #define NUM_INTS				32
 #define MAX_EP_NUM_EACH_DEVICE	8
-#define TD_MAX_NUM_EACH_UARB	12
+#define TD_MAX_NUM_EACH_UARB	8
 /* Maximum number of root hub ports. */
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 	3
 
@@ -84,14 +83,11 @@
 #define OHCI_INTR_MIE			(0x1ul << 31)	/* master interrupt enable */
 
 // ED States
-#define ED_NEW					0x00
+#define ED_IDLE					0x00
 #define ED_UNLINK				0x01
 #define ED_OPER					0x02
 #define ED_DEL					0x04
 #define ED_URB_DEL				0x08
-
-// urb_priv_t state
-#define URB_PRIV_DEL 1
 
 /* TD info field */
 #define TD_CC					0xf0000000
@@ -128,7 +124,7 @@
 #define TD_BUFFERUNDERRUN		0x0D
 #define TD_NOTACCESSED			0x0F
 
-#define OHCI_ED_SKIP			(1 << 14)
+
 
 /* USB HUB CONSTANTS (not OHCI-specific; see hub.h) */
 /* Requests: bRequest << 8 | bmRequestType */
@@ -270,27 +266,35 @@ struct ohci_regs_t
 struct ed_t
 {
 	uint32_t hwINFO;
+#define ED_DEQUEUE				(0x1ul << 27)
+#define ED_ISO					(0x1ul << 15)
+#define ED_SKIP					(0x1ul << 14)
+#define ED_LOWSPEED				(0x1ul << 13)
+#define ED_OUT					(0x1ul << 11)
+#define ED_IN					(0x2ul << 11)
 	uint32_t hwTailP;
 	uint32_t hwHeadP;
+#define ED_C					0x02ul
+#define ED_H					0x01ul
 	uint32_t hwNextED;
 
-	uint8_t int_period;
-	uint8_t int_load;
-	uint8_t int_interval;
+	int8_t branch;
+	uint32_t load : 10;
+	uint32_t interval : 6;
 
-	uint8_t busy : 1;
-	uint8_t type : 2;
-	uint8_t:1;
-	uint8_t state : 4;
-
-#if USBH_CFG_ENABLE_ISO
-	uint16_t last_iso;
-	uint16_t dummy[7];
-#endif // USBH_CFG_ENABLE_ISO
+	uint32_t rm_frame :1;
+	uint32_t busy : 1;
+	uint32_t type : 2;
+	uint32_t : 4;
 
 	struct ed_t *prev;
-	struct ed_t *ed_rm_list;
-	struct vsfusbh_device_t *vsfdev;
+	struct ed_t *ed_next;
+	struct td_t *dummy_td;
+	//struct urb_priv_t *urb_priv;
+
+	//struct vsfusbh_device_t *vsfdev;
+	//struct td_t *dummy_td;
+	//struct td_t *td_list;
 };
 
 /* usb OHCI td, must be aligned to 32 bytes */
@@ -305,24 +309,16 @@ struct td_t
 #endif // USBH_CFG_ENABLE_ISO
 
 	uint8_t busy : 1;
-	uint8_t is_iso : 1;
-	uint8_t:6;
+	uint8_t :7;
 	uint8_t index;
 	uint16_t num;
 
-	struct ed_t *ed;
-	struct td_t *next_dl_td;
 	struct urb_priv_t *urb_priv;
+	struct td_t *next_dl_td;
+	struct ed_t *ed_dummy;
 #if USBH_CFG_ENABLE_ISO
 	uint32_t dummy[4];
 #endif // USBH_CFG_ENABLE_ISO
-};
-
-struct ohci_device_t
-{
-	struct ed_t *ed[MAX_EP_NUM_EACH_DEVICE];
-	uint32_t in_flag;
-	uint32_t ed_cnt;
 };
 
 /* Full ohci controller descriptor */
@@ -330,14 +326,18 @@ struct vsfohci_t;
 struct ohci_t
 {
 	struct ohci_hcca_t *hcca;
-	uint16_t disabled;
+	uint8_t disabled;
+	uint8_t working :1;
+	uint8_t restart_work :1;
+	uint8_t :6;
 	uint16_t resume_count;
 
-	uint32_t ohci_int_load[32];		/* load of the 32 Interrupt Chains (for load balancing)*/
-	struct ed_t *ed_rm_list[2];
+	uint16_t load[32];		/* load of the 32 Interrupt Chains (for load balancing)*/
+	struct ed_t *ed_rm_list;
 	struct ed_t *ed_bulktail;
 	struct ed_t *ed_controltail;
 	struct ed_t *ed_isotail;
+	struct td_t *dl_start;
 
 	uint32_t hc_control;			/* copy of the hc control reg */
 
@@ -349,14 +349,10 @@ struct vsfohci_t
 {
 	struct ohci_t *ohci;
 
-	struct ed_t *ed_pool;
 	struct td_t *td_pool;
 
 	struct vsfsm_t *sm;
 
-	/* counter for FSM delay*/
-	uint32_t tickcnt;
-	uint32_t delayms;
 	uint16_t loops;
 };
 
@@ -366,9 +362,14 @@ struct urb_priv_t
 	uint16_t length;			/* number of tds associated with this request */
 	uint16_t td_cnt;			/* number of tds already serviced */
 	uint16_t state;
+#define URB_PRIV_INIT				0
+#define URB_PRIV_EDLINK				(0x1 << 1)
+#define URB_PRIV_EDSKIP				(0x1 << 2)
+#define URB_PRIV_TDALLOC			(0x1 << 3)
+#define URB_PRIV_TDLINK				(0x1 << 4)
+#define URB_PRIV_WAIT_COMPLETE		(0x1 << 5)
+#define URB_PRIV_WAIT_DELETE		(0x1 << 6)
 	struct td_t *td[TD_MAX_NUM_EACH_UARB];	/* list pointer to all corresponding TDs associated with this request */
-
-	void *extra_buf;
 };
 
 #endif	// __VSFOHCI_H_INCLUDED__

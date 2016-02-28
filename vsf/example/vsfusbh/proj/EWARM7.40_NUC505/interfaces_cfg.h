@@ -72,7 +72,7 @@
 #define OHCI_PORT1_PB13_DM_ENABLE			0
 #define OHCI_PORT1_PB14_DP_ENABLE			1
 #define OHCI_PORT1_PB15_DM_ENABLE			1
-#define OHCI_PORT_INDEX						((0ul << 16) | HCD_PORT2)	//(OHCI_PORT1 | OHCI_PORT2)
+#define OHCI_PORT_INDEX						((0ul << 16) | HCD_PORT1)	//(HCD_PORT1 | HCD_PORT2)
 
 
 // SPI config

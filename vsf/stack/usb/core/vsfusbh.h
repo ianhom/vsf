@@ -23,11 +23,10 @@ struct vsfusbh_device_t
 	struct usb_config_t *actconfig;
 
 	uint32_t toggle[2];	// one bit per endpoint
-	uint32_t halted[2];	// one bit per endpoint
 
 	uint16_t epmaxpacketin[USB_MAXENDPOINTS];
 	uint16_t epmaxpacketout[USB_MAXENDPOINTS];
-	
+
 	struct vsfusbh_device_t *parent;
 	struct vsfusbh_device_t *children[USB_MAXCHILDREN];
 
@@ -109,7 +108,6 @@ struct vsfusbh_urb_t
 {
 	struct vsfusbh_device_t *vsfdev;
 	uint32_t pipe;					/*!< pipe information						*/
-	int32_t status;					/*!< returned status						*/
 
 	uint16_t packet_size;
 	uint16_t transfer_flags;		/*!< USB_DISABLE_SPD | USB_ISO_ASAP | etc.	*/
@@ -120,7 +118,8 @@ struct vsfusbh_urb_t
 	struct usb_ctrlrequest_t setup_packet;
 
 	uint32_t start_frame;			/*!< start frame (iso/irq only)		*/
-	uint32_t interval;				/*!< polling interval (irq only)	*/
+	uint16_t interval;				/*!< polling interval (iso/irq only)*/
+	int16_t status;					/*!< returned status				*/
 #if USBH_CFG_ENABLE_ISO
 	uint32_t number_of_packets;		/*!< number of packets (iso)		*/
 	uint32_t error_count;			/*!< number of errors (iso only)	*/
