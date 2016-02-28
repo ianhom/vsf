@@ -47,6 +47,22 @@ static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 	VSFUSBD_DESC_NULL
 };
 
+
+struct vsfip_httpd_ca_t
+{
+	uint8_t 					islogin;
+	uint8_t 					rsp;
+	uint8_t 					user[32];
+	uint8_t 					pass[32];
+	struct vsfip_ipaddr_t 		userip;
+	uint8_t						timerout;
+};
+
+const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[];
+vsf_err_t 	vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								uint8_t *reqfilename, 
+								struct vsfip_ipaddr_t *useripaddr, char **redirectfilename);
+
 // app state machine events
 #define APP_EVT_USBPU_TO				VSFSM_EVT_USER_LOCAL_INSTANT + 0
 
@@ -121,6 +137,13 @@ struct vsfapp_t
 			uint8_t txbuff[65];
 			uint8_t rxbuff[65];
 		} telnetd;
+		
+		struct
+		{
+			struct vsfip_httpd_t httpd;
+			struct vsfip_httpd_service_t service[3];
+            struct vsfip_httpd_ca_t ca;
+		} httpd;
 	} vsfip;
 
 	struct vsfsm_pt_t pt;
@@ -242,7 +265,11 @@ struct vsfapp_t
 	.vsfip.telnetd.stream_rx.stream.op				= &fifostream_op,
 	.vsfip.telnetd.stream_rx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.rxbuff,
 	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
-
+    
+    .vsfip.httpd.httpd.postroot = (struct vsfip_httpd_posttarget_t *)vsfip_httpd_postroot,
+    .vsfip.httpd.httpd.cb.onca = vsfip_httpd_ca,
+    .vsfip.httpd.httpd.cb.oncaparam = &app.vsfip.httpd.ca,
+	
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 //	.shell.echo								= true,
 //	.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
@@ -349,6 +376,82 @@ static const struct vsfile_memop_t app_vsfile_memop =
 	.free_vfs = app_vsfile_free_vfs,
 };
 
+vsf_err_t	loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+                      uint8_t type, uint8_t	*buf, uint32_t size,
+                      char **rspfilename);
+
+const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[1] = 
+{
+    {
+        .name = "login",
+        .ondat = loginpost,
+        .ondatparam = &app.vsfip.httpd.ca
+    },
+};
+
+
+vsf_err_t	loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+                      uint8_t type, uint8_t	*buf, uint32_t size,
+                      char **rspfilename)
+{
+	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
+	uint32_t tmpsize;
+	uint8_t* user;
+	uint8_t* pass;
+	if(type != VSFIP_HTTPD_TYPE_XWWW)
+		goto loginfail;
+	
+	//set a str end maybe danger overmem
+	buf[size] = 0;
+	
+	//postdat is xwww type
+	user = vsfip_http_getpostvaluebyname(buf, "user", &tmpsize);
+	if(user == NULL)
+		goto loginfail;
+	memcpy(param->user, user, tmpsize);
+	
+	pass = vsfip_http_getpostvaluebyname(buf, "pass", &tmpsize);
+	if(user == NULL)
+		goto loginfail;
+	memcpy(param->pass, pass, tmpsize);
+	
+	*rspfilename = "loginsuccess.htm";
+	param->islogin = true;
+	param->rsp = true;
+	return VSFERR_NONE;
+	
+loginfail:
+	*rspfilename = "loginfail.htm";
+	
+	param->rsp = false;
+	return VSFERR_NONE;
+}
+
+vsf_err_t 	vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+								uint8_t *reqfilename, 
+								struct vsfip_ipaddr_t *useripaddr, char **redirectfilename)
+{
+	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
+    *redirectfilename = NULL;
+    
+	if(param->islogin)
+	{
+		//check addr
+		if(useripaddr->size == param->userip.size)
+		if(memcmp(useripaddr->addr.s_addr_buf, param->userip.addr.s_addr_buf, param->userip.size) == 0)
+			return VSFERR_NONE;
+	}
+	
+	memcpy(&param->userip, useripaddr, sizeof(struct vsfip_ipaddr_t));
+	
+    //access to login is vaild
+	if(strcmp(reqfilename, "login") == 0)
+		return VSFERR_NONE;
+	
+	*redirectfilename = "login.htm";
+	return VSFERR_NONE;
+}
+
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -393,7 +496,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			app.caller_pt.state = 0;
 			vsfile_getfile(&app.caller_pt, 0, NULL, "/httpd_root", &file);
 			app.caller_pt.state = 0;
-			app.caller_pt.user_data = httpd_root;
+			app.caller_pt.user_data = &httpd_root_dir;
 			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&vsfile_memfs_op, file);
 
 			// tester
@@ -422,7 +525,19 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		STREAM_INIT(&app.vsfip.telnetd.stream_rx);
 		STREAM_INIT(&app.vsfip.telnetd.stream_tx);
 		vsfip_telnetd_start(&app.vsfip.telnetd.telnetd);
-
+		
+        {
+            struct vsfile_t *file;
+            
+            app.caller_pt.state = 0;
+			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root/HttpRoot", &file);
+			
+            //httpd init
+            vsfip_httpd_start(&app.vsfip.httpd.httpd, 
+						  app.vsfip.httpd.service, dimof(app.vsfip.httpd.service),
+						  80, file);
+        
+        }
 		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);

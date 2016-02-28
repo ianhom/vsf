@@ -20,6 +20,7 @@
 #define __FAKEFAT32_FS_H_INCLUDED__
 
 #include "tool/fakefat32/fakefat32.h"
+#include "httpd_fs.h"
 
 // fakefat32
 static const uint8_t vsfcdc_inf[] =
@@ -296,6 +297,11 @@ static struct fakefat32_file_t fakefat32_root_dir[] =
 		.memfile.file.name = "Driver",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
 		.memfile.d.child = (struct vsfile_memfile_t *)fakefat32_driver_dir,
+	},
+    {
+		.memfile.file.name = "HttpRoot",
+		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
+		.memfile.d.child = (struct vsfile_memfile_t *)httpd_root_dir,
 	},
 	{
 		.memfile.file.name = NULL,
