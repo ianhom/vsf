@@ -396,7 +396,7 @@ vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	uint32_t tmpsize;
 	uint8_t* user;
 	uint8_t* pass;
-	if(type != VSFIP_HTTPD_TYPE_XWWW)
+	if (type != VSFIP_HTTPD_TYPE_XWWW)
 		goto loginfail;
 	
 	//set a str end maybe danger overmem
@@ -404,12 +404,12 @@ vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	
 	//postdat is xwww type
 	user = vsfip_http_getpostvaluebyname(buf, "user", &tmpsize);
-	if(user == NULL)
+	if (user == NULL)
 		goto loginfail;
 	memcpy(param->user, user, tmpsize);
 	
 	pass = vsfip_http_getpostvaluebyname(buf, "pass", &tmpsize);
-	if(user == NULL)
+	if (user == NULL)
 		goto loginfail;
 	memcpy(param->pass, pass, tmpsize);
 	
@@ -432,18 +432,18 @@ vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
 	*redirectfilename = NULL;
     
-	if(param->islogin)
+	if (param->islogin)
 	{
 		//check addr
-		if(useripaddr->size == param->userip.size)
-		if(memcmp(useripaddr->addr.s_addr_buf, param->userip.addr.s_addr_buf, param->userip.size) == 0)
+		if (useripaddr->size == param->userip.size)
+		if (memcmp(useripaddr->addr.s_addr_buf, param->userip.addr.s_addr_buf, param->userip.size) == 0)
 			return VSFERR_NONE;
 	}
 	
 	memcpy(&param->userip, useripaddr, sizeof(struct vsfip_ipaddr_t));
 	
 	//access to login is vaild
-	if(strcmp(reqfilename, "login") == 0)
+	if (strcmp(reqfilename, "login") == 0)
 		return VSFERR_NONE;
 	
 	*redirectfilename = "login.htm";
@@ -490,13 +490,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			app.caller_pt.user_data = &app.mal.fakefat32;
 			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&fakefat32_fs_op, file);
 
-			// mount httpd under /httpd_root
-			app.caller_pt.state = 0;
-			vsfile_getfile(&app.caller_pt, 0, NULL, "/httpd_root", &file);
-			app.caller_pt.state = 0;
-			app.caller_pt.user_data = &httpd_root_dir;
-			vsfile_mount(&app.caller_pt, 0, (struct vsfile_fsop_t *)&vsfile_memfs_op, file);
-
 			// tester
 			app.caller_pt.state = 0;
 			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root/Driver/Windows/VSFRNDIS.inf", &file);
@@ -534,7 +527,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
             vsfip_httpd_start(&app.vsfip.httpd.httpd, 
 						  app.vsfip.httpd.service, dimof(app.vsfip.httpd.service),
 						  80, file);
-        
         }
 		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);

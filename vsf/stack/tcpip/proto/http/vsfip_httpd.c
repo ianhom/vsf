@@ -52,12 +52,12 @@ const struct vsfile_memfile_t http404 =
 static uint8_t* vsfip_httpd_getnextline(uint8_t *buf, uint32_t size)
 {
 	uint8_t* bufend = buf + size - 1;
-	while(buf < bufend)
+	while (buf < bufend)
 	{
-		if(*buf == '\r')
+		if (*buf == '\r')
 		{
 			buf++;
-			if(*buf == '\n')
+			if (*buf == '\n')
 				return buf+1;
 		}
 		buf++;
@@ -88,9 +88,9 @@ const struct vsfip_http_contenttype_t vsfip_httpd_supporttype[VSFIP_HTTPD_SUPPOR
 static uint8_t* vsfip_httpd_gettypestr(uint8_t type)
 {
 	uint8_t i;
-	for( i = 0 ; i < VSFIP_HTTPD_SUPPORTTYPECNT ; i++)
+	for (i = 0;i < VSFIP_HTTPD_SUPPORTTYPECNT;i++)
 	{
-		if(type == vsfip_httpd_supporttype[i].type)
+		if (type == vsfip_httpd_supporttype[i].type)
 			return vsfip_httpd_supporttype[i].str;
 	}
 	return vsfip_httpd_supporttype[VSFIP_HTTPD_SUPPORTTYPECNT - 1].str;
@@ -104,7 +104,7 @@ static uint8_t vsfip_httpd_getfiletype(uint8_t *filename)
 	if (extname == NULL)
 		return VSFIP_HTTPD_TYPE_UNKNOW;
 	extname++;
-	for( i = 0 ; i < VSFIP_HTTPD_SUPPORTTYPECNT ; i++)
+	for (i = 0;i < VSFIP_HTTPD_SUPPORTTYPECNT;i++)
 	{
 		if (strcmp(extname, vsfip_httpd_supporttype[i].ext) == 0)
 			return vsfip_httpd_supporttype[i].type;
@@ -115,7 +115,7 @@ static uint8_t vsfip_httpd_getfiletype(uint8_t *filename)
 static uint8_t vsfip_httpd_getcontenttype(uint8_t *str)
 {
 	uint8_t i;
-	for ( i = 0 ; i < VSFIP_HTTPD_SUPPORTTYPECNT ; i++)
+	for (i = 0;i < VSFIP_HTTPD_SUPPORTTYPECNT;i++)
 	{
 		if (strcmp(str, vsfip_httpd_supporttype[i].str) == 0)
 			return vsfip_httpd_supporttype[i].type;
@@ -187,7 +187,7 @@ static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t * service, s
 	
 	filenameptr = rdptr;
 	//getfilename
-	while(*rdptr != ' '&&*rdptr != '\r'&&*rdptr != '\n')
+	while (*rdptr != ' '&&*rdptr != '\r'&&*rdptr != '\n')
 	{
 		if(size <= 0)
 			return VSFERR_FAIL;
@@ -289,7 +289,7 @@ getpostdat:
 	if (post->type == VSFIP_HTTPD_TYPE_XWWW)
 	{
 		//double /r/n/r/n mean end of info
-		while(memcmp(rdptr, "\r\n", 2) != 0)
+		while (memcmp(rdptr, "\r\n", 2) != 0)
 		{
 			uint8_t * nextline = vsfip_httpd_getnextline(rdptr, size);
 			if (nextline == NULL)
@@ -568,7 +568,8 @@ exit:
 static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct vsfip_socket_t *acceptso)
 {
 	struct vsfip_httpd_service_t * service;
-    for(uint8_t i = 0 ; i < httpd->maxconnection ; i++)
+	uint8_t i;
+    for (i = 0;i < httpd->maxconnection;i++)
     {
 		if (httpd->service[i].so == NULL)
 		{
