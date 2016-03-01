@@ -224,7 +224,7 @@ static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t * service, s
 static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfip_httpd_service_t * service = (struct vsfip_httpd_service_t *)pt->user_data;
-    struct vsfip_post_t* post = &service->post;
+	struct vsfip_post_t* post = &service->post;
 	struct vsfip_buffer_t* inbuf = service->inbuf;
 	uint8_t * rdptr = inbuf->app.buffer;
 	uint32_t size = inbuf->app.size;
@@ -302,11 +302,11 @@ getpostdat:
 		post->buf = vsfip_httpd_getnextline(rdptr, size);
 		service->file_pt.user_data = service->posttarget->ondatparam;
 		service->file_pt.state = 0;
-    	vsfsm_pt_entry(pt);
+		vsfsm_pt_entry(pt);
 		err = service->posttarget->ondat(&service->file_pt, evt, 
                                          post->type, post->buf, post->size, 
                                          &service->targetfilename); 
-        if (err > 0) return err; else if (err < 0) goto errend;
+		if (err > 0) return err; else if (err < 0) goto errend;
 		
 		//Todo if post morethan onepkg
 	}
@@ -356,24 +356,24 @@ static vsf_err_t vsfip_httpd_build_rsphead200(struct vsfip_httpd_service_t * ser
 
 static vsf_err_t vsfip_httpd_getposttarget(struct vsfip_httpd_service_t * service, char *targetname)
 {
-    struct vsfip_httpd_posttarget_t *cur = service->postroot; 
-    while (cur != NULL && cur->name != NULL)
-    {
-        if (strcmp(cur->name, targetname) == 0)
-        {
-            service->posttarget = cur;
-            return VSFERR_NONE;
-        }
-        cur++;
-    }
-    service->posttarget = NULL;
-    return VSFERR_FAIL;
+	struct vsfip_httpd_posttarget_t *cur = service->postroot; 
+	while (cur != NULL && cur->name != NULL)
+	{
+		if (strcmp(cur->name, targetname) == 0)
+		{
+			service->posttarget = cur;
+			return VSFERR_NONE;
+		}
+		cur++;
+	}
+	service->posttarget = NULL;
+	return VSFERR_FAIL;
 }
 
 static vsf_err_t vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfip_httpd_service_t * service = (struct vsfip_httpd_service_t *)pt->user_data;
-    struct vsfip_buffer_t* outbuf;
+	struct vsfip_buffer_t* outbuf;
 	vsf_err_t err;
 	vsfsm_pt_begin(pt);
 	
@@ -410,18 +410,18 @@ static vsf_err_t vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 		//due to file map must set it when read write
 		service->file_pt.user_data = service->targetfile;
 		service->file_pt.state = 0;
-    	vsfsm_pt_entry(pt);
+		vsfsm_pt_entry(pt);
 		err = vsfile_read(&service->file_pt, evt, service->targetfile, 
 						  service->fileoffset, VSFIP_CFG_TCP_MSS, 
 						  outbuf->app.buffer, &outbuf->app.size);
-    	if (err > 0) return err; else if (err < 0) goto exit;
+		if (err > 0) return err; else if (err < 0) goto exit;
 	
 		service->fileoffset += outbuf->app.size;
 		
 httpsend:		
 		service->socket_pt.state = 0;
-    	vsfsm_pt_entry(pt);
-    	err = vsfip_tcp_send(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
+		vsfsm_pt_entry(pt);
+		err = vsfip_tcp_send(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
                          	service->outbuf, false);
 		if (err > 0) return err; else if (err < 0) goto exitnofree;
 		
@@ -444,11 +444,11 @@ exitnofree:
 
 static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
-    struct vsfip_httpd_service_t * service = (struct vsfip_httpd_service_t *)pt->user_data;
-    vsf_err_t err = VSFERR_NONE;
-    vsfsm_pt_begin(pt);
+	struct vsfip_httpd_service_t * service = (struct vsfip_httpd_service_t *)pt->user_data;
+	vsf_err_t err = VSFERR_NONE;
+	vsfsm_pt_begin(pt);
 
-    service->socket_pt.sm = pt->sm;
+	service->socket_pt.sm = pt->sm;
 	service->local_pt.sm = pt->sm;
 	
 	service->file_pt.sm = pt->sm;
@@ -457,9 +457,9 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	service->output_pt.sm = pt->sm;
 #endif	
 	
-    service->socket_pt.state = 0;
-    vsfsm_pt_entry(pt);
-    err = vsfip_tcp_recv(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
+	service->socket_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_tcp_recv(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
                          &service->inbuf);
 	if (err > 0) return err; else if (err < 0) goto exit;
 	
@@ -472,19 +472,19 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 #endif	
 	if (service->cb->onca != NULL)
 	{
-        char *redirectfilename = NULL;
+		char *redirectfilename = NULL;
 		service->local_pt.user_data = service->cb->oncaparam;
 		service->local_pt.state = 0;
-    	vsfsm_pt_entry(pt);
-    	err = service->cb->onca(&service->local_pt, evt, service->targetfilename,
+		vsfsm_pt_entry(pt);
+		err = service->cb->onca(&service->local_pt, evt, service->targetfilename,
                                 &service->so->remote_sockaddr.sin_addr, &redirectfilename);
 		if (err > 0) return err; else if (err < 0) goto exit;
         
-        if (redirectfilename != NULL)
-        {
-            service->targetfilename = redirectfilename;
-            service->req = VSFIP_HTTP_GET;
-        }
+		if (redirectfilename != NULL)
+        	{
+			service->targetfilename = redirectfilename;
+			service->req = VSFIP_HTTP_GET;
+		}
 	}
     
 #ifdef HTTPD_DEBUG
@@ -494,25 +494,25 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	
 	if (service->req == VSFIP_HTTP_POST)
 	{
-        err = vsfip_httpd_getposttarget(service, service->targetfilename);
-        if (err < 0)
-        {
-            //filenotfound
-            service->targetfilename = "http400";
-        }
-        else
-        {
-            //to do deal with post
-            service->local_pt.user_data = service;
-            service->local_pt.state = 0;
-            vsfsm_pt_entry(pt);
-            err = vsfip_httpd_processpost(&service->local_pt, evt);
-            if (err > 0) return err; else if (err < 0) goto exit;
-        }
-    }
+		err = vsfip_httpd_getposttarget(service, service->targetfilename);
+		if (err < 0)
+		{
+			//filenotfound
+			service->targetfilename = "http400";
+		}
+		else
+		{
+		//to do deal with post
+		service->local_pt.user_data = service;
+		service->local_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfip_httpd_processpost(&service->local_pt, evt);
+		if (err > 0) return err; else if (err < 0) goto exit;
+		}
+	}
     
-    //scan for rspfile
-    service->file_pt.user_data = service->root;
+	//scan for rspfile
+	service->file_pt.user_data = service->root;
 	service->file_pt.state = 0;
 	vsfsm_pt_entry(pt);
 	err = vsfile_getfile(&service->file_pt, evt, service->root,
@@ -529,7 +529,7 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 		service->rsp = VSFIP_HTTP_200_OK;
 	}    
     
-    vsfip_buffer_release(service->inbuf);
+	vsfip_buffer_release(service->inbuf);
 	service->inbuf = NULL;
     
 #ifdef HTTPD_DEBUG
@@ -539,52 +539,52 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	//send targetfile
 	service->local_pt.user_data = service;
 	service->local_pt.state = 0;
-    vsfsm_pt_entry(pt);
+	vsfsm_pt_entry(pt);
   	err = vsfip_httpd_sendtargetfile(&service->local_pt, evt);
 	if (err > 0) return err; if (err < 0) goto exit;
 	
 exit:
 	//release socket
-    if (service->inbuf != NULL)
+	if (service->inbuf != NULL)
 	{
-        vsfip_buffer_release(service->inbuf);
+		vsfip_buffer_release(service->inbuf);
 		service->inbuf = NULL;
 	}
 	
-    service->socket_pt.state = 0;
-    vsfsm_pt_entry(pt);
-    err = vsfip_tcp_close(&service->socket_pt, evt,service->so);
+	service->socket_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_tcp_close(&service->socket_pt, evt,service->so);
 	if (err > 0) return err;
 
-    //release socket
-    vsfip_close(service->so);
-    service->so = NULL;
+	//release socket
+	vsfip_close(service->so);
+	service->so = NULL;
 
-    vsfsm_pt_end(pt);
+	vsfsm_pt_end(pt);
 	
-    return VSFERR_FAIL;
+	return VSFERR_FAIL;
 }
 
 static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct vsfip_socket_t *acceptso)
 {
 	struct vsfip_httpd_service_t * service;
 	uint8_t i;
-    for (i = 0;i < httpd->maxconnection;i++)
-    {
+	for (i = 0;i < httpd->maxconnection;i++)
+	{
 		if (httpd->service[i].so == NULL)
 		{
 			service = &httpd->service[i];
 
-            //clear it mem
-            memset(service , 0, sizeof(struct vsfip_httpd_service_t));
+			//clear it mem
+			memset(service , 0, sizeof(struct vsfip_httpd_service_t));
 
-            //set so
-            service->so = acceptso;
+			//set so
+			service->so = acceptso;
 			service->root = httpd->root;
-            service->postroot = httpd->postroot;
+			service->postroot = httpd->postroot;
 
-            service->pt.thread = vsfip_httpd_service_thread;
-            service->pt.user_data = service;
+			service->pt.thread = vsfip_httpd_service_thread;
+			service->pt.user_data = service;
 			
 			service->cb = &httpd->cb;
 			
@@ -594,7 +594,7 @@ static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct
 			service->output_pt.state = 0;
 #endif
 
-            return vsfsm_pt_init(&service->sm, &service->pt);
+			return vsfsm_pt_init(&service->sm, &service->pt);
         }
 	}
 	return VSFERR_NOT_ENOUGH_RESOURCES;
@@ -602,31 +602,32 @@ static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct
 
 static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
-    struct vsfip_httpd_t *httpd = (struct vsfip_httpd_t *)pt->user_data;
-    vsf_err_t err = VSFERR_NONE;
-    struct vsfip_socket_t *acceptso;
+	struct vsfip_httpd_t *httpd = (struct vsfip_httpd_t *)pt->user_data;
+	vsf_err_t err = VSFERR_NONE;
+	struct vsfip_socket_t *acceptso;
 
-    vsfsm_pt_begin(pt);
+	vsfsm_pt_begin(pt);
 
-    httpd->so = vsfip_socket(AF_INET, IPPROTO_TCP);
+	httpd->so = vsfip_socket(AF_INET, IPPROTO_TCP);
 
-    httpd->so->rx_timeout_ms = 0;
-    httpd->so->tx_timeout_ms = VSFIP_HTTP_SERVER_SOCKETTIMEOUT;
+	httpd->so->rx_timeout_ms = 0;
+	httpd->so->tx_timeout_ms = VSFIP_HTTP_SERVER_SOCKETTIMEOUT;
 
-    err = vsfip_bind(httpd->so, httpd->sockaddr.sin_port);
-    if (err < 0) goto close;
+	err = vsfip_bind(httpd->so, httpd->sockaddr.sin_port);
+	if (err < 0) goto close;
 
-    err = vsfip_listen(httpd->so,httpd->maxconnection);
-    if (err < 0) goto close;
+	err = vsfip_listen(httpd->so,httpd->maxconnection);
+	if (err < 0) goto close;
 
-    httpd->daemon_pt.sm = pt->sm;
+	httpd->daemon_pt.sm = pt->sm;
 
 	while(httpd->isactive)
 	{
-    	httpd->daemon_pt.state = 0;
-    	vsfsm_pt_entry(pt);
-    	err = vsfip_tcp_accept(&httpd->daemon_pt, evt, httpd->so, &acceptso);
-    	if (err > 0) return err; 
+		httpd->daemon_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfip_tcp_accept(&httpd->daemon_pt, evt, httpd->so, &acceptso);
+		
+		if (err > 0) return err; 
 		else if (err < 0) httpd->isactive = false;
 		else
 		{
@@ -635,44 +636,44 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			{
 				httpd->acceptso = acceptso;
 				httpd->daemon_pt.state = 0;
-    			vsfsm_pt_entry(pt);
-    			err = vsfip_tcp_close(&httpd->daemon_pt, evt, httpd->acceptso);
-    			if (err > 0)	return err;
-    			vsfip_close(httpd->acceptso);
+				vsfsm_pt_entry(pt);
+				err = vsfip_tcp_close(&httpd->daemon_pt, evt, httpd->acceptso);
+				if (err > 0) return err;
+				vsfip_close(httpd->acceptso);
 				httpd->acceptso = NULL;
 			}
 		}
-    }
+	}
 	
 	vsfip_close(httpd->so);
 	httpd->so = NULL;
-    vsfsm_pt_end(pt);
+	vsfsm_pt_end(pt);
 close:
-    return VSFERR_NONE;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 							struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,
 							uint16_t port, struct vsfile_t *root)
 {
-    if ((NULL == servicemem) || (NULL == httpd))
-    {
-        return VSFERR_FAIL;
-    }
+	if ((NULL == servicemem) || (NULL == httpd))
+	{
+		return VSFERR_FAIL;
+	}
 
     //get the mem
-    httpd->service = servicemem;
+	httpd->service = servicemem;
 	httpd->maxconnection = maxconnection;
 	httpd->root = root;
 
-    httpd->sockaddr.sin_port = port;
-    httpd->sockaddr.sin_addr.size = 4;
+	httpd->sockaddr.sin_port = port;
+	httpd->sockaddr.sin_addr.size = 4;
 
-    httpd->pt.thread = vsfip_httpd_thread;
-    httpd->pt.user_data = httpd;
+	httpd->pt.thread = vsfip_httpd_thread;
+	httpd->pt.user_data = httpd;
 	
 	httpd->isactive = true;
 
-    vsfsm_pt_init(&httpd->sm, &httpd->pt);
-    return VSFERR_NONE;
+	vsfsm_pt_init(&httpd->sm, &httpd->pt);
+	return VSFERR_NONE;
 }

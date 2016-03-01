@@ -246,8 +246,8 @@ struct vsfapp_t
 	.usbd.device.int_priority				= 0,
 
 	.usbd.rndis.param.netif.macaddr.size			= 6,
-	.usbd.rndis.param.netif.macaddr.addr.s_addr64	= 0x0E0D0C0B0AE0,
-	.usbd.rndis.param.netif.ipaddr.size				= 4,
+	.usbd.rndis.param.netif.macaddr.addr.s_addr64		= 0x0E0D0C0B0AE0,
+	.usbd.rndis.param.netif.ipaddr.size			= 4,
 	.usbd.rndis.param.netif.ipaddr.addr.s_addr		= 0x01202020,
 	.usbd.rndis.param.netif.netmask.size			= 4,
 	.usbd.rndis.param.netif.netmask.addr.s_addr		= 0x00FFFFFF,
@@ -381,11 +381,11 @@ vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[1] = 
 {
-    {
-        .name = "login",
-        .ondat = loginpost,
-        .ondatparam = &app.vsfip.httpd.ca
-    },
+	{
+		.name = "login",
+		.ondat = loginpost,
+		.ondatparam = &app.vsfip.httpd.ca
+	},
 };
 
 vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -517,17 +517,17 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		STREAM_INIT(&app.vsfip.telnetd.stream_tx);
 		vsfip_telnetd_start(&app.vsfip.telnetd.telnetd);
 		
-        {
-            struct vsfile_t *file;
+		{
+			struct vsfile_t *file;
             
-            app.caller_pt.state = 0;
+			app.caller_pt.state = 0;
 			vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root/HttpRoot", &file);
 			
-            //httpd init
-            vsfip_httpd_start(&app.vsfip.httpd.httpd, 
+			//httpd init
+			vsfip_httpd_start(&app.vsfip.httpd.httpd, 
 						  app.vsfip.httpd.service, dimof(app.vsfip.httpd.service),
 						  80, file);
-        }
+		}
 		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);
 		STREAM_INIT(&app.usbd.cdc.stream_tx);
