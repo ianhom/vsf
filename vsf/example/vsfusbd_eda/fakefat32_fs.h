@@ -298,7 +298,7 @@ static struct fakefat32_file_t fakefat32_root_dir[] =
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
 		.memfile.d.child = (struct vsfile_memfile_t *)fakefat32_driver_dir,
 	},
-    {
+	{
 		.memfile.file.name = "HttpRoot",
 		.memfile.file.attr = VSFILE_ATTR_DIRECTORY,
 		.memfile.d.child = (struct vsfile_memfile_t *)httpd_root_dir,

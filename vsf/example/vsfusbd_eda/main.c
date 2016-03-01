@@ -53,7 +53,7 @@ struct vsfip_httpd_ca_t
 	uint8_t 					rsp;
 	uint8_t 					user[32];
 	uint8_t 					pass[32];
-	struct vsfip_ipaddr_t 		userip;
+	struct vsfip_ipaddr_t		userip;
 	uint8_t						timerout;
 };
 
@@ -141,7 +141,7 @@ struct vsfapp_t
 		{
 			struct vsfip_httpd_t httpd;
 			struct vsfip_httpd_service_t service[3];
-            struct vsfip_httpd_ca_t ca;
+			struct vsfip_httpd_ca_t ca;
 		} httpd;
 	} vsfip;
 
@@ -375,7 +375,7 @@ static const struct vsfile_memop_t app_vsfile_memop =
 	.free_vfs = app_vsfile_free_vfs,
 };
 
-vsf_err_t	loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
                       uint8_t type, uint8_t	*buf, uint32_t size,
                       char **rspfilename);
 
@@ -388,7 +388,7 @@ const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[1] =
     },
 };
 
-vsf_err_t	loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
                       uint8_t type, uint8_t *buf, uint32_t size,
                       char **rspfilename)
 {
@@ -425,7 +425,7 @@ loginfail:
 	return VSFERR_NONE;
 }
 
-vsf_err_t 	vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								uint8_t *reqfilename, 
 								struct vsfip_ipaddr_t *useripaddr, char **redirectfilename)
 {
