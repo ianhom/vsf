@@ -595,7 +595,7 @@ static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct
 #endif
 
 			return vsfsm_pt_init(&service->sm, &service->pt);
-        }
+		}
 	}
 	return VSFERR_NOT_ENOUGH_RESOURCES;
 }
@@ -661,7 +661,7 @@ vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 		return VSFERR_FAIL;
 	}
 
-    //get the mem
+	//get the mem
 	httpd->service = servicemem;
 	httpd->maxconnection = maxconnection;
 	httpd->root = root;

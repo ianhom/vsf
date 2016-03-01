@@ -53,14 +53,14 @@ struct vsfip_httpd_ca_t
 	uint8_t 					rsp;
 	uint8_t 					user[32];
 	uint8_t 					pass[32];
-	struct vsfip_ipaddr_t		userip;
+	struct vsfip_ipaddr_t				userip;
 	uint8_t						timerout;
 };
 
 const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[];
-vsf_err_t 	vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-								uint8_t *reqfilename, 
-								struct vsfip_ipaddr_t *useripaddr, char **redirectfilename);
+vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+			uint8_t *reqfilename, 
+			struct vsfip_ipaddr_t *useripaddr, char **redirectfilename);
 
 // app state machine events
 #define APP_EVT_USBPU_TO				VSFSM_EVT_USER_LOCAL_INSTANT + 0
