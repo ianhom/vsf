@@ -7,19 +7,19 @@
 
 #define VSFIP_HTTP_SERVER_SOCKETTIMEOUT        	 	4000
 
-#define VSFIP_HTTP_HOMEPAGE							"index.htm"
+#define VSFIP_HTTP_HOMEPAGE				"index.htm"
 
-const char  VSFIP_HTTP_HEAD_GET[] = 				"GET ";
-const char  VSFIP_HTTP_HEAD_POST[] = 				"POST ";
+const char  VSFIP_HTTP_HEAD_GET[] =			"GET ";
+const char  VSFIP_HTTP_HEAD_POST[] =			"POST ";
 
-const char  POST_ContentLength[] =                  "Content-Length: ";
-const char  POST_ContentDisposition[] =             "Content-Disposition: ";
-const char  POST_ContentType[] =                    "Content-Type: ";
+const char  POST_ContentLength[] =			"Content-Length: ";
+const char  POST_ContentDisposition[] =			"Content-Disposition: ";
+const char  POST_ContentType[] =			"Content-Type: ";
 
-const char  POST_ContentType_MutiFormData[] =       "multipart/form-data; ";
-const char  POST_boundary[] =                       "boundary=";
-const char  POST_ContentType_ApplicationXWWW[] =    "application/x-www-form-urlencoded";
-const char  POST_ContentType_ApplicationBin[] =     "application/octet-stream";
+const char  POST_ContentType_MutiFormData[] =		"multipart/form-data; ";
+const char  POST_boundary[] =				"boundary=";
+const char  POST_ContentType_ApplicationXWWW[] =	"application/x-www-form-urlencoded";
+const char  POST_ContentType_ApplicationBin[] =		"application/octet-stream";
 
 const struct vsfile_memfile_t http400 = 
 {
