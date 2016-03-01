@@ -265,9 +265,9 @@ struct vsfapp_t
 	.vsfip.telnetd.stream_rx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.rxbuff,
 	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
     
-    .vsfip.httpd.httpd.postroot = (struct vsfip_httpd_posttarget_t *)vsfip_httpd_postroot,
-    .vsfip.httpd.httpd.cb.onca = vsfip_httpd_ca,
-    .vsfip.httpd.httpd.cb.oncaparam = &app.vsfip.httpd.ca,
+	.vsfip.httpd.httpd.postroot = (struct vsfip_httpd_posttarget_t *)vsfip_httpd_postroot,
+	.vsfip.httpd.httpd.cb.onca = vsfip_httpd_ca,
+	.vsfip.httpd.httpd.cb.oncaparam = &app.vsfip.httpd.ca,
 	
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 //	.shell.echo								= true,
@@ -376,7 +376,7 @@ static const struct vsfile_memop_t app_vsfile_memop =
 };
 
 vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-                      uint8_t type, uint8_t	*buf, uint32_t size,
+                      uint8_t type, uint8_t *buf, uint32_t size,
                       char **rspfilename);
 
 const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[1] = 
@@ -430,7 +430,7 @@ vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfip_ipaddr_t *useripaddr, char **redirectfilename)
 {
 	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
-    *redirectfilename = NULL;
+	*redirectfilename = NULL;
     
 	if(param->islogin)
 	{
@@ -442,7 +442,7 @@ vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	
 	memcpy(&param->userip, useripaddr, sizeof(struct vsfip_ipaddr_t));
 	
-    //access to login is vaild
+	//access to login is vaild
 	if(strcmp(reqfilename, "login") == 0)
 		return VSFERR_NONE;
 	

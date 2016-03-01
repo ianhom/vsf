@@ -388,7 +388,7 @@ static struct fakefat32_file_t httpd_root_dir[] =
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_READONLY,
 		.memfile.f.buff = (uint8_t *)webimg_logo2,
 	},
-    {
+	{
 		.memfile.file.name = NULL,
 	},
 };
