@@ -1,10 +1,7 @@
 #ifndef __VSFIP_HTTPD_H_INCLUDED__
 #define __VSFIP_HTTPD_H_INCLUDED__
 
-
-
 //#define HTTPD_DEBUG
-
 enum vsfip_httpd_service_req_t
 {
 	VSFIP_HTTP_POST,
@@ -81,7 +78,6 @@ struct vsfip_httpd_service_t
 #endif
 };
 
-
 struct vsfip_httpd_cb_t
 {
 	vsf_err_t 			(*onca)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -116,7 +112,6 @@ struct vsfip_httpd_t
 #endif
         
 };
-
 
 vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 							struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,

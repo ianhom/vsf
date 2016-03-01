@@ -21,7 +21,6 @@ const char  POST_boundary[] =                       "boundary=";
 const char  POST_ContentType_ApplicationXWWW[] =    "application/x-www-form-urlencoded";
 const char  POST_ContentType_ApplicationBin[] =     "application/octet-stream";
 
-
 const struct vsfile_memfile_t http400 = 
 {
 	{
@@ -72,8 +71,6 @@ struct vsfip_http_contenttype_t
 	uint8_t		*str;
 	uint8_t		*ext;
 };
-
-
 
 #define VSFIP_HTTPD_SUPPORTTYPECNT						8
 const struct vsfip_http_contenttype_t vsfip_httpd_supporttype[VSFIP_HTTPD_SUPPORTTYPECNT] = 
@@ -162,7 +159,6 @@ search:
 	}
 }
 
-
 static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t * service, struct vsf_buffer_t *buf)
 {
 	uint8_t * rdptr = buf->buffer;
@@ -203,7 +199,6 @@ static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t * service, s
 	*rdptr = 0;
 	
 	//ignore http version
-	
 	rdptr = vsfip_httpd_getnextline(rdptr, size);
 	if (rdptr == NULL)
 		buf->size = 0;
@@ -311,24 +306,14 @@ getpostdat:
 		err = service->posttarget->ondat(&service->file_pt, evt, 
                                          post->type, post->buf, post->size, 
                                          &service->targetfilename); 
-        //err = vsfile_write(&service->file_pt, evt, service->targetfile,
-		//				  0, sizeof(struct vsfip_post_t), (void*)post, NULL);
-    	//err = service->targetfile->f_op->write(&service->file_pt, evt, 0, &postbuf);
-		if (err > 0)	return err;
-		if (err < 0)	goto errend;
+        if (err > 0) return err; else if (err < 0) goto errend;
 		
 		//Todo if post morethan onepkg
-		
-		
-			
 	}
-    
     
 	//set resp file
 	if (service->targetfilename == NULL)
-		service->targetfile = (struct vsfile_t *)&http400;
-    else
-        
+		service->targetfile = (struct vsfile_t *)&http400;    
 	
 	vsfip_buffer_release(service->inbuf);
 	service->inbuf = NULL;
@@ -367,7 +352,6 @@ static vsf_err_t vsfip_httpd_build_rsphead200(struct vsfip_httpd_service_t * ser
 	buf->size = strlen(wrptr);
 	
 	return VSFERR_NONE;
-	
 }
 
 static vsf_err_t vsfip_httpd_getposttarget(struct vsfip_httpd_service_t * service, char *targetname)
@@ -398,7 +382,6 @@ static vsf_err_t vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	
 	service->fileoffset = 0;
 	
-	
 	//send httprsp head
 	if (service->rsp == VSFIP_HTTP_200_OK)
 	{
@@ -410,8 +393,7 @@ static vsf_err_t vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 		outbuf->app.size = VSFIP_CFG_TCP_MSS;
 
 		err = vsfip_httpd_build_rsphead200(service, &outbuf->app);
-		if (err < 0)
-			goto exit;
+		if (err < 0) goto exit;
 		
 		goto httpsend;
 	}
@@ -432,9 +414,7 @@ static vsf_err_t vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 		err = vsfile_read(&service->file_pt, evt, service->targetfile, 
 						  service->fileoffset, VSFIP_CFG_TCP_MSS, 
 						  outbuf->app.buffer, &outbuf->app.size);
-    	//err = service->targetfile->f_op->read(&service->file_pt, evt, service->fileoffset, &outbuf->app);
-		if (err > 0)	return err;
-		if (err < 0)	goto exit;
+    	if (err > 0) return err; else if (err < 0) goto exit;
 	
 		service->fileoffset += outbuf->app.size;
 		
@@ -443,8 +423,7 @@ httpsend:
     	vsfsm_pt_entry(pt);
     	err = vsfip_tcp_send(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
                          	service->outbuf, false);
-		if (err > 0)	return err;
-		if (err < 0)	goto exitnofree;
+		if (err > 0) return err; else if (err < 0) goto exitnofree;
 		
 		service->outbuf = NULL;
 		
@@ -454,9 +433,10 @@ httpsend:
 	
 	vsfsm_pt_end(pt);
 exit:
-	if (service->outbuf!= NULL)
+	if (service->outbuf != NULL)
 	{
 		vsfip_buffer_release(service->outbuf);
+		service->outbuf = NULL;
 	}
 exitnofree:
 	return VSFERR_FAIL;
@@ -472,8 +452,7 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	service->local_pt.sm = pt->sm;
 	
 	service->file_pt.sm = pt->sm;
-	
-	
+
 #ifdef HTTPD_DEBUG	
 	service->output_pt.sm = pt->sm;
 #endif	
@@ -482,11 +461,10 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
     vsfsm_pt_entry(pt);
     err = vsfip_tcp_recv(&service->socket_pt, evt, service->so, &service->so->remote_sockaddr,
                          &service->inbuf);
-	if (err > 0)	return err;
-	if (err < 0)	goto exit;
+	if (err > 0) return err; else if (err < 0) goto exit;
 	
 	err = vsfip_httpd_prase_req(service, &service->inbuf->app);
-	if (err < 0)	goto exit;
+	if (err < 0) goto exit;
 	
 #ifdef HTTPD_DEBUG
 	vsfshell_printf(&service->output_pt, "->HTTP %s %s" VSFSHELL_LINEEND,
@@ -500,8 +478,7 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
     	vsfsm_pt_entry(pt);
     	err = service->cb->onca(&service->local_pt, evt, service->targetfilename,
                                 &service->so->remote_sockaddr.sin_addr, &redirectfilename);
-		if (err > 0)	return err;
-		if (err < 0)	goto exit;
+		if (err > 0) return err; else if (err < 0) goto exit;
         
         if (redirectfilename != NULL)
         {
@@ -530,31 +507,27 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
             service->local_pt.state = 0;
             vsfsm_pt_entry(pt);
             err = vsfip_httpd_processpost(&service->local_pt, evt);
-            if (err > 0)	return err;
-            if (err < 0)	goto exit;
+            if (err > 0) return err; else if (err < 0) goto exit;
         }
     }
     
     //scan for rspfile
-    {
-        service->file_pt.user_data = service->root;
-        service->file_pt.state = 0;
-        vsfsm_pt_entry(pt);
-        err = vsfile_getfile(&service->file_pt, evt, service->root,
-                            service->targetfilename, &service->targetfile);
-        //err = service->root->d_op->getfilebyname(&service->file_pt, evt, &service->targetfile, service->targetfilename);
-        if (err > 0)	return err;
-        if (err < 0)
-        {
-            service->rsp = VSFIP_HTTP_404_NOTFOUND;
-            //filenotfound
-            service->targetfile = (struct vsfile_t *)&http404;
-        }
-        else
-        {
-            service->rsp = VSFIP_HTTP_200_OK;
-        }
-    }    
+    service->file_pt.user_data = service->root;
+	service->file_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_getfile(&service->file_pt, evt, service->root,
+						service->targetfilename, &service->targetfile);
+	if (err > 0) return err; 
+	else if (err < 0)
+	{
+		service->rsp = VSFIP_HTTP_404_NOTFOUND;
+		//filenotfound
+		service->targetfile = (struct vsfile_t *)&http404;
+	}
+	else
+	{
+		service->rsp = VSFIP_HTTP_200_OK;
+	}    
     
     vsfip_buffer_release(service->inbuf);
 	service->inbuf = NULL;
@@ -568,19 +541,20 @@ static vsf_err_t vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t e
 	service->local_pt.state = 0;
     vsfsm_pt_entry(pt);
   	err = vsfip_httpd_sendtargetfile(&service->local_pt, evt);
-	if (err > 0)	return err;
-	if (err < 0)	goto exit;
+	if (err > 0) return err; if (err < 0) goto exit;
 	
-
 exit:
 	//release socket
     if (service->inbuf != NULL)
+	{
         vsfip_buffer_release(service->inbuf);
+		service->inbuf = NULL;
+	}
 	
     service->socket_pt.state = 0;
     vsfsm_pt_entry(pt);
     err = vsfip_tcp_close(&service->socket_pt, evt,service->so);
-	if (err > 0)	return err;
+	if (err > 0) return err;
 
     //release socket
     vsfip_close(service->so);
@@ -625,7 +599,6 @@ static vsf_err_t vsfip_httpd_attachtoservice(struct vsfip_httpd_t *httpd, struct
 	return VSFERR_NOT_ENOUGH_RESOURCES;
 }
 
-
 static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
     struct vsfip_httpd_t *httpd = (struct vsfip_httpd_t *)pt->user_data;
@@ -640,29 +613,21 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
     httpd->so->tx_timeout_ms = VSFIP_HTTP_SERVER_SOCKETTIMEOUT;
 
     err = vsfip_bind(httpd->so, httpd->sockaddr.sin_port);
-    if (err < 0)
-    {
-        goto close;
-    }
+    if (err < 0) goto close;
 
     err = vsfip_listen(httpd->so,httpd->maxconnection);
-    if (err < 0)
-    {
-        goto close;
-    }
+    if (err < 0) goto close;
 
     httpd->daemon_pt.sm = pt->sm;
 
 	while(httpd->isactive)
 	{
-
     	httpd->daemon_pt.state = 0;
     	vsfsm_pt_entry(pt);
     	err = vsfip_tcp_accept(&httpd->daemon_pt, evt, httpd->so, &acceptso);
-    	if (err > 0)	return err;
-    	if (err < 0)	httpd->isactive = false;
-		
-		if (err == 0)
+    	if (err > 0) return err; 
+		else if (err < 0) httpd->isactive = false;
+		else
 		{
 			err = vsfip_httpd_attachtoservice(httpd, acceptso);
 			if (err != VSFERR_NONE)
@@ -684,8 +649,6 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 close:
     return VSFERR_NONE;
 }
-
-
 
 vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 							struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,

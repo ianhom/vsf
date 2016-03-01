@@ -393,6 +393,4 @@ static struct fakefat32_file_t httpd_root_dir[] =
 	},
 };
 
-
-
 #endif		// __HTTPD_FS_H_INCLUDED__

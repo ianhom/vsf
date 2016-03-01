@@ -47,7 +47,6 @@ static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 	VSFUSBD_DESC_NULL
 };
 
-
 struct vsfip_httpd_ca_t
 {
 	uint8_t 					islogin;
@@ -389,9 +388,8 @@ const struct vsfip_httpd_posttarget_t vsfip_httpd_postroot[1] =
     },
 };
 
-
 vsf_err_t	loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-                      uint8_t type, uint8_t	*buf, uint32_t size,
+                      uint8_t type, uint8_t *buf, uint32_t size,
                       char **rspfilename)
 {
 	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
