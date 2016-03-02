@@ -17,12 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <ctype.h>
-
 #include "vsf.h"
+
+#undef vsfshell_init
+#undef vsfshell_register_handlers
+#undef vsfshell_free_handler_thread
 
 enum vsfshell_EVT_t
 {
@@ -202,11 +201,11 @@ vsfshell_parse_cmd(char *cmd, struct vsfshell_handler_param_t *param)
 		if (('\'' == cmd[i]) || ('"' == cmd[i]))
 		{
 			uint8_t j;
-			char div = cmd[i];
+			char divider = cmd[i];
 			
 			j = i + 1;
 			argv_tmp = &cmd[j];
-			while (cmd[j] != div)
+			while (cmd[j] != divider)
 			{
 				if ('\0' == cmd[j])
 				{
@@ -518,3 +517,26 @@ void vsfshell_register_handlers(struct vsfshell_t *shell,
 		handlers++;
 	}
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfshell_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfshell_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfshell_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfshell_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfshell_init;
+	ifs->register_handlers = vsfshell_register_handlers;
+	ifs->free_handler_thread = vsfshell_free_handler_thread;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

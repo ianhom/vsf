@@ -1203,19 +1203,48 @@ error:
 	return VSFERR_FAIL;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfohci_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfohci_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfohci_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfohci_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->drv.init_thread = vsfohci_init_thread;
+	ifs->drv.fini = vsfohci_fini;
+	ifs->drv.suspend = vsfohci_suspend;
+	ifs->drv.resume = vsfohci_resume;
+	ifs->drv.alloc_device = vsfohci_alloc_device;
+	ifs->drv.free_device = vsfohci_free_device;
+	ifs->drv.alloc_urb = vsfohci_alloc_urb;
+	ifs->drv.free_urb = vsfohci_free_urb;
+	ifs->drv.submit_urb = vsfohci_submit_urb;
+	ifs->drv.relink_urb = vsfohci_relink_urb;
+	ifs->drv.rh_control = vsfohci_rh_control;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbh_hcddrv_t vsfohci_drv =
 {
-	vsfohci_init_thread,
-	vsfohci_fini,
-	vsfohci_suspend,
-	vsfohci_resume,
-	vsfohci_alloc_device,
-	vsfohci_free_device,
-	vsfohci_alloc_urb,
-	vsfohci_free_urb,
-	vsfohci_submit_urb,
-	vsfohci_relink_urb,
-	vsfohci_rh_control,
+	.init_thread = vsfohci_init_thread,
+	.fini = vsfohci_fini,
+	.suspend = vsfohci_suspend,
+	.resume = vsfohci_resume,
+	.alloc_device = vsfohci_alloc_device,
+	.free_device = vsfohci_free_device,
+	.alloc_urb = vsfohci_alloc_urb,
+	.free_urb = vsfohci_free_urb,
+	.submit_urb = vsfohci_submit_urb,
+	.relink_urb = vsfohci_relink_urb,
+	.rh_control = vsfohci_rh_control,
 };
 #endif

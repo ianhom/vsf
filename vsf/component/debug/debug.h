@@ -20,15 +20,39 @@
 #ifndef __DEBUG_H_INCLUDED__
 #define __DEBUG_H_INCLUDED__
 
-#include "app_type.h"
-#include "vsf_cfg.h"
-
-#include "component/stream/stream.h"
-
 #ifdef VSFCFG_DEBUG
+
+#define VSFCFG_DEBUG_INFO_PARSE_LEN 		(VSFCFG_DEBUG_INFO_LEN + 100)
+
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFDBG_MODNAME						"vsf.component.debug"
+
+struct vsfdbg_modifs_t
+{
+	uint8_t info[VSFCFG_DEBUG_INFO_PARSE_LEN];
+	struct vsf_stream_t *stream;
+
+	void (*init)(struct vsf_stream_t*);
+	void (*fini)(void);
+	uint32_t (*debug)(const char*, ...);
+};
+
+void vsfdbg_modexit(struct vsf_module_t*);
+vsf_err_t vsfdbg_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFDBG_MOD							\
+	((struct vsfdbg_modifs_t *)vsf_module_get(VSFDBG_MODNAME))
+#define debug_init							VSFDBG_MOD->init
+#define debug_fini							VSFDBG_MOD->fini
+#define debug								VSFDBG_MOD->debug
+#define debug_info							VSFDBG_MOD->info
+#define debug_stream						VSFDBG_MOD->stream
+#else
 void debug_init(struct vsf_stream_t *stream);
 void debug_fini(void);
 uint32_t debug(const char *format, ...);
+#endif
+
 #define vsf_debug(format, ...) debug("%s:%d "format"\r\n", __FILE__,\
 										__LINE__, ##__VA_ARGS__)
 #define vsf_debug_init(s) debug_init(s)

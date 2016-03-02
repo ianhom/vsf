@@ -147,7 +147,22 @@ struct vsfusbh_hid_t
 	struct hid_report_t hid_report;
 };
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBH_HID_MODNAME					"vsf.stack.usb.host.hid"
+
+struct vsfusbh_hid_modifs_t
+{
+	struct vsfusbh_class_drv_t drv;
+};
+
+void vsfusbh_hid_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBH_HIDCMOD						\
+	((struct vsfusbh_hid_modifs_t *)vsf_module_get(VSFUSBH_HID_MODNAME))
+#define vsfusbh_hid_drv						VSFUSBH_HIDCMOD->drv
+
+#else
 extern const struct vsfusbh_class_drv_t vsfusbh_hid_drv;
 #endif
 

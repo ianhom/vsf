@@ -49,7 +49,25 @@ struct vsfip_dhcpc_t
 	unsigned ready : 1;
 };
 
-vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
-							struct vsfip_dhcpc_t *dhcpc);
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFIP_DHCPC_MODNAME					"vsf.stack.net.tcpip.proto.dhcpc"
+
+struct vsfip_dhcpc_modifs_t
+{
+	struct vsfip_dhcpc_local_t dhcpc;
+	vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
+};
+
+void vsfip_dhcpc_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_dhcpc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFIP_DHCPCMOD						\
+	((struct vsfip_dhcpc_modifs_t *)vsf_module_get(VSFIP_DHCPC_MODNAME))
+#define vsfip_dhcpc							VSFIP_DHCPCMOD->dhcpc
+#define vsfip_dhcpc_start					VSFIP_DHCPCMOD->start
+
+#else
+vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
+#endif
 
 #endif		// __VSFIP_DHCPC_H_INCLUDED__

@@ -20,7 +20,22 @@
 #ifndef __VSFUSBH_HUB_H_INCLUDED__
 #define __VSFUSBH_HUB_H_INCLUDED__
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBH_HUB_MODNAME					"vsf.stack.usb.host.hub"
+
+struct vsfusbh_hub_modifs_t
+{
+	struct vsfusbh_class_drv_t drv;
+};
+
+void vsfusbh_hub_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_hub_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBH_HUBCMOD						\
+	((struct vsfusbh_hub_modifs_t *)vsf_module_get(VSFUSBH_HUB_MODNAME))
+#define vsfusbh_hub_drv						VSFUSBH_HUBCMOD->drv
+
+#else
 extern const struct vsfusbh_class_drv_t vsfusbh_hub_drv;
 #endif
 

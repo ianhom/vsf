@@ -223,11 +223,30 @@ vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbd_MSC_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbd_MSC_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbd_MSC_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbd_MSC_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->protocol.request_prepare = vsfusbd_MSCBOT_request_prepare;
+	ifs->protocol.init = vsfusbd_MSCBOT_class_init;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class =
 {
-	NULL,
-	vsfusbd_MSCBOT_request_prepare, NULL,
-	vsfusbd_MSCBOT_class_init, NULL
+	.request_prepare = vsfusbd_MSCBOT_request_prepare,
+	.init = vsfusbd_MSCBOT_class_init,
 };
 #endif

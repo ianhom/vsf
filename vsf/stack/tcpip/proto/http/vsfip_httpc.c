@@ -1,6 +1,24 @@
+/***************************************************************************
+ *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 #include "vsf.h"
 
-#include <stdlib.h>
+#undef vsfip_httpc_get
 
 #ifdef HTTPC_DEBUG
 #include "framework/vsfshell/vsfshell.h"
@@ -365,13 +383,6 @@ vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
-const struct vsfip_httpc_op_t vsfip_httpc_op_stream =
-{
-	vsfip_httpc_on_connect_stream, vsfip_httpc_on_recv_stream
-};
-#endif
-
 // op_buffer
 vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					void *output, uint32_t offset, struct vsfip_buffer_t *buf)
@@ -391,9 +402,37 @@ vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_httpc_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfip_httpc_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_httpc_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_httpc_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->op_stream.on_connect = vsfip_httpc_on_connect_stream;
+	ifs->op_stream.on_recv = vsfip_httpc_on_recv_stream;
+	ifs->op_buffer.on_recv = vsfip_httpc_on_recv_buffer;
+	ifs->get = vsfip_httpc_get;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
+const struct vsfip_httpc_op_t vsfip_httpc_op_stream =
+{
+	.on_connect = vsfip_httpc_on_connect_stream,
+	.on_recv = vsfip_httpc_on_recv_stream,
+};
+
 const struct vsfip_httpc_op_t vsfip_httpc_op_buffer =
 {
-	NULL, vsfip_httpc_on_recv_buffer
+	.on_recv = vsfip_httpc_on_recv_buffer,
 };
 #endif

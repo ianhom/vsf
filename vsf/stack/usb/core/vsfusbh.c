@@ -18,6 +18,23 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#undef vsfusbh_init
+#undef vsfusbh_fini
+#undef vsfusbh_register_driver
+#undef vsfusbh_submit_urb
+#undef vsfusbh_relink_urb
+#undef vsfusbh_alloc_device
+#undef vsfusbh_free_device
+#undef vsfusbh_add_device
+#undef vsfusbh_disconnect_device
+#undef vsfusbh_remove_interface
+#undef vsfusbh_control_msg
+#undef vsfusbh_get_descriptor
+#undef vsfusbh_get_class_descriptor
+#undef vsfusbh_set_configuration
+#undef vsfusbh_set_interface
+#undef vsfusbh_get_extra_descriptor
+
 #define USB_MAX_DEVICE				127
 
 struct vsfusbh_class_drv_list
@@ -196,7 +213,7 @@ static vsf_err_t vsfusbh_find_intrface_driver(struct vsfusbh_t *usbh,
 	return VSFERR_FAIL;
 }
 
-void vsfusbh_remove_intrface(struct vsfusbh_t *usbh,
+void vsfusbh_remove_interface(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, struct usb_interface_t *interface)
 {
 	const struct vsfusbh_class_drv_t *drv = interface->driver;
@@ -289,7 +306,7 @@ void vsfusbh_disconnect_device(struct vsfusbh_t *usbh,
 	if (dev->actconfig)
 	{
 		for (i = 0; i < dev->actconfig->bNumInterfaces; i++)
-			vsfusbh_remove_intrface(usbh, dev, dev->actconfig->interface + i);
+			vsfusbh_remove_interface(usbh, dev, dev->actconfig->interface + i);
 	}
 
 	for (i = 0; i < USB_MAXCHILDREN; i++)
@@ -1288,3 +1305,28 @@ vsf_err_t vsfusbh_get_extra_descriptor(uint8_t *buf, uint16_t size,
 	}
 	return VSFERR_FAIL;
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbh_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbh_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbh_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbh_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfusbh_init;
+	ifs->fini = vsfusbh_fini;
+	ifs->register_driver = vsfusbh_register_driver;
+	ifs->submit_urb = vsfusbh_submit_urb;
+	ifs->relink_urb = vsfusbh_relink_urb;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

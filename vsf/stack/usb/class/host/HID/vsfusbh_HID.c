@@ -45,7 +45,7 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 			if ((desc->usage_min != -1) && (desc->usage_max != -1))
 			{
 				desc->usage_num = desc->usage_max - desc->usage_min + 1;
-				usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+				usage = vsf_bufmgr_malloc(sizeof(struct hid_usage_t));
 				if (usage == NULL)
 					return VSFERR_FAIL;
 
@@ -71,19 +71,19 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 			{
 				for (i = 0; i < desc->usage_num; i++)
 				{
-					usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+					usage = vsf_bufmgr_malloc(sizeof(struct hid_usage_t));
 					if (usage == NULL)
 						return VSFERR_FAIL;
 
 					usage->report_size = (int32_t)desc->report_size;
-					usage->report_count = (int32_t)desc->report_count/desc->usage_num;
+					usage->report_count = (int32_t)desc->report_count / desc->usage_num;
 					usage->data_flag = (uint32_t)value;
 
 					usage->usage_page = (uint16_t)desc->usage_page;
 					usage->usage_min = (uint8_t)desc->usages[i];
 					usage->usage_max = (uint8_t)desc->usages[i];
-					usage->bit_length = (int32_t)(desc->report_size * desc->report_count/desc->usage_num);
-					usage->bit_offset = (int32_t)(hidrpt->input_bitlen + i*usage->bit_length);
+					usage->bit_length = (int32_t)(desc->report_size * desc->report_count / desc->usage_num);
+					usage->bit_offset = (int32_t)(hidrpt->input_bitlen + i * usage->bit_length);
 
 					usage->logical_min = desc->logical_min;
 					usage->logical_max = desc->logical_max;
@@ -100,7 +100,7 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 			if ((desc->usage_min != -1) && (desc->usage_max != -1))
 			{
 				desc->usage_num = desc->usage_max - desc->usage_min + 1;
-				usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+				usage = vsf_bufmgr_malloc(sizeof(struct hid_usage_t));
 				if (usage == NULL)
 					return VSFERR_FAIL;
 
@@ -126,19 +126,19 @@ static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 			{
 				for (i = 0; i < desc->usage_num; i++)
 				{
-					usage = vsf_bufmgr_malloc(sizeof (struct hid_usage_t));
+					usage = vsf_bufmgr_malloc(sizeof(struct hid_usage_t));
 					if (usage == NULL)
 						return VSFERR_FAIL;
 
 					usage->report_size = desc->report_size;
 					usage->report_count = desc->report_count;
 					usage->data_flag = value;
-					value = desc->report_size * desc->report_count/desc->usage_num;
+					value = desc->report_size * desc->report_count / desc->usage_num;
 
 					usage->usage_page = desc->usage_page;
 					usage->usage_min = desc->usages[i];
 					usage->usage_max = desc->usages[i];
-					usage->bit_offset = hidrpt->output_bitlen + i*value;
+					usage->bit_offset = hidrpt->output_bitlen + i * value;
 					usage->bit_length = value;
 
 					usage->logical_min = desc->logical_min;
@@ -287,13 +287,13 @@ static vsf_err_t hid_parse_report(struct vsfusbh_hid_t *hid, uint8_t *buf,
 	uint8_t *end = buf + len;
 	int item_size;
 	vsf_err_t err;
-	struct hid_desc_t *desc = vsf_bufmgr_malloc(sizeof (struct hid_desc_t));
+	struct hid_desc_t *desc = vsf_bufmgr_malloc(sizeof(struct hid_desc_t));
 
 	if (desc == NULL)
 		return VSFERR_FAIL;
 
-	memset(hidrpt, 0, sizeof (struct hid_report_t));
-	memset(desc, 0, sizeof (struct hid_desc_t));
+	memset(hidrpt, 0, sizeof(struct hid_report_t));
+	memset(desc, 0, sizeof(struct hid_desc_t));
 
 	sllist_init_node(hidrpt->input_list);
 	sllist_init_node(hidrpt->output_list);
@@ -312,7 +312,7 @@ static vsf_err_t hid_parse_report(struct vsfusbh_hid_t *hid, uint8_t *buf,
 		else
 		{
 			item_size = HID_ITEM_SIZE(b);
-			err = usbh_hid_parse_item(desc, HID_ITEM_TAG(b), item_size, buf+1, hidrpt);
+			err = usbh_hid_parse_item(desc, HID_ITEM_TAG(b), item_size, buf + 1, hidrpt);
 			if (err)
 			{
 				err = -1;
@@ -402,13 +402,13 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 		for (i=0; i<usage->report_count; ++i)
 		{
 			/* get usage value */
-			cur_value = get_bits(report->cur_value, usage->bit_offset+i*usage->report_size, usage->report_size);
-			pre_value = get_bits(report->pre_value, usage->bit_offset+i*usage->report_size, usage->report_size);
+			cur_value = get_bits(report->cur_value, usage->bit_offset + i * usage->report_size, usage->report_size);
+			pre_value = get_bits(report->pre_value, usage->bit_offset + i * usage->report_size, usage->report_size);
 
 			/* compare and process */
 			if (cur_value != pre_value)
 			{
-				static struct usbh_hid_event_t event;
+				struct usbh_hid_event_t event;
 				event.type = HID_VALUE_TYPE_UNKNOWN;
 
 				event.usage_page = usage->usage_page;
@@ -427,8 +427,8 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 					middle = (usage->logical_min + usage->logical_max) / 2;
 					if (usage->logical_min >= 0)
 					{
-						event.pre_value =  -(middle - pre_value);
-						event.cur_value =  -(middle - cur_value);
+						event.pre_value = -(middle - pre_value);
+						event.cur_value = -(middle - cur_value);
 					}
 					else
 					{
@@ -457,7 +457,6 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 	}
 }
 
-
 static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
@@ -471,7 +470,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	inturb->sm = &hid->sm;
 
 	ctrlurb->transfer_length = hid->hid_desc->desc[0].wDescriptorLength;
-	if (ctrlurb->transfer_length  > 1024)
+	if (ctrlurb->transfer_length > 1024)
 		return VSFERR_NOT_SUPPORT;
 	ctrlurb->transfer_buffer = vsf_bufmgr_malloc(ctrlurb->transfer_length);
 	if (ctrlurb->transfer_buffer == NULL)
@@ -560,7 +559,7 @@ static struct vsfsm_state_t *vsfusbh_hid_evt_handler_init(struct vsfsm_t *sm,
 		err = hid->pt.thread(&hid->pt, evt);
 		if (err < 0)
 		{
-			vsfusbh_remove_intrface(hid->usbh, hid->dev, hid->interface);
+			vsfusbh_remove_interface(hid->usbh, hid->dev, hid->interface);
 		}
 		break;
 	default:
@@ -653,6 +652,29 @@ const struct vsfusbh_device_id_t vsfusbh_hid_id_table[] =
 	{0},
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbh_hid_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbh_hid_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbh_hid_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->drv.name = "hid";
+	ifs->drv.id_table = vsfusbh_hid_id_table;
+	ifs->drv.probe = vsfusbh_hid_probe;
+	ifs->drv.disconnect = vsfusbh_hid_disconnect;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbh_class_drv_t vsfusbh_hid_drv =
 {
 	.name = "hid",
@@ -661,4 +683,4 @@ const struct vsfusbh_class_drv_t vsfusbh_hid_drv =
 	.disconnect = vsfusbh_hid_disconnect,
 	.ioctl = NULL,
 };
-
+#endif

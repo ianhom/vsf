@@ -20,8 +20,6 @@
 #ifndef __VSFFAT_H_INCLUDED__
 #define __VSFFAT_H_INCLUDED__
 
-#include "../vsf_malfs.h"
-
 struct vsffat_t;
 struct vsfile_fatfile_t
 {
@@ -96,11 +94,27 @@ struct vsffat_t
 	// for vsffat_alloc_cluschain
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFFAT_MODNAME						"vsf.component.file.fs.malfs.fat"
+
+struct vsffat_modifs_t
+{
+	struct vsfile_fsop_t op;
+	bool (*is_LFN)(char*);
+};
+
+void vsffat_modexit(struct vsf_module_t*);
+vsf_err_t vsffat_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFFAT_MOD							\
+	((struct vsffat_modifs_t *)vsf_module_get(VSFFAT_MODNAME))
+#define vsffat_op							VSFFAT_MOD->op
+#define vsffat_is_LFN						VSFFAT_MOD->is_LFN
+
+#else
+extern const struct vsfile_fsop_t vsffat_op;
 // helper
 bool vsffat_is_LFN(char *name);
-
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfile_fsop_t vsffat_op;
 #endif
 
 #endif	// __VSFFAT_H_INCLUDED__

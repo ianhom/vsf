@@ -72,10 +72,6 @@ struct vsfshell_handler_param_t
 	struct vsfsm_pt_t output_pt;
 };
 
-vsf_err_t vsfshell_init(struct vsfshell_t *shell);
-void vsfshell_register_handlers(struct vsfshell_t *shell,
-										struct vsfshell_handler_t *handlers);
-
 typedef vsf_err_t (*vsfshell_printf_thread_t)(struct vsfsm_pt_t *pt,
 									vsfsm_evt_t evt, const char *format, ...);
 #define vsfshell_printf(output_pt, format, ...)\
@@ -118,6 +114,29 @@ typedef vsf_err_t (*vsfshell_printf_thread_t)(struct vsfsm_pt_t *pt,
 		}\
 	} while (0)
 
-void vsfshell_free_handler_thread(struct vsfshell_t *shell, struct vsfsm_t *sm);
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFSHELL_MODNAME					"vsf.framework.shell"
+
+struct vsfshell_modifs_t
+{
+	vsf_err_t (*init)(struct vsfshell_t*);
+	void (*register_handlers)(struct vsfshell_t*, struct vsfshell_handler_t*);
+	void (*free_handler_thread)(struct vsfshell_t*, struct vsfsm_t*);
+};
+
+void vsfshell_modexit(struct vsf_module_t*);
+vsf_err_t vsfshell_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFSHELL_MOD						\
+	((struct vsfshell_modifs_t *)vsf_module_get(VSFSHELL_MODNAME))
+#define vsfshell_init						VSFSHELL_MOD->init
+#define vsfshell_register_handlers			VSFSHELL_MOD->register_handlers
+#define vsfshell_free_handler_thread		VSFSHELL_MOD->free_handler_thread
+
+#else
+vsf_err_t vsfshell_init(struct vsfshell_t*);
+void vsfshell_register_handlers(struct vsfshell_t*, struct vsfshell_handler_t*);
+void vsfshell_free_handler_thread(struct vsfshell_t*, struct vsfsm_t*);
+#endif
 
 #endif	// __VSFSHELL_H_INCLUDED__

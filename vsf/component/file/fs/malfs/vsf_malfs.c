@@ -18,7 +18,11 @@
  ***************************************************************************/
 
 #include "vsf.h"
-#include "vsf_malfs.h"
+
+#undef vsf_malfs_init
+#undef vsf_malfs_fini
+#undef vsf_malfs_read
+#undef vsf_malfs_write
 
 static void vsf_malfs_finish(void *param)
 {
@@ -93,3 +97,27 @@ vsf_err_t vsf_malfs_write(struct vsf_malfs_t *malfs, uint32_t sector,
 	STREAM_INIT(&malfs->mbufstream);
 	return vsf_malstream_write(&malfs->malstream, sector * bs, num * bs);
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsf_malfs_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsf_malfs_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsf_malfs_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsf_malfs_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsf_malfs_init;
+	ifs->fini = vsf_malfs_fini;
+	ifs->read = vsf_malfs_read;
+	ifs->write = vsf_malfs_write;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

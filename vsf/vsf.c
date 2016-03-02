@@ -142,28 +142,73 @@ succeed:
 fail:
 	return NULL;
 }
-
-#if defined(VSFCFG_FUNC_SHELL) && defined(VSFCFG_MODULE_SHELL)
-static struct vsf_shell_api_t vsf_shell_api;
-#endif
-#if defined(VSFCFG_FUNC_USBD) && defined(VSFCFG_MODULE_USBD)
-static struct vsf_usbd_api_t vsf_usbd_api;
-#endif
-#if defined(VSFCFG_FUNC_USBH) && defined(VSFCFG_MODULE_USBH)
-static struct vsf_usbh_api_t vsf_usbh_api;
-#endif
-#if defined(VSFCFG_FUNC_TCPIP) && defined(VSFCFG_MODULE_TCPIP)
-static struct vsf_tcpip_api_t vsf_tcpip_api;
-#endif
-#if defined(VSFCFG_FUNC_BCMWIFI) && defined(VSFCFG_MODULE_BCMWIFI)
-static struct vsf_bcmwifi_api_t vsf_bcmwifi_api;
-#endif
 #endif		// VSFCFG_MODULE
+
 // reserve 512 bytes for vector table
 ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 {
 	.ver = VSF_API_VERSION,
 	.ifs = &core_interfaces,
+
+	.libc.stdlib.abs = abs,
+	.libc.stdlib.labs = labs,
+	.libc.stdlib.llabs = llabs,
+	.libc.stdlib.div = div,
+	.libc.stdlib.ldiv = ldiv,
+	.libc.stdlib.lldiv = lldiv,
+	.libc.stdlib.strtod = strtod,
+	.libc.stdlib.strtof = strtof,
+	.libc.stdlib.strtold = strtold,
+	.libc.stdlib.strtol = strtol,
+	.libc.stdlib.strtoul = strtoul,
+	.libc.stdlib.strtoll = strtoll,
+	.libc.stdlib.strtoull = strtoull,
+	.libc.stdlib.atof = atof,
+	.libc.stdlib.atoi = atoi,
+	.libc.stdlib.atol = atol,
+	.libc.stdlib.atoll = atoll,
+	.libc.stdio.sprintf = sprintf,
+	.libc.stdio.snprintf = snprintf,
+	.libc.stdio.vsprintf = vsprintf,
+	.libc.stdio.vsnprintf = vsnprintf,
+	.libc.string.memcmp = memcmp,
+	.libc.string.memcpy = memcpy,
+	.libc.string.memmove = memmove,
+	.libc.string.memset = memset,
+	.libc.string.strcat = strcat,
+	.libc.string.strcmp = strcmp,
+	.libc.string.strcpy = strcpy,
+	.libc.string.strcspn = strcspn,
+	.libc.string.strlen = strlen,
+	.libc.string.strncat = strncat,
+	.libc.string.strncmp = strncmp,
+	.libc.string.strncpy = strncpy,
+	.libc.string.strspn = strspn,
+	.libc.string.strtok = strtok,
+	.libc.string.strxfrm = strxfrm,
+	.libc.string.strcasecmp = strcasecmp,
+	.libc.string.strncasecmp = strncasecmp,
+	.libc.string.strtok_r = strtok_r,
+	.libc.string.strnlen = strnlen,
+	.libc.string.memchr = memchr,
+	.libc.string.strchr = strchr,
+	.libc.string.strpbrk = strpbrk,
+	.libc.string.strrchr = strrchr,
+	.libc.string.strstr = strstr,
+	.libc.ctype.isdigit = isdigit,
+	.libc.ctype.isspace = isspace,
+	.libc.ctype.isalpha = isalpha,
+	.libc.ctype.isalnum = isalnum,
+	.libc.ctype.isprint = isprint,
+	.libc.ctype.isupper = isupper,
+	.libc.ctype.islower = islower,
+	.libc.ctype.isxdigit = isxdigit,
+	.libc.ctype.isblank = isblank,
+	.libc.ctype.isgraph = isgraph,
+	.libc.ctype.iscntrl = iscntrl,
+	.libc.ctype.ispunct = ispunct,
+	.libc.ctype.tolower = tolower,
+	.libc.ctype.toupper = toupper,
 
 	.framework.evtq_init = vsfsm_evtq_init,
 	.framework.evtq_set = vsfsm_evtq_set,
@@ -198,15 +243,6 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.framework.module.load = vsf_module_load,
 	.framework.module.unload = vsf_module_unload,
 #endif
-#ifdef VSFCFG_FUNC_SHELL
-#ifdef VSFCFG_MODULE_SHELL
-	.framework.shell = &vsf_shell_api,
-#else
-	.framework.shell.init = vsfshell_init,
-	.framework.shell.register_handlers = vsfshell_register_handlers,
-	.framework.shell.free_handler_thread = vsfshell_free_handler_thread,
-#endif
-#endif
 
 #ifdef VSFCFG_BUFFER
 	.component.buffer.queue.init = vsfq_init,
@@ -221,62 +257,16 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.component.buffer.fifo.pop = vsf_fifo_pop,
 	.component.buffer.fifo.get_data_length = vsf_fifo_get_data_length,
 	.component.buffer.fifo.get_avail_length = vsf_fifo_get_avail_length,
+	.component.buffer.multibuf.init = vsf_multibuf_init,
+	.component.buffer.multibuf.get_empty = vsf_multibuf_get_empty,
+	.component.buffer.multibuf.push = vsf_multibuf_push,
+	.component.buffer.multibuf.get_payload = vsf_multibuf_get_payload,
+	.component.buffer.multibuf.pop = vsf_multibuf_pop,
 	.component.buffer.bufmgr.malloc_aligned_do = vsf_bufmgr_malloc_aligned_do,
 	.component.buffer.bufmgr.free_do = vsf_bufmgr_free_do,
 	.component.buffer.pool.init = vsfpool_init,
 	.component.buffer.pool.alloc = vsfpool_alloc,
 	.component.buffer.pool.free = vsfpool_free,
-#endif
-#ifdef VSFCFG_STREAM
-	.component.stream.init = stream_init,
-	.component.stream.fini = stream_fini,
-	.component.stream.read = stream_read,
-	.component.stream.write = stream_write,
-	.component.stream.get_data_size = stream_get_data_size,
-	.component.stream.get_free_size = stream_get_free_size,
-	.component.stream.connect_rx = stream_connect_rx,
-	.component.stream.connect_tx = stream_connect_tx,
-	.component.stream.disconnect_rx = stream_disconnect_rx,
-	.component.stream.disconnect_tx = stream_disconnect_tx,
-	.component.stream.fifostream_op = &fifostream_op,
-	.component.stream.mbufstream_op = &mbufstream_op,
-	.component.stream.bufstream_op = &bufstream_op,
-#endif
-#ifdef VSFCFG_MAL
-	.component.mal.init = vsfmal_init,
-	.component.mal.fini = vsfmal_fini,
-	.component.mal.erase_all = vsfmal_erase_all,
-	.component.mal.erase = vsfmal_erase,
-	.component.mal.read = vsfmal_read,
-	.component.mal.write = vsfmal_write,
-	.component.mal.malstream.init = vsf_malstream_init,
-	.component.mal.malstream.read = vsf_malstream_read,
-	.component.mal.malstream.write = vsf_malstream_write,
-#ifdef VSFCFG_SCSI
-	.component.mal.scsi.init = vsfscsi_init,
-	.component.mal.scsi.execute = vsfscsi_execute,
-	.component.mal.scsi.cancel_transact = vsfscsi_cancel_transact,
-	.component.mal.scsi.release_transact = vsfscsi_release_transact,
-	.component.mal.scsi.mal2scsi_op = &vsf_mal2scsi_op,
-#endif
-#endif
-#ifdef VSFCFG_FILE
-	.component.file.init = vsfile_init,
-	.component.file.mount = vsfile_mount,
-	.component.file.unmount = vsfile_unmount,
-	.component.file.getfile = vsfile_getfile,
-	.component.file.findfirst = vsfile_findfirst,
-	.component.file.findnext = vsfile_findnext,
-	.component.file.findend = vsfile_findend,
-	.component.file.open = vsfile_open,
-	.component.file.close = vsfile_close,
-	.component.file.read = vsfile_read,
-	.component.file.write = vsfile_write,
-	.component.file.getfileext = vsfile_getfileext,
-	.component.file.is_div = vsfile_is_div,
-	.component.file.dummy_file = vsfile_dummy_file,
-	.component.file.dummy_rw = vsfile_dummy_rw,
-	.component.file.memfs_op = &vsfile_memfs_op,
 #endif
 
 	.tool.bittool.bit_reverse_u8 = BIT_REVERSE_U8,
@@ -306,84 +296,4 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.tool.bittool.mskarr.set = mskarr_set,
 	.tool.bittool.mskarr.clr = mskarr_clr,
 	.tool.bittool.mskarr.ffz = mskarr_ffz,
-
-#ifdef VSFCFG_FUNC_USBD
-#ifdef VSFCFG_MODULE_USBD
-	.stack.usb.device = &vsf_usbd_api,
-#else
-	.stack.usb.device.init = vsfusbd_device_init,
-	.stack.usb.device.fini = vsfusbd_device_fini,
-	.stack.usb.device.ep_send = vsfusbd_ep_send,
-	.stack.usb.device.ep_recv = vsfusbd_ep_recv,
-	.stack.usb.device.set_IN_handler = vsfusbd_set_IN_handler,
-	.stack.usb.device.set_OUT_handler = vsfusbd_set_OUT_handler,
-	.stack.usb.device.classes.hid.protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_HID_class,
-	.stack.usb.device.classes.cdc.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCControl_class,
-	.stack.usb.device.classes.cdc.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCData_class,
-	.stack.usb.device.classes.cdcacm.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
-	.stack.usb.device.classes.cdcacm.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMData_class,
-#ifdef VSFCFG_FUNC_TCPIP
-	.stack.usb.device.classes.rndis.control_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISControl_class,
-	.stack.usb.device.classes.rndis.data_protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_RNDISData_class,
-#endif
-#ifdef VSFCFG_SCSI
-	.stack.usb.device.classes.mscbot.protocol = (struct vsfusbd_class_protocol_t *)&vsfusbd_MSCBOT_class,
-#endif
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_USBH
-#ifdef VSFCFG_MODULE_USBH
-	.stack.usb.host = &vsf_usbh_api,
-#else
-	.stack.usb.host.init = vsfusbh_init,
-	.stack.usb.host.fini = vsfusbh_fini,
-	.stack.usb.host.register_driver = vsfusbh_register_driver,
-#if IFS_HCD_EN
-	.stack.usb.host.hcd.ohci.driver = (struct vsfusbh_hcddrv_t *)&vsfusbh_ohci_drv,
-#endif
-	.stack.usb.host.classes.hub.driver = (struct vsfusbh_class_drv_t *)&vsfusbh_hub_drv,
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_TCPIP
-#ifdef VSFCFG_MODULE_TCPIP
-	.stack.net.tcpip = &vsf_tcpip_api,
-#else
-	.stack.net.tcpip.init = vsfip_init,
-	.stack.net.tcpip.fini = vsfip_fini,
-	.stack.net.tcpip.netif_add = vsfip_netif_add,
-	.stack.net.tcpip.netif_remove = vsfip_netif_remove,
-	.stack.net.tcpip.socket = vsfip_socket,
-	.stack.net.tcpip.close = vsfip_close,
-	.stack.net.tcpip.listen = vsfip_listen,
-	.stack.net.tcpip.bind = vsfip_bind,
-	.stack.net.tcpip.tcp_connect = vsfip_tcp_connect,
-	.stack.net.tcpip.tcp_accept = vsfip_tcp_accept,
-	.stack.net.tcpip.tcp_async_send = vsfip_tcp_async_send,
-	.stack.net.tcpip.tcp_send = vsfip_tcp_send,
-	.stack.net.tcpip.tcp_async_recv = vsfip_tcp_async_recv,
-	.stack.net.tcpip.tcp_recv = vsfip_tcp_recv,
-	.stack.net.tcpip.tcp_close = vsfip_tcp_close,
-	.stack.net.tcpip.udp_async_send = vsfip_udp_async_send,
-	.stack.net.tcpip.udp_send = vsfip_udp_send,
-	.stack.net.tcpip.udp_async_recv = vsfip_udp_async_recv,
-	.stack.net.tcpip.udp_recv = vsfip_udp_recv,
-
-	.stack.net.tcpip.protocol.dhcpc.start = vsfip_dhcpc_start,
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_BCMWIFI
-#ifdef VSFCFG_MODULE_BCMWIFI
-	.stack.net.bcmwifi = &vsf_bcmwifi_api,
-#else
-	.stack.net.bcmwifi.bus.spi_op = (struct bcm_bus_op_t *)&bcm_bus_spi_op,
-	.stack.net.bcmwifi.bus.sdio_op = (struct bcm_bus_op_t *)&bcm_bus_sdio_op,
-	.stack.net.bcmwifi.netdrv_op = (struct vsfip_netdrv_op_t *)&bcm_wifi_netdrv_op,
-	.stack.net.bcmwifi.scan = bcm_wifi_scan,
-	.stack.net.bcmwifi.join = bcm_wifi_join,
-	.stack.net.bcmwifi.leave = bcm_wifi_leave,
-#endif
-#endif
 };

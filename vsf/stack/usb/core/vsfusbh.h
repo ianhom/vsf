@@ -179,6 +179,63 @@ struct vsfusbh_t
 	struct vsfusbh_urb_t *probe_urb;
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBH_MODNAME						"vsf.stack.usb.host"
+
+struct vsfusbh_modifs_t
+{
+	vsf_err_t (*init)(struct vsfusbh_t*);
+	vsf_err_t (*fini)(struct vsfusbh_t*);
+	vsf_err_t (*register_driver)(struct vsfusbh_t*,
+					const struct vsfusbh_class_drv_t*);
+
+	vsf_err_t (*submit_urb)(struct vsfusbh_t*, struct vsfusbh_urb_t*);
+	vsf_err_t (*relink_urb)(struct vsfusbh_t*, struct vsfusbh_urb_t*);
+
+	struct vsfusbh_device_t* (*alloc_device)(struct vsfusbh_t*);
+	void (*free_device)(struct vsfusbh_t*, struct vsfusbh_device_t*);
+	vsf_err_t (*add_device)(struct vsfusbh_t*, struct vsfusbh_device_t*);
+	void (*disconnect_device)(struct vsfusbh_t*, struct vsfusbh_device_t**);
+	void (*remove_interface)(struct vsfusbh_t*, struct vsfusbh_device_t*,
+					struct usb_interface_t*);
+
+	vsf_err_t (*control_msg)(struct vsfusbh_t*, struct vsfusbh_urb_t*,
+					uint8_t, uint8_t, uint16_t, uint16_t);
+	vsf_err_t (*get_descriptor)(struct vsfusbh_t*, struct vsfusbh_urb_t*,
+					uint8_t, uint8_t);
+	vsf_err_t (*get_class_descriptor)(struct vsfusbh_t*, struct vsfusbh_urb_t*,
+					uint16_t, uint8_t, uint8_t);
+	vsf_err_t (*set_configuration)(struct vsfusbh_t*, struct vsfusbh_urb_t*,
+					uint8_t);
+	vsf_err_t (*set_interface)(struct vsfusbh_t*, struct vsfusbh_urb_t*,
+					uint16_t, uint16_t);
+
+	vsf_err_t (*get_extra_descriptor)(uint8_t*, uint16_t, uint8_t, void**);
+};
+
+void vsfusbh_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBHMOD						\
+	((struct vsfusbh_modifs_t *)vsf_module_get(VSFUSBH_MODNAME))
+#define vsfusbh_init						VSFUSBHMOD->init
+#define vsfusbh_fini						VSFUSBHMOD->fini
+#define vsfusbh_register_driver				VSFUSBHMOD->register_driver
+#define vsfusbh_submit_urb					VSFUSBHMOD->submit_urb
+#define vsfusbh_relink_urb					VSFUSBHMOD->relink_urb
+#define vsfusbh_alloc_device				VSFUSBHMOD->alloc_device
+#define vsfusbh_free_device					VSFUSBHMOD->free_device
+#define vsfusbh_add_device					VSFUSBHMOD->add_device
+#define vsfusbh_disconnect_device			VSFUSBHMOD->disconnect_device
+#define vsfusbh_remove_interface			VSFUSBHMOD->remove_interface
+#define vsfusbh_control_msg					VSFUSBHMOD->control_msg
+#define vsfusbh_get_descriptor				VSFUSBHMOD->get_descriptor
+#define vsfusbh_get_class_descriptor		VSFUSBHMOD->get_class_descriptor
+#define vsfusbh_set_configuration			VSFUSBHMOD->set_configuration
+#define vsfusbh_set_interface				VSFUSBHMOD->set_interface
+#define vsfusbh_get_extra_descriptor		VSFUSBHMOD->get_extra_descriptor
+
+#else
 vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
 vsf_err_t vsfusbh_relink_urb(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb);
 
@@ -186,20 +243,19 @@ vsf_err_t vsfusbh_init(struct vsfusbh_t *usbh);
 vsf_err_t vsfusbh_fini(struct vsfusbh_t *usbh);
 vsf_err_t vsfusbh_register_driver(struct vsfusbh_t *usbh,
 		const struct vsfusbh_class_drv_t *drv);
+
 struct vsfusbh_device_t *vsfusbh_alloc_device(struct vsfusbh_t *usbh);
 void vsfusbh_free_device(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev);
-void vsfusbh_remove_intrface(struct vsfusbh_t *usbh,
-		struct vsfusbh_device_t *dev, struct usb_interface_t *interface);
 vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev);
 void vsfusbh_disconnect_device(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t **pdev);
+void vsfusbh_remove_interface(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_interface_t *interface);
 
 vsf_err_t vsfusbh_control_msg(struct vsfusbh_t *usbh, struct vsfusbh_urb_t *vsfurb,
 		uint8_t bRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex);
 
-vsf_err_t vsfusbh_set_address(struct vsfusbh_t *usbh,
-		struct vsfusbh_urb_t *vsfurb);
 vsf_err_t vsfusbh_get_descriptor(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb, uint8_t type, uint8_t index);
 vsf_err_t vsfusbh_get_class_descriptor(struct vsfusbh_t *usbh,
@@ -211,7 +267,6 @@ vsf_err_t vsfusbh_set_interface(struct vsfusbh_t *usbh,
 
 vsf_err_t vsfusbh_get_extra_descriptor(uint8_t *buf, uint16_t size,
 		uint8_t type, void **ptr);
-
-void sllist_append(struct sllist *head, struct sllist *new);
+#endif
 
 #endif	// __VSFUSBH_H_INCLUDED__

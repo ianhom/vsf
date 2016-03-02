@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#undef vsfip_dhcpd_start
+
 #include "vsfip_dhcp_common.h"
 
 static struct vsfip_ipmac_assoc*
@@ -202,3 +204,24 @@ cleanup:
 	}
 	return VSFERR_FAIL;
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_dhcpd_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfip_dhcpd_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_dhcpd_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_dhcpd_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->start = vsfip_dhcpd_start;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

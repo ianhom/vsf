@@ -19,7 +19,22 @@
 #ifndef __VSFOHCI_H___
 #define __VSFOHCI_H___
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFOHCI_MODNAME						"vsf.stack.usb.host.hcd.ohci"
+
+struct vsfohci_modifs_t
+{
+	struct vsfusbh_hcddrv_t drv;
+};
+
+void vsfohci_modexit(struct vsf_module_t*);
+vsf_err_t vsfohci_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFOHCICMOD							\
+	((struct vsfohci_modifs_t *)vsf_module_get(VSFOHCI_MODNAME))
+#define vsfohci_drv							VSFOHCICMOD->drv
+
+#else
 extern const struct vsfusbh_hcddrv_t vsfohci_drv;
 #endif
 

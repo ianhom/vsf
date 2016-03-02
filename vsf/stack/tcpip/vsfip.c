@@ -17,7 +17,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
-#include <stdlib.h>
+
+#undef vsfip_init
+#undef vsfip_fini
+#undef vsfip_netif_add
+#undef vsfip_netif_remove
+#undef vsfip_buffer_get
+#undef vsfip_appbuffer_get
+#undef vsfip_buffer_reference
+#undef vsfip_buffer_release
+#undef vsfip_socket
+#undef vsfip_close
+#undef vsfip_socket_cb
+#undef vsfip_listen
+#undef vsfip_bind
+#undef vsfip_tcp_connect
+#undef vsfip_tcp_accept
+#undef vsfip_tcp_async_send
+#undef vsfip_tcp_send
+#undef vsfip_tcp_async_recv
+#undef vsfip_tcp_recv
+#undef vsfip_tcp_close
+#undef vsfip_udp_async_send
+#undef vsfip_udp_send
+#undef vsfip_udp_async_recv
+#undef vsfip_udp_recv
+#undef vsfip_ip4_pton
 
 #define VSFIP_TCP_RETRY			3
 #define VSFIP_TCP_ATO			10
@@ -51,7 +76,7 @@ struct vsfip_t vsfip;
 #endif
 
 // socket buffer
-struct vsfip_socket_t* vsfip_socket_get(void)
+static struct vsfip_socket_t* vsfip_socket_get(void)
 {
 	struct vsfip_socket_t *socket = vsfip.mem_op->get_socket();
 	if (socket != NULL)
@@ -61,7 +86,7 @@ struct vsfip_socket_t* vsfip_socket_get(void)
 	return socket;
 }
 
-void vsfip_socket_release(struct vsfip_socket_t *socket)
+static void vsfip_socket_release(struct vsfip_socket_t *socket)
 {
 	if (socket != NULL)
 	{
@@ -70,7 +95,7 @@ void vsfip_socket_release(struct vsfip_socket_t *socket)
 }
 
 // tcppcb buffer
-struct vsfip_tcppcb_t* vsfip_tcppcb_get(void)
+static struct vsfip_tcppcb_t* vsfip_tcppcb_get(void)
 {
 	struct vsfip_tcppcb_t *tcppcb = vsfip.mem_op->get_tcppcb();
 	if (tcppcb != NULL)
@@ -80,7 +105,7 @@ struct vsfip_tcppcb_t* vsfip_tcppcb_get(void)
 	return tcppcb;
 }
 
-void vsfip_tcppcb_release(struct vsfip_tcppcb_t *pcb)
+static void vsfip_tcppcb_release(struct vsfip_tcppcb_t *pcb)
 {
 	if (pcb != NULL)
 	{
@@ -136,7 +161,7 @@ void vsfip_buffer_release(struct vsfip_buffer_t *buf)
 }
 
 // bufferlist
-void vsfip_bufferlist_free(struct vsfq_t *list)
+static void vsfip_bufferlist_free(struct vsfq_t *list)
 {
 	struct vsfq_node_t *node;
 	struct vsfip_buffer_t *tmpbuf;
@@ -2095,7 +2120,7 @@ vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain)
 	//is vaild num
 	domainip->addr.s_addr_buf[0] = i;
 
-	for (i = 1;i < 4;i++)
+	for (i = 1; i < 4; i++)
 	{
 		str = strchr(str, '.');
 		if (str == NULL)
@@ -2106,3 +2131,55 @@ vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain)
 	domainip->size = 4;
 	return VSFERR_NONE;
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+#undef vsfip_eth_header
+#undef vsfip_eth_input
+vsf_err_t vsfip_eth_header(struct vsfip_buffer_t *buf,
+	enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest_addr);
+void vsfip_eth_input(struct vsfip_buffer_t *buf);
+vsf_err_t vsfip_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfip_init;
+	ifs->fini = vsfip_fini;
+	ifs->netif_add = vsfip_netif_add;
+	ifs->netif_remove = vsfip_netif_remove;
+	ifs->buffer_get = vsfip_buffer_get;
+	ifs->appbuffer_get = vsfip_appbuffer_get;
+	ifs->buffer_reference = vsfip_buffer_reference;
+	ifs->buffer_release = vsfip_buffer_release;
+	ifs->socket = vsfip_socket;
+	ifs->close = vsfip_close;
+	ifs->socket_cb = vsfip_socket_cb;
+	ifs->listen = vsfip_listen;
+	ifs->bind = vsfip_bind;
+	ifs->tcp_connect = vsfip_tcp_connect;
+	ifs->tcp_accept = vsfip_tcp_accept;
+	ifs->tcp_async_send = vsfip_tcp_async_send;
+	ifs->tcp_send = vsfip_tcp_send;
+	ifs->tcp_async_recv = vsfip_tcp_async_recv;
+	ifs->tcp_recv = vsfip_tcp_recv;
+	ifs->tcp_close = vsfip_tcp_close;
+	ifs->udp_async_send = vsfip_udp_async_send;
+	ifs->udp_send = vsfip_udp_send;
+	ifs->udp_async_recv = vsfip_udp_async_recv;
+	ifs->udp_recv = vsfip_udp_recv;
+	ifs->ip4_pton = vsfip_ip4_pton;
+	ifs->netif.eth.header = vsfip_eth_header;
+	ifs->netif.eth.input = vsfip_eth_input;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

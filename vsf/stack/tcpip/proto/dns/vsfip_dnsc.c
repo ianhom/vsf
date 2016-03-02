@@ -18,6 +18,10 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#undef vsfip_dnsc_init
+#undef vsfip_dnsc_setserver
+#undef vsfip_gethostbyname
+
 #define VSFIP_DNS_CLIENT_PORT			53
 #define VSFIP_DNS_TRY_CNT				3
 
@@ -58,7 +62,7 @@ PACKED_HEAD struct PACKED_MID vsfip_dns_response_t
 }; PACKED_TAIL
 
 #ifndef VSFCFG_STANDALONE_MODULE
-static struct vsfip_dns_local_t vsfip_dns;
+static struct vsfip_dnsc_local_t vsfip_dnsc;
 #endif
 
 #define VSFIP_DNS_PKG_SIZE		512
@@ -244,19 +248,19 @@ vsf_err_t vsfip_dns_decode_ans(uint8_t *ans , uint16_t size, uint16_t id,
 	return VSFERR_FAIL;
 }
 
-vsf_err_t vsfip_dns_setserver(uint8_t numdns, struct vsfip_ipaddr_t *dnsserver)
+vsf_err_t vsfip_dnsc_setserver(uint8_t numdns, struct vsfip_ipaddr_t *dnsserver)
 {
-	if (numdns < dimof(vsfip_dns.server))
-		vsfip_dns.server[numdns] = *dnsserver;
+	if (numdns < dimof(vsfip_dnsc.server))
+		vsfip_dnsc.server[numdns] = *dnsserver;
 	else
 		return VSFERR_NOT_AVAILABLE;
 
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfip_dns_init(void)
+vsf_err_t vsfip_dnsc_init(void)
 {
-	return vsfsm_crit_init(&vsfip_dns.crit, VSFSM_EVT_USER_LOCAL);
+	return vsfsm_crit_init(&vsfip_dnsc.crit, VSFSM_EVT_USER_LOCAL);
 }
 
 vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -267,67 +271,90 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfsm_pt_begin(pt);
 
-	if (vsfsm_crit_enter(&vsfip_dns.crit, pt->sm))
+	if (vsfsm_crit_enter(&vsfip_dnsc.crit, pt->sm))
 	{
 		vsfsm_pt_wfe(pt, VSFSM_EVT_USER_LOCAL);
 	}
 
-	vsfip_dns.so = vsfip_socket(AF_INET, IPPROTO_UDP);
-	if (vsfip_dns.so == NULL)
+	vsfip_dnsc.so = vsfip_socket(AF_INET, IPPROTO_UDP);
+	if (vsfip_dnsc.so == NULL)
 	{
 		err = VSFERR_NOT_AVAILABLE;
 		goto close;
 	}
 
-	err = vsfip_listen(vsfip_dns.so, 0);
+	err = vsfip_listen(vsfip_dnsc.so, 0);
 	if (err < 0) goto close;
 
-	vsfip_dns.id++;
-	vsfip_dns.outbuf = vsfip_dns_build_query(domain, vsfip_dns.id);
-	vsfip_dns.socket_pt.sm = pt->sm;
-	vsfip_dns.so->rx_timeout_ms = 1000;
+	vsfip_dnsc.id++;
+	vsfip_dnsc.outbuf = vsfip_dns_build_query(domain, vsfip_dnsc.id);
+	vsfip_dnsc.socket_pt.sm = pt->sm;
+	vsfip_dnsc.so->rx_timeout_ms = 1000;
 
-	vsfip_dns.try_cnt = VSFIP_DNS_TRY_CNT;
+	vsfip_dnsc.try_cnt = VSFIP_DNS_TRY_CNT;
 	do
 	{
-		for (i = 0 ; i < dimof(vsfip_dns.server) ; i++)
+		for (i = 0 ; i < dimof(vsfip_dnsc.server) ; i++)
 		{
-			vsfip_dns.dnsaddr.sin_port = VSFIP_DNS_CLIENT_PORT;
-			vsfip_dns.dnsaddr.sin_addr = vsfip_dns.server[i];
-			vsfip_dns.socket_pt.state = 0;
+			vsfip_dnsc.dnsaddr.sin_port = VSFIP_DNS_CLIENT_PORT;
+			vsfip_dnsc.dnsaddr.sin_addr = vsfip_dnsc.server[i];
+			vsfip_dnsc.socket_pt.state = 0;
 			vsfsm_pt_entry(pt);
-			vsfip_udp_send(NULL, 0, vsfip_dns.so, &vsfip_dns.dnsaddr,
-							vsfip_dns.outbuf);
+			vsfip_udp_send(NULL, 0, vsfip_dnsc.so, &vsfip_dnsc.dnsaddr,
+						vsfip_dnsc.outbuf);
 
 			// receive
-			vsfip_dns.socket_pt.state = 0;
+			vsfip_dnsc.socket_pt.state = 0;
 			vsfsm_pt_entry(pt);
-			err = vsfip_udp_recv(&vsfip_dns.socket_pt, evt, vsfip_dns.so,
-									&vsfip_dns.dnsaddr, &vsfip_dns.inbuf);
+			err = vsfip_udp_recv(&vsfip_dnsc.socket_pt, evt, vsfip_dnsc.so,
+						&vsfip_dnsc.dnsaddr, &vsfip_dnsc.inbuf);
 			if (err > 0) return err; else if (err < 0) continue;
 
 			// recv success
-			err = vsfip_dns_decode_ans(vsfip_dns.inbuf->app.buffer,
-							vsfip_dns.inbuf->app.size, vsfip_dns.id, domainip);
-			vsfip_buffer_release(vsfip_dns.inbuf);
+			err = vsfip_dns_decode_ans(vsfip_dnsc.inbuf->app.buffer,
+						vsfip_dnsc.inbuf->app.size, vsfip_dnsc.id, domainip);
+			vsfip_buffer_release(vsfip_dnsc.inbuf);
 			if (!err) break;
 		}
-		vsfip_dns.try_cnt--;
-	} while ((err != 0) && (vsfip_dns.try_cnt > 0));
+		vsfip_dnsc.try_cnt--;
+	} while ((err != 0) && (vsfip_dnsc.try_cnt > 0));
 
 close:
-	if (vsfip_dns.outbuf != NULL)
+	if (vsfip_dnsc.outbuf != NULL)
 	{
-		vsfip_buffer_release(vsfip_dns.outbuf);
-		vsfip_dns.outbuf = NULL;
+		vsfip_buffer_release(vsfip_dnsc.outbuf);
+		vsfip_dnsc.outbuf = NULL;
 	}
-	if (vsfip_dns.so != NULL)
+	if (vsfip_dnsc.so != NULL)
 	{
-		vsfip_close(vsfip_dns.so);
-		vsfip_dns.so = NULL;
+		vsfip_close(vsfip_dnsc.so);
+		vsfip_dnsc.so = NULL;
 	}
-	vsfsm_crit_leave(&vsfip_dns.crit);
+	vsfsm_crit_leave(&vsfip_dnsc.crit);
 
 	vsfsm_pt_end(pt);
 	return err;
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_dnsc_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfip_dnsc_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_dnsc_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_dnsc_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfip_dnsc_init;
+	ifs->setserver = vsfip_dnsc_setserver;
+	ifs->gethostbyname = vsfip_gethostbyname;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

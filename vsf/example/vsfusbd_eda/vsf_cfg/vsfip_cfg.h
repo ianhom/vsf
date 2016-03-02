@@ -9,7 +9,6 @@
 
 #define VSFIP_CFG_NETIF_HEADLEN				64
 #define VSFIP_CFG_HOSTNAME					"vsfip"
-#define VSFIP_CFG_DOMAIN					"vsfip.net"
 
 #define VSFIP_CFG_MTU						1500
 // NETIF_HEAD + 1500(MTU)
@@ -19,3 +18,4 @@
 
 // dhcpd
 #define VSFIP_CFG_DHCPD_ASSOCNUM			2
+#define VSFIP_CFG_DOMAIN					"vsfip.net"

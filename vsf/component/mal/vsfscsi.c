@@ -19,6 +19,13 @@
 
 #include "vsf.h"
 
+#undef vsfscsi_init
+#undef vsfscsi_execute
+#undef vsfscsi_cancel_transact
+#undef vsfscsi_release_transact
+#undef vsf_mal2scsi_init
+#undef vsf_mal2scsi_execute
+
 void vsfscsi_release_transact(struct vsfscsi_transact_t *transact)
 {
 	transact->lun = NULL;
@@ -413,9 +420,34 @@ vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
 	return vsf_malstream_init(&mal2scsi->malstream);
 }
 
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfscsi_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfscsi_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfscsi_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfscsi_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfscsi_init;
+	ifs->execute = vsfscsi_execute;
+	ifs->cancel_transact = vsfscsi_cancel_transact;
+	ifs->release_transact = vsfscsi_release_transact;
+	ifs->mal2scsi.op.init = vsf_mal2scsi_init;
+	ifs->mal2scsi.op.execute = vsf_mal2scsi_execute;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfscsi_lun_op_t vsf_mal2scsi_op =
 {
 	.init = vsf_mal2scsi_init,
 	.execute = vsf_mal2scsi_execute,
-	.cancel = NULL,
 };
+#endif

@@ -170,6 +170,46 @@ struct vsfusbd_device_t
 	vsf_err_t (*OUT_handler[16])(struct vsfusbd_device_t*, uint8_t);
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBD_MODNAME							"vsf.stack.usb.device"
+
+struct vsfusbd_modifs_t
+{
+	vsf_err_t (*init)(struct vsfusbd_device_t*);
+	vsf_err_t (*fini)(struct vsfusbd_device_t*);
+
+	vsf_err_t (*ep_send)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
+	void (*ep_cancel_send)(struct vsfusbd_device_t *, struct vsfusbd_transact_t *);
+	vsf_err_t (*ep_recv)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
+	void (*ep_cancel_recv)(struct vsfusbd_device_t *, struct vsfusbd_transact_t *);
+
+	vsf_err_t (*set_IN_handler)(struct vsfusbd_device_t*, uint8_t,
+				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
+	vsf_err_t (*set_OUT_handler)(struct vsfusbd_device_t*, uint8_t,
+				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
+
+	vsf_err_t (*get_descriptor)(struct vsfusbd_device_t*,
+				struct vsfusbd_desc_filter_t*, uint8_t, uint8_t, uint16_t,
+				struct vsf_buffer_t*);
+};
+
+void vsfusbd_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBD_MOD							\
+	((struct vsfusbd_modifs_t *)vsf_module_get(VSFUSBD_MODNAME))
+#define vsfusbd_device_get_descriptor		VSFUSBD_MOD->get_descriptor
+#define vsfusbd_device_init					VSFUSBD_MOD->init
+#define vsfusbd_device_fini					VSFUSBD_MOD->fini
+#define vsfusbd_ep_recv						VSFUSBD_MOD->ep_recv
+#define vsfusbd_ep_cancel_recv				VSFUSBD_MOD->ep_cancel_recv
+#define vsfusbd_ep_send						VSFUSBD_MOD->ep_send
+#define vsfusbd_ep_cancel_send				VSFUSBD_MOD->ep_cancel_send
+#define vsfusbd_set_IN_handler				VSFUSBD_MOD->set_IN_handler
+#define vsfusbd_set_OUT_handler				VSFUSBD_MOD->set_OUT_handler
+
+#else
+
 vsf_err_t vsfusbd_device_get_descriptor(struct vsfusbd_device_t *device,
 		struct vsfusbd_desc_filter_t *filter, uint8_t type, uint8_t index,
 		uint16_t lanid, struct vsf_buffer_t *buffer);
@@ -185,13 +225,10 @@ vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
 void vsfusbd_ep_cancel_send(struct vsfusbd_device_t *device,
 								struct vsfusbd_transact_t *transact);
 
-vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep);
-vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep);
-
 vsf_err_t vsfusbd_set_IN_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));
 vsf_err_t vsfusbd_set_OUT_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t));
+#endif
 
 #endif	// __VSF_USBD_H_INCLUDED__
-

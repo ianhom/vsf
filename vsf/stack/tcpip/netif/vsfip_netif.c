@@ -17,6 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
+
+#undef vsfip_netif_arp_add_assoc
+
 #include "../vsfip_priv.h"
 
 enum vsfip_netif_EVT_t

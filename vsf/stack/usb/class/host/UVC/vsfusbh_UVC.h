@@ -50,11 +50,33 @@ struct vsfusbh_uvc_param_t
 	uint16_t video_height;
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBH_UVC_MODNAME					"vsf.stack.usb.host.uvc"
+
+struct vsfusbh_uvc_modifs_t
+{
+	struct vsfusbh_class_drv_t drv;
+	vsf_err_t (*set)(void*, struct vsfusbh_uvc_param_t*);
+	void (*report)(void*, struct vsfusbh_uvc_param_t*,
+						struct vsfusbh_uvc_payload_t*);
+};
+
+void vsfusbh_uvc_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_uvc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBH_UVCMOD						\
+	((struct vsfusbh_uvc_modifs_t *)vsf_module_get(VSFUSBH_UVC_MODNAME))
+#define vsfusbh_uvc_drv						VSFUSBH_UVCMOD->drv
+#define vsfusbh_uvc_set						VSFUSBH_UVCMOD->set
+#define vsfusbh_uvc_report					VSFUSBH_UVCMOD->report
+
+#else
 vsf_err_t vsfusbh_uvc_set(void *dev_data, struct vsfusbh_uvc_param_t *param);
 
 extern void (*vsfusbh_uvc_report)(void *dev_data,
 		struct vsfusbh_uvc_param_t *param,
 		struct vsfusbh_uvc_payload_t *payload);
 extern const struct vsfusbh_class_drv_t vsfusbh_uvc_drv;
+#endif
 
 #endif // __VSFUSBH_UVC_H_INCLUDED__

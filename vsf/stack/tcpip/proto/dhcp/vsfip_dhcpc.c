@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#undef vsfip_dhcpc_start
+
 #include "vsfip_dhcp_common.h"
 
 #ifndef VSFCFG_STANDALONE_MODULE
@@ -267,3 +269,25 @@ vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
 	dhcpc->sm.user_data = dhcpc;
 	return vsfsm_init(&dhcpc->sm);
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_dhcpc_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfip_dhcpc_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_dhcpc_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_dhcpc_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->dhcpc.xid = VSFIP_DHCPC_XID;
+	ifs->start = vsfip_dhcpc_start;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

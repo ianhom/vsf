@@ -19,6 +19,8 @@
 
 #include "vsf.h"
 
+#undef vsfusbd_CDCData_connect
+
 #ifdef VSFUSBD_CDCCFG_TRANSACT
 static void vsfusbd_CDCData_on_OUT_finish(void *p);
 static void vsfusbd_CDCData_on_rxconn(void *p)
@@ -358,16 +360,37 @@ vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbd_CDC_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbd_CDC_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbd_CDC_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbd_CDC_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->control_protocol.request_prepare = vsfusbd_CDCControl_request_prepare;
+	ifs->control_protocol.request_process = vsfusbd_CDCControl_request_process;
+	ifs->data_protocol.init = vsfusbd_CDCData_class_init;
+	ifs->connect = vsfusbd_CDCData_connect;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbd_class_protocol_t vsfusbd_CDCControl_class =
 {
-	NULL,
-	vsfusbd_CDCControl_request_prepare, vsfusbd_CDCControl_request_process,
-	NULL, NULL
+	.request_prepare = vsfusbd_CDCControl_request_prepare,
+	.request_process = vsfusbd_CDCControl_request_process,
 };
 
 const struct vsfusbd_class_protocol_t vsfusbd_CDCData_class =
 {
-	NULL, NULL, NULL, vsfusbd_CDCData_class_init, NULL
+	.init = vsfusbd_CDCData_class_init,
 };
 #endif

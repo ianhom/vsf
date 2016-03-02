@@ -1,3 +1,21 @@
+/***************************************************************************
+ *   Copyright (C) 2009 - 2010 by Simon Qian <SimonQian@SimonQian.com>     *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 #ifndef __VSFIP_HTTPC_H_INCLUDED__
 #define __VSFIP_HTTPC_H_INCLUDED__
 
@@ -35,12 +53,31 @@ struct vsfip_httpc_param_t
 	uint16_t port;
 };
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFIP_HTTPC_MODNAME					"vsf.stack.net.tcpip.proto.httpc"
+
+struct vsfip_httpc_modifs_t
+{
+	struct vsfip_httpc_op_t op_stream;
+	struct vsfip_httpc_op_t op_buffer;
+	vsf_err_t (*get)(struct vsfsm_pt_t*, vsfsm_evt_t, char*, void*);
+};
+
+void vsfip_httpc_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_httpc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFIP_HTTPCMOD						\
+	((struct vsfip_httpc_modifs_t *)vsf_module_get(VSFIP_HTTPC_MODNAME))
+#define vsfip_httpc_op_stream				VSFIP_HTTPCMOD->op_stream
+#define vsfip_httpc_op_buffer				VSFIP_HTTPCMOD->op_buffer
+#define vsfip_httpc_get						VSFIP_HTTPCMOD->get
+
+#else
 extern const struct vsfip_httpc_op_t vsfip_httpc_op_stream;
 extern const struct vsfip_httpc_op_t vsfip_httpc_op_buffer;
-#endif
 
 vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						char *wwwaddr, void *output);
+#endif
 
 #endif		// __VSFIP_HTTPD_H_INCLUDED__

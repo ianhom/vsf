@@ -129,17 +129,36 @@ vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbd_CDCACM_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbd_CDCACM_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbd_CDCACM_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbd_CDCACM_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->control_protocol.request_prepare = vsfusbd_CDCACMControl_request_prepare;
+	ifs->control_protocol.request_process = vsfusbd_CDCACMControl_request_process;
+	ifs->data_protocol.init = vsfusbd_CDCACMData_class_init;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbd_class_protocol_t vsfusbd_CDCACMControl_class =
 {
-	NULL,
-	vsfusbd_CDCACMControl_request_prepare,
-	vsfusbd_CDCACMControl_request_process,
-	NULL, NULL
+	.request_prepare = vsfusbd_CDCACMControl_request_prepare,
+	.request_process = vsfusbd_CDCACMControl_request_process,
 };
 
 const struct vsfusbd_class_protocol_t vsfusbd_CDCACMData_class =
 {
-	NULL, NULL, NULL, vsfusbd_CDCACMData_class_init, NULL
+	.init = vsfusbd_CDCACMData_class_init,
 };
 #endif

@@ -17,9 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <ctype.h>
 #include "vsf.h"
-#include "vsffat.h"
+
+#undef vsffat_is_LFN
 
 // Refer to:
 // 1. "Microsoft Extensible Firmware Initiative FAT32 File System Specification"
@@ -817,7 +817,35 @@ vsf_err_t vsffat_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NOT_SUPPORT;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsffat_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsffat_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsffat_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsffat_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->op.mount = vsffat_mount;
+	ifs->op.unmount = vsffat_unmount;
+	ifs->op.f_op.close = vsffat_close;
+	ifs->op.f_op.read = vsffat_read;
+	ifs->op.f_op.write = vsffat_write;
+	ifs->op.d_op.addfile = vsffat_addfile;
+	ifs->op.d_op.removefile = vsffat_removefile;
+	ifs->op.d_op.getchild_byname = vsffat_getchild_byname;
+	ifs->op.d_op.getchild_byidx = vsffat_getchild_byidx;
+	ifs->is_LFN = vsffat_is_LFN;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfile_fsop_t vsffat_op =
 {
 	// mount / unmount

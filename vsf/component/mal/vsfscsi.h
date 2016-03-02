@@ -126,11 +126,6 @@ struct vsfscsi_device_t
 	struct vsfscsi_transact_t transact;
 };
 
-vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev);
-vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB);
-void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact);
-void vsfscsi_release_transact(struct vsfscsi_transact_t *transact);
-
 // mal2scsi
 // lun->param is pointer to vsf_mal2scsi_t
 struct vsf_mal2scsi_cparam_t
@@ -170,6 +165,40 @@ struct vsf_mal2scsi_t
 	// scsistream can be bufstream or mbufstream
 	struct vsf_scsistream_t scsistream;
 };
+
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFSCSI_MODNAME					"vsf.component.mal.scsi"
+
+struct vsfscsi_modifs_t
+{
+	vsf_err_t (*init)(struct vsfscsi_device_t*);
+	vsf_err_t (*execute)(struct vsfscsi_lun_t*, uint8_t*);
+	void (*cancel_transact)(struct vsfscsi_transact_t*);
+	void (*release_transact)(struct vsfscsi_transact_t*);
+
+	struct
+	{
+		struct vsfscsi_lun_op_t op;
+	} mal2scsi;
+};
+
+void vsfscsi_modexit(struct vsf_module_t*);
+vsf_err_t vsfscsi_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFSCSI_MOD						\
+	((struct vsfscsi_modifs_t *)vsf_module_get(VSFSCSI_MODNAME))
+#define vsfscsi_init						VSFSCSI_MOD->init
+#define vsfscsi_execute						VSFSCSI_MOD->execute
+#define vsfscsi_cancel_transact				VSFSCSI_MOD->cancel_transact
+#define vsfscsi_release_transact			VSFSCSI_MOD->release_transact
+#define vsf_mal2scsi_op						VSFSCSI_MOD->mal2scsi.op
+
+#else
+vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev);
+vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB);
+void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact);
+void vsfscsi_release_transact(struct vsfscsi_transact_t *transact);
 extern const struct vsfscsi_lun_op_t vsf_mal2scsi_op;
+#endif
 
 #endif // __VSFSCSI_H_INCLUDED__

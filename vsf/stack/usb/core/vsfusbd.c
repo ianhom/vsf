@@ -19,6 +19,16 @@
 
 #include "vsf.h"
 
+#undef vsfusbd_device_get_descriptor
+#undef vsfusbd_device_init
+#undef vsfusbd_device_fini
+#undef vsfusbd_ep_recv
+#undef vsfusbd_ep_cancel_recv
+#undef vsfusbd_ep_send
+#undef vsfusbd_ep_cancel_send
+#undef vsfusbd_set_IN_handler
+#undef vsfusbd_set_OUT_handler
+
 // events for vsfusbd
 #define VSFUSBD_INTEVT_BASE				VSFSM_EVT_USER_LOCAL
 enum vsfusbd_evt_t
@@ -72,6 +82,9 @@ vsf_err_t vsfusbd_device_get_descriptor(struct vsfusbd_device_t *device,
 	}
 	return VSFERR_FAIL;
 }
+
+static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep);
+static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep);
 
 vsf_err_t vsfusbd_set_IN_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t))
@@ -716,7 +729,7 @@ static void vsfusbd_ctrl_process(struct vsfusbd_device_t *device)
 }
 
 // on_IN and on_OUT
-vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
+static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = device->IN_transact[ep];
 
@@ -773,7 +786,7 @@ vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
+static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 {
 	struct vsfusbd_transact_t *transact = device->OUT_transact[ep];
 	uint16_t ep_size = device->drv->ep.get_OUT_epsize(ep);
@@ -1276,3 +1289,32 @@ vsf_err_t vsfusbd_device_fini(struct vsfusbd_device_t *device)
 {
 	return vsfsm_post_evt_pending(&device->sm, VSFSM_EVT_FINI);
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbd_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbd_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbd_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbd_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfusbd_device_init;
+	ifs->fini = vsfusbd_device_fini;
+	ifs->ep_send = vsfusbd_ep_send;
+	ifs->ep_cancel_send = vsfusbd_ep_cancel_send;
+	ifs->ep_recv = vsfusbd_ep_recv;
+	ifs->ep_cancel_recv = vsfusbd_ep_cancel_recv;
+	ifs->set_IN_handler = vsfusbd_set_IN_handler;
+	ifs->set_OUT_handler = vsfusbd_set_OUT_handler;
+	ifs->get_descriptor = vsfusbd_device_get_descriptor;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

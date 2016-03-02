@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "vsf.h"
 
+#undef vsfip_telnetd_start
+
 #define VSFIP_TELNETD_EVT_STREAM_IN				(VSFSM_EVT_USER + 0)
 #define VSFIP_TELNETD_EVT_STREAM_OUT			(VSFSM_EVT_USER + 1)
 
@@ -230,3 +232,24 @@ vsf_err_t vsfip_telnetd_start(struct vsfip_telnetd_t *telnetd)
 	telnetd->pt.user_data = telnetd;
 	return vsfsm_pt_init(&telnetd->sm, &telnetd->pt);
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfip_telnetd_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfip_telnetd_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfip_telnetd_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfip_telnetd_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->start = vsfip_telnetd_start;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

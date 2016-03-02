@@ -57,10 +57,6 @@ enum usb_MSCBOT_req_t
 #define USBMSC_CSW_FAIL					0x01
 #define USBMSC_CSW_PHASE_ERROR			0x02
 
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class;
-#endif
-
 struct vsfusbd_MSCBOT_param_t
 {
 	uint8_t ep_out;
@@ -75,5 +71,24 @@ struct vsfusbd_MSCBOT_param_t
 	struct vsf_bufstream_t bufstream;
 	struct vsfusbd_device_t *device;
 };
+
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBD_MSC_MODNAME					"vsf.stack.usb.device.classes.msc"
+
+struct vsfusbd_MSC_modifs_t
+{
+	struct vsfusbd_class_protocol_t protocol;
+};
+
+void vsfusbd_MSC_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_MSC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBD_MSCMOD						\
+	((struct vsfusbd_MSC_modifs_t *)vsf_module_get(VSFUSBD_MSC_MODNAME))
+#define vsfusbd_MSCBOT_class				VSFUSBD_MSCMOD->protocol
+
+#else
+extern const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class;
+#endif
 
 #endif	// __VSFUSBD_MSC_H_INCLUDED__

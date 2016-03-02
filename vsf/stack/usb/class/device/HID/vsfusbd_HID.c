@@ -19,6 +19,8 @@
 
 #include "vsf.h"
 
+#undef vsfusbd_HID_IN_report_changed
+
 enum vsfusbd_HID_EVT_t
 {
 	VSFUSBD_HID_EVT_TIMER4MS = VSFSM_EVT_USER_LOCAL_INSTANT + 0,
@@ -389,11 +391,35 @@ vsf_err_t vsfusbd_HID_request_process(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbd_HID_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbd_HID_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbd_HID_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbd_HID_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->protocol.get_desc = vsfusbd_HID_get_desc;
+	ifs->protocol.request_prepare = vsfusbd_HID_request_prepare;
+	ifs->protocol.request_process = vsfusbd_HID_request_process;
+	ifs->protocol.init = vsfusbd_HID_class_init;
+	ifs->IN_report_changed = vsfusbd_HID_IN_report_changed;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbd_class_protocol_t vsfusbd_HID_class =
 {
-	vsfusbd_HID_get_desc,
-	vsfusbd_HID_request_prepare, vsfusbd_HID_request_process,
-	vsfusbd_HID_class_init, NULL
+	.get_desc =			vsfusbd_HID_get_desc,
+	.request_prepare =	vsfusbd_HID_request_prepare,
+	.request_process =	vsfusbd_HID_request_process,
+	.init =				vsfusbd_HID_class_init,
 };
 #endif

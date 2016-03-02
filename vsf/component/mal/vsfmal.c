@@ -19,6 +19,16 @@
 
 #include "vsf.h"
 
+#undef vsfmal_init
+#undef vsfmal_fini
+#undef vsfmal_erase_all
+#undef vsfmal_erase
+#undef vsfmal_read
+#undef vsfmal_write
+#undef vsf_malstream_init
+#undef vsf_malstream_read
+#undef vsf_malstream_write
+
 vsf_err_t vsfmal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
@@ -170,19 +180,6 @@ vsf_err_t vsfmim_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pt->user_data = mim->realmal;
 	return vsfmal_write(pt, evt, mim->addr + addr, buff, size);
 }
-
-#ifndef VSFCFG_STANDALONE_MODULE
-const struct vsfmal_drv_t vsfmim_drv =
-{
-	.block_size = vsfmim_blocksize,
-	.init = vsfmim_init,
-	.fini = vsfmim_fini,
-	.erase_all = vsfmim_erase_all,
-	.erase = vsfmim_erase,
-	.read = vsfmim_read,
-	.write = vsfmim_write,
-};
-#endif
 
 // mal stream
 #define VSF_MALSTREAM_ON_INOUT			(VSFSM_EVT_USER + 0)
@@ -379,3 +376,50 @@ vsf_err_t vsf_malstream_write(struct vsf_malstream_t *malstream, uint64_t addr,
 	malstream->pt.user_data = malstream;
 	return vsfsm_pt_init(&malstream->sm, &malstream->pt);
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfmal_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfmal_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfmal_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfmal_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->init = vsfmal_init;
+	ifs->fini = vsfmal_fini;
+	ifs->erase_all = vsfmal_erase_all;
+	ifs->erase = vsfmal_erase;
+	ifs->read = vsfmal_read;
+	ifs->write = vsfmal_write;
+	ifs->mim.drv.block_size = vsfmim_blocksize;
+	ifs->mim.drv.init = vsfmim_init;
+	ifs->mim.drv.fini = vsfmim_fini;
+	ifs->mim.drv.erase_all = vsfmim_erase_all;
+	ifs->mim.drv.erase = vsfmim_erase;
+	ifs->mim.drv.read = vsfmim_read;
+	ifs->mim.drv.write = vsfmim_write;
+	ifs->malstream.init = vsf_malstream_init;
+	ifs->malstream.read = vsf_malstream_read;
+	ifs->malstream.write = vsf_malstream_write;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
+const struct vsfmal_drv_t vsfmim_drv =
+{
+	.block_size = vsfmim_blocksize,
+	.init = vsfmim_init,
+	.fini = vsfmim_fini,
+	.erase_all = vsfmim_erase_all,
+	.erase = vsfmim_erase,
+	.read = vsfmim_read,
+	.write = vsfmim_write,
+};
+#endif

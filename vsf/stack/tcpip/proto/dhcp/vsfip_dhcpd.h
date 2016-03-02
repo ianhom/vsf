@@ -33,7 +33,23 @@ struct vsfip_dhcpd_t
 	uint32_t alloc_idx;
 };
 
-vsf_err_t vsfip_dhcpd_start(struct vsfip_netif_t *netif,
-							struct vsfip_dhcpd_t *dhcpd);
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFIP_DHCPD_MODNAME					"vsf.stack.net.tcpip.proto.dhcpd"
+
+struct vsfip_dhcpd_modifs_t
+{
+	vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpd_t*);
+};
+
+void vsfip_dhcpd_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_dhcpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFIP_DHCPDMOD						\
+	((struct vsfip_dhcpd_modifs_t *)vsf_module_get(VSFIP_DHCPD_MODNAME))
+#define vsfip_dhcpd_start					VSFIP_DHCPDMOD->start
+
+#else
+vsf_err_t vsfip_dhcpd_start(struct vsfip_netif_t*, struct vsfip_dhcpd_t*);
+#endif
 
 #endif		// __VSFIP_DHCPD_H_INCLUDED__

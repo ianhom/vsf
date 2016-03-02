@@ -15,3 +15,7 @@
 #define VSFIP_BUFFER_SIZE					(VSFIP_CFG_MTU + VSFIP_CFG_NETIF_HEADLEN)
 // 1500(MTU) - 20(TCP_HEAD) - 20(IP_HEAD)
 #define VSFIP_CFG_TCP_MSS					(VSFIP_CFG_MTU - 40)
+
+// dhcpd
+#define VSFIP_CFG_DHCPD_ASSOCNUM			2
+#define VSFIP_CFG_DOMAIN					"vsfip.net"

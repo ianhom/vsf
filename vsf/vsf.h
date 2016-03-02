@@ -27,30 +27,9 @@
 #include "vsf_cfg.h"
 #include "interfaces.h"
 
-// framework
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
-#ifdef VSFCFG_BUFFER
-#include "component/buffer/buffer.h"
+#ifdef VSFCFG_STANDALONE_MODULE
+#include "app_hw_cfg.h"
 #endif
-#ifdef VSFCFG_STREAM
-#include "component/stream/stream.h"
-#endif
-#ifdef VSFCFG_MAL
-#include "component/mal/vsfmal.h"
-#ifdef VSFCFG_SCSI
-#include "component/mal/vsfscsi.h"
-#endif
-#endif
-#ifdef VSFCFG_FILE
-#include "component/file/vsfile.h"
-#endif
-#ifdef VSFCFG_DEBUG
-#include "component/debug/debug.h"
-#endif
-
-#define VSF_API_VERSION						0x00000001
 
 #ifdef VSFCFG_MODULE
 struct vsf_module_info_t
@@ -72,14 +51,35 @@ struct vsf_module_t
 };
 #endif		// VSFCFG_MODULE
 
+// framework
+#include "framework/vsfsm/vsfsm.h"
+#include "framework/vsftimer/vsftimer.h"
+
+#ifdef VSFCFG_BUFFER
+#include "component/buffer/buffer.h"
+#endif
+#ifdef VSFCFG_STREAM
+#include "component/stream/stream.h"
+#endif
+#ifdef VSFCFG_MAL
+#include "component/mal/vsfmal.h"
+#ifdef VSFCFG_SCSI
+#include "component/mal/vsfscsi.h"
+#endif
+#endif
+#ifdef VSFCFG_FILE
+#include "component/file/vsfile.h"
+#include "component/file/fs/malfs/vsf_malfs.h"
+#include "component/file/fs/malfs/fat/vsffat.h"
+#endif
+#ifdef VSFCFG_DEBUG
+#include "component/debug/debug.h"
+#endif
+
+#define VSF_API_VERSION						0x00000001
+
 #ifdef VSFCFG_FUNC_SHELL
 #include "framework/vsfshell/vsfshell.h"
-struct vsf_shell_api_t
-{
-	vsf_err_t (*init)(struct vsfshell_t*);
-	void (*register_handlers)(struct vsfshell_t*, struct vsfshell_handler_t*);
-	void (*free_handler_thread)(struct vsfshell_t*, struct vsfsm_t*);
-};
 #endif
 
 #ifdef VSFCFG_FUNC_TCPIP
@@ -91,90 +91,6 @@ struct vsf_shell_api_t
 #include "stack/tcpip/proto/http/vsfip_httpc.h"
 #include "stack/tcpip/proto/http/vsfip_httpd.h"
 #include "stack/tcpip/proto/telnet/vsfip_telnetd.h"
-struct vsf_tcpip_api_t
-{
-	struct vsfip_t local;
-
-	vsf_err_t (*init)(struct vsfip_mem_op_t*);
-	vsf_err_t (*fini)(void);
-
-	vsf_err_t (*netif_add)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							struct vsfip_netif_t*);
-	vsf_err_t (*netif_remove)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							struct vsfip_netif_t*);
-
-	struct vsfip_buffer_t* (*buffer_get)(uint32_t);
-	struct vsfip_buffer_t* (*appbuffer_get)(uint32_t, uint32_t);
-	void (*buffer_reference)(struct vsfip_buffer_t*);
-	void (*buffer_release)(struct vsfip_buffer_t*);
-
-	struct vsfip_socket_t* (*socket)(enum vsfip_sockfamilt_t,
-							enum vsfip_sockproto_t);
-	vsf_err_t (*close)(struct vsfip_socket_t*);
-
-	vsf_err_t (*listen)(struct vsfip_socket_t*, uint8_t);
-	vsf_err_t (*bind)(struct vsfip_socket_t*, uint16_t);
-
-	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
-	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_socket_t**);
-	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
-	vsf_err_t (*tcp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t*, bool);
-	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
-	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t**);
-	vsf_err_t (*tcp_close)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*);
-
-	vsf_err_t (*udp_async_send)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
-	vsf_err_t (*udp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t*);
-	vsf_err_t (*udp_async_recv)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
-	vsf_err_t (*udp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t**);
-
-	struct
-	{
-		struct
-		{
-			vsf_err_t (*header)(struct vsfip_buffer_t ,
-				enum vsfip_netif_proto_t, const struct vsfip_macaddr_t*);
-			void (*input)(struct vsfip_buffer_t*);
-		} eth;
-	} netif;
-
-	struct
-	{
-		struct
-		{
-			struct vsfip_dhcpc_local_t local;
-			vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
-		} dhcpc;
-		struct
-		{
-			struct vsfip_dns_local_t local;
-			vsf_err_t (*init)(void);
-			vsf_err_t (*setserver)(uint8_t, struct vsfip_ipaddr_t*);
-			vsf_err_t (*gethostbyname)(struct vsfsm_pt_t*, vsfsm_evt_t,
-							char*, struct vsfip_ipaddr_t*);
-		} dns;
-		struct
-		{
-			struct vsfip_httpc_op_t op_stream;
-			struct vsfip_httpc_op_t op_buffer;
-		} httpc;
-	} protocol;
-};
 #endif
 
 #ifdef VSFCFG_FUNC_USBD
@@ -188,73 +104,6 @@ struct vsf_tcpip_api_t
 #ifdef VSFCFG_SCSI
 #include "stack/usb/class/device/MSC/vsfusbd_MSC_BOT.h"
 #endif
-struct vsf_usbd_api_t
-{
-	vsf_err_t (*init)(struct vsfusbd_device_t*);
-	vsf_err_t (*fini)(struct vsfusbd_device_t*);
-
-	vsf_err_t (*ep_send)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
-	vsf_err_t (*ep_recv)(struct vsfusbd_device_t*, struct vsfusbd_transact_t*);
-
-	vsf_err_t (*set_IN_handler)(struct vsfusbd_device_t*, uint8_t,
-				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
-	vsf_err_t (*set_OUT_handler)(struct vsfusbd_device_t*, uint8_t,
-				vsf_err_t (*)(struct vsfusbd_device_t*, uint8_t));
-
-	struct
-	{
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBD)
-			struct vsfusbd_class_protocol_t protocol;
-#else
-			struct vsfusbd_class_protocol_t *protocol;
-#endif
-		} hid;
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBD)
-			struct vsfusbd_class_protocol_t control_protocol;
-			struct vsfusbd_class_protocol_t data_protocol;
-#else
-			struct vsfusbd_class_protocol_t *control_protocol;
-			struct vsfusbd_class_protocol_t *data_protocol;
-#endif
-		} cdc;
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBD)
-			struct vsfusbd_class_protocol_t control_protocol;
-			struct vsfusbd_class_protocol_t data_protocol;
-#else
-			struct vsfusbd_class_protocol_t *control_protocol;
-			struct vsfusbd_class_protocol_t *data_protocol;
-#endif
-		} cdcacm;
-#ifdef VSFCFG_FUNC_TCPIP
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBD)
-			struct vsfusbd_class_protocol_t control_protocol;
-			struct vsfusbd_class_protocol_t data_protocol;
-#else
-			struct vsfusbd_class_protocol_t *control_protocol;
-			struct vsfusbd_class_protocol_t *data_protocol;
-#endif
-		} rndis;
-#endif
-#ifdef VSFCFG_SCSI
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBD)
-			struct vsfusbd_class_protocol_t protocol;
-#else
-			struct vsfusbd_class_protocol_t *protocol;
-#endif
-		} mscbot;
-#endif
-	} classes;
-};
 #endif
 
 #ifdef VSFCFG_FUNC_USBH
@@ -262,84 +111,123 @@ struct vsf_usbd_api_t
 #include "stack/usb/core/hcd/ohci/vsfohci.h"
 #include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
 #include "stack/usb/class/host/HID/vsfusbh_HID.h"
-struct vsf_usbh_api_t
-{
-	vsf_err_t (*init)(struct vsfusbh_t*);
-	vsf_err_t (*fini)(struct vsfusbh_t*);
-	vsf_err_t (*register_driver)(struct vsfusbh_t*,
-					const struct vsfusbh_class_drv_t*);
-
-	vsf_err_t (*submit_urb)(struct vsfusbh_t*, struct vsfusbh_urb_t*);
-
-#if IFS_HCD_EN
-	struct
-	{
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBH)
-			struct vsfusbh_hcddrv_t driver;
-#else
-			struct vsfusbh_hcddrv_t *driver;
-#endif
-		} ohci;
-	} hcd;
-#endif
-
-	struct
-	{
-		struct
-		{
-#if defined(VSFCFG_MODULE_USBH)
-			struct vsfusbh_class_drv_t driver;
-#else
-			struct vsfusbh_class_drv_t *driver;
-#endif
-		} hub;
-	} classes;
-};
 #endif
 
 #ifdef VSFCFG_FUNC_BCMWIFI
 #include "stack/tcpip/netif/eth/broadcom/bcm_wifi.h"
 #include "stack/tcpip/netif/eth/broadcom/bus/bcm_bus.h"
-struct vsf_bcmwifi_api_t
-{
-#if defined(VSFCFG_MODULE_BCMWIFI)
-	struct
-	{
-#if IFS_SPI_EN
-		struct bcm_bus_op_t spi_op;
-#endif
-#if IFS_SDIO_EN
-		struct bcm_bus_op_t sdio_op;
-#endif
-	} bus;
-	struct vsfip_netdrv_op_t netdrv_op;
-#else
-	struct
-	{
-#if IFS_SPI_EN
-		struct bcm_bus_op_t *spi_op;
-#endif
-#if IFS_SDIO_EN
-		struct bcm_bus_op_t *sdio_op;
-#endif
-	} bus;
-	struct vsfip_netdrv_op_t *netdrv_op;
 #endif
 
-	vsf_err_t (*scan)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_buffer_t**, uint8_t);
-	vsf_err_t (*join)(struct vsfsm_pt_t*, vsfsm_evt_t, uint32_t*, const char*,
-				enum bcm_authtype_t, const uint8_t*, uint8_t);
-	vsf_err_t (*leave)(struct vsfsm_pt_t*, vsfsm_evt_t);
-};
+#ifdef VSFCFG_STANDALONE_MODULE
+// libc is included in VSF system
+#include <stdarg.h>
+typedef struct
+{
+	int quot;
+	int rem;
+} div_t;
+
+typedef struct
+{
+	long quot;
+	long rem;
+} ldiv_t;
+
+typedef struct
+{
+	long long quot;
+	long long rem;
+} lldiv_t;
+#else
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <ctype.h>
 #endif
 
 struct vsf_t
 {
 	uint32_t ver;
 	struct interfaces_info_t const *ifs;
+
+	struct
+	{
+		struct
+		{
+			int (*abs)(int);
+			long (*labs)(long);
+			long long (*llabs)(long long);
+
+			div_t (*div)(int, int);
+			ldiv_t (*ldiv)(long, long);
+			lldiv_t (*lldiv)(long long, long long);
+
+			double (*strtod)(const char*, char**);
+			float (*strtof)(const char*, char**);
+			long double (*strtold)(const char*, char**);
+			long (*strtol)(const char*, char**, int);
+			unsigned long (*strtoul)(const char*, char**, int);
+			long long (*strtoll)(const char*, char**, int);
+			unsigned long long (*strtoull)(const char*, char**, int);
+
+			double (*atof)(const char*);
+			int (*atoi)(const char*);
+			long (*atol)(const char*);
+			long long (*atoll)(const char*);
+		} stdlib;
+		struct
+		{
+			int (*sprintf)(char*, const char*, ...);
+			int (*snprintf)(char*, size_t, const char*, ...);
+			int (*vsprintf)(char*, const char*, va_list);
+			int (*vsnprintf)(char*, size_t, const char*, va_list);
+		} stdio;
+		struct
+		{
+			int (*memcmp)(const void*, const void*, size_t);
+			void* (*memcpy)(void*, const void*, size_t);
+			void* (*memmove)(void*, const void*, size_t);
+			void* (*memset)(void*, int, size_t);
+			char* (*strcat)(char*, const char*);
+			int (*strcmp)(const char*, const char*);
+			char* (*strcpy)(char*, const char*);
+			size_t (*strcspn)(const char*, const char*);
+			size_t (*strlen)(const char*);
+			char* (*strncat)(char*, const char*, size_t);
+			int (*strncmp)(const char*, const char*, size_t);
+			char* (*strncpy)(char*, const char*, size_t);
+			size_t (*strspn)(const char*, const char*);
+			char* (*strtok)(char*, const char*);
+			size_t (*strxfrm)(char*, const char*, size_t);
+			int (*strcasecmp)(const char*, const char*);
+			int (*strncasecmp)(const char*, const char*, size_t);
+			char* (*strtok_r)(char*, const char*, char**);
+			size_t (*strnlen)(char const*, size_t);
+			void* (*memchr)(const void*, int, size_t);
+			char* (*strchr)(const char*, int);
+			char* (*strpbrk)(const char*, const char*);
+			char* (*strrchr)(const char*, int);
+			char* (*strstr)(const char*, const char*);
+		} string;
+		struct
+		{
+			int (*isdigit)(int);
+			int (*isspace)(int);
+			int (*isalpha)(int);
+			int (*isalnum)(int);
+			int (*isprint)(int);
+			int (*isupper)(int);
+			int (*islower)(int);
+			int (*isxdigit)(int);
+			int (*isblank)(int);
+			int (*isgraph)(int);
+			int (*iscntrl)(int);
+			int (*ispunct)(int);
+			int (*tolower)(int);
+			int (*toupper)(int);
+		} ctype;
+	} libc;
 
 	struct vsf_framework_t
 	{
@@ -391,14 +279,6 @@ struct vsf_t
 			void (*unload)(char*);
 		} module;
 #endif
-
-#ifdef VSFCFG_FUNC_SHELL
-#ifdef VSFCFG_MODULE_SHELL
-		struct vsf_shell_api_t *shell;
-#else
-		struct vsf_shell_api_t shell;
-#endif
-#endif
 	} framework;
 
 	struct
@@ -428,6 +308,15 @@ struct vsf_t
 
 			struct
 			{
+				vsf_err_t (*init)(struct vsf_multibuf_t*);
+				uint8_t* (*get_empty)(struct vsf_multibuf_t*);
+				vsf_err_t (*push)(struct vsf_multibuf_t*);
+				uint8_t* (*get_payload)(struct vsf_multibuf_t*);
+				vsf_err_t (*pop)(struct vsf_multibuf_t*);
+			} multibuf;
+
+			struct
+			{
 				void* (*malloc_aligned_do)(uint32_t, uint32_t);
 				void (*free_do)(void*);
 			} bufmgr;
@@ -441,98 +330,14 @@ struct vsf_t
 		} buffer;
 #endif
 
-#ifdef VSFCFG_STREAM
+#ifdef VSFCFG_LIST
 		struct
 		{
-			vsf_err_t (*init)(struct vsf_stream_t*);
-			vsf_err_t (*fini)(struct vsf_stream_t*);
-			uint32_t (*read)(struct vsf_stream_t*, struct vsf_buffer_t*);
-			uint32_t (*write)(struct vsf_stream_t*, struct vsf_buffer_t*);
-			uint32_t (*get_data_size)(struct vsf_stream_t*);
-			uint32_t (*get_free_size)(struct vsf_stream_t*);
-			void (*connect_rx)(struct vsf_stream_t*);
-			void (*connect_tx)(struct vsf_stream_t*);
-			void (*disconnect_rx)(struct vsf_stream_t*);
-			void (*disconnect_tx)(struct vsf_stream_t*);
-
-			const struct vsf_stream_op_t *fifostream_op;
-			const struct vsf_stream_op_t *mbufstream_op;
-			const struct vsf_stream_op_t *bufstream_op;
-		} stream;
-#endif
-
-#ifdef VSFCFG_MAL
-		struct
-		{
-			vsf_err_t (*init)(struct vsfsm_pt_t*, vsfsm_evt_t);
-			vsf_err_t (*fini)(struct vsfsm_pt_t*, vsfsm_evt_t);
-			vsf_err_t (*erase_all)(struct vsfsm_pt_t*, vsfsm_evt_t);
-			vsf_err_t (*erase)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
-									uint32_t);
-			vsf_err_t (*read)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
-									uint8_t*, uint32_t);
-			vsf_err_t (*write)(struct vsfsm_pt_t*, vsfsm_evt_t, uint64_t,
-									uint8_t*, uint32_t);
-
-			struct
-			{
-				vsf_err_t (*init)(struct vsf_malstream_t*);
-				vsf_err_t (*read)(struct vsf_malstream_t*, uint64_t, uint32_t);
-				vsf_err_t (*write)(struct vsf_malstream_t*, uint64_t, uint32_t);
-			} malstream;
-
-#ifdef VSFCFG_SCSI
-			struct
-			{
-				vsf_err_t (*init)(struct vsfscsi_device_t*);
-				vsf_err_t (*execute)(struct vsfscsi_lun_t*, uint8_t*);
-				void (*cancel_transact)(struct vsfscsi_transact_t*);
-				void (*release_transact)(struct vsfscsi_transact_t*);
-
-				const struct vsfscsi_lun_op_t *mal2scsi_op;
-			} scsi;
-#endif
-		} mal;
-#endif
-
-#ifdef VSFCFG_FILE
-		struct
-		{
-			vsf_err_t (*init)(void);
-
-			vsf_err_t (*mount)(struct vsfsm_pt_t*, vsfsm_evt_t,
-						struct vsfile_fsop_t*, struct vsfile_t*);
-			vsf_err_t (*unmount)(struct vsfsm_pt_t*, vsfsm_evt_t,
-						struct vsfile_t*);
-
-			vsf_err_t (*getfile)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*, char*, struct vsfile_t**);
-			vsf_err_t (*findfirst)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*, struct vsfile_t**);
-			vsf_err_t (*findnext)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*, struct vsfile_t**);
-			vsf_err_t (*findend)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*);
-
-			vsf_err_t (*open)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*);
-			vsf_err_t (*close)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*);
-			vsf_err_t (*read)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*, uint64_t, uint32_t, uint8_t*, uint32_t*);
-			vsf_err_t (*write)(struct vsfsm_pt_t*, vsfsm_evt_t,
-					struct vsfile_t*, uint64_t, uint32_t, uint8_t*, uint32_t*);
-
-			char* (*getfileext)(char* name);
-			bool (*is_div)(char ch);
-
-			vsf_err_t (*dummy_file)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *dir);
-			vsf_err_t (*dummy_rw)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *dir);
-
-			const struct vsfile_fsop_t *memfs_op;
-		} file;
+			int (*is_in)(struct sllist*, struct sllist*);
+			int (*remove)(struct sllist**, struct sllist*);
+			void (*append)(struct sllist*, struct sllist*);
+			void (*delete_next)(struct sllist*);
+		} list;
 #endif
 	} component;
 
@@ -576,53 +381,6 @@ struct vsf_t
 			} mskarr;
 		} bittool;
 	} tool;
-
-#if defined(VSFCFG_FUNC_TCPIP) || defined(VSFCFG_FUNC_BCMWIFI) || defined(VSFCFG_FUNC_USBD) || defined(VSFCFG_FUNC_USBH)
-	struct
-	{
-#if defined(VSFCFG_FUNC_USBD) || defined(VSFCFG_FUNC_USBH)
-		struct
-		{
-#ifdef VSFCFG_FUNC_USBD
-#ifdef VSFCFG_MODULE_USBD
-			struct vsf_usbd_api_t *device;
-#else
-			struct vsf_usbd_api_t device;
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_USBH
-#ifdef VSFCFG_MODULE_USBH
-			struct vsf_usbh_api_t *host;
-#else
-			struct vsf_usbh_api_t host;
-#endif
-#endif
-		} usb;
-#endif
-
-#if defined(VSFCFG_FUNC_TCPIP) || defined(VSFCFG_FUNC_BCMWIFI)
-		struct
-		{
-#ifdef VSFCFG_FUNC_TCPIP
-#ifdef VSFCFG_MODULE_TCPIP
-			struct vsf_tcpip_api_t *tcpip;
-#else
-			struct vsf_tcpip_api_t tcpip;
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_BCMWIFI
-#ifdef VSFCFG_MODULE_BCMWIFI
-			struct vsf_bcmwifi_api_t *bcmwifi;
-#else
-			struct vsf_bcmwifi_api_t bcmwifi;
-#endif
-#endif
-		} net;
-#endif
-	} stack;
-#endif
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
@@ -688,7 +446,72 @@ struct vsf_t
 #define vsfhal_eint_config				core_interfaces.eint.config
 #define vsfhal_eint_enable				core_interfaces.eint.enable
 #define vsfhal_eint_disable				core_interfaces.eint.disable
+
+#define vsfhal_hcd_init					core_interfaces.hcd.init
+#define vsfhal_hcd_fini					core_interfaces.hcd.fini
+#define vsfhal_hcd_regbase				core_interfaces.hcd.regbase
 // more interfaces related MACROs here
+
+// libc
+#define abs								vsf.libc.stdlib.abs
+#define labs							vsf.libc.stdlib.labs
+#define llabs							vsf.libc.stdlib.llabs
+#define div								vsf.libc.stdlib.div
+#define ldiv							vsf.libc.stdlib.ldiv
+#define lldiv							vsf.libc.stdlib.lldiv
+#define strtod							vsf.libc.stdlib.strtod
+#define strtof							vsf.libc.stdlib.strtof
+#define strtold							vsf.libc.stdlib.strtold
+#define strtol							vsf.libc.stdlib.strtol
+#define strtoul							vsf.libc.stdlib.strtoul
+#define strtoll							vsf.libc.stdlib.strtoll
+#define strtoull						vsf.libc.stdlib.strtoull
+#define atof							vsf.libc.stdlib.atof
+#define atoi							vsf.libc.stdlib.atoi
+#define atol							vsf.libc.stdlib.atol
+#define atoll							vsf.libc.stdlib.atoll
+#define sprintf							vsf.libc.stdio.sprintf
+#define snprintf						vsf.libc.stdio.snprintf
+#define vsprintf						vsf.libc.stdio.vsprintf
+#define vsnprintf						vsf.libc.stdio.vsnprintf
+#define memcmp							vsf.libc.string.memcmp
+#define memcpy							vsf.libc.string.memcpy
+#define memmove							vsf.libc.string.memmove
+#define memset							vsf.libc.string.memset
+#define strcat							vsf.libc.string.strcat
+#define strcmp							vsf.libc.string.strcmp
+#define strcpy							vsf.libc.string.strcpy
+#define strcspn							vsf.libc.string.strcspn
+#define strlen							vsf.libc.string.strlen
+#define strncat							vsf.libc.string.strncat
+#define strncmp							vsf.libc.string.strncmp
+#define strncpy							vsf.libc.string.strncpy
+#define strspn							vsf.libc.string.strspn
+#define strtok							vsf.libc.string.strtok
+#define strxfrm							vsf.libc.string.strxfrm
+#define strcasecmp						vsf.libc.string.strcasecmp
+#define strncasecmp						vsf.libc.string.strncasecmp
+#define strtok_r						vsf.libc.string.strtok_r
+#define strnlen							vsf.libc.string.strnlen
+#define memchr							vsf.libc.string.memchr
+#define strchr							vsf.libc.string.strchr
+#define strpbrk							vsf.libc.string.strpbrk
+#define strrchr							vsf.libc.string.strrchr
+#define strstr							vsf.libc.string.strstr
+#define isdigit							vsf.libc.ctype.isdigit
+#define isspace							vsf.libc.ctype.isspace
+#define isalpha							vsf.libc.ctype.isalpha
+#define isalnum							vsf.libc.ctype.isalnum
+#define isprint							vsf.libc.ctype.isprint
+#define isupper							vsf.libc.ctype.isupper
+#define islower							vsf.libc.ctype.islower
+#define isxdigit						vsf.libc.ctype.isxdigit
+#define isblank							vsf.libc.ctype.isblank
+#define isgraph							vsf.libc.ctype.isgraph
+#define iscntrl							vsf.libc.ctype.iscntrl
+#define ispunct							vsf.libc.ctype.ispunct
+#define tolower							vsf.libc.ctype.tolower
+#define toupper							vsf.libc.ctype.toupper
 
 #define vsfsm_evtq_init					vsf.framework.evtq_init
 #define vsfsm_evtq_set					vsf.framework.evtq_set
@@ -730,72 +553,6 @@ struct vsf_t
 #define vsf_module_unload				vsf.framework.module.unload
 #endif
 
-#ifdef VSFCFG_FUNC_SHELL
-#ifdef VSFCFG_MODULE_SHELL
-#define vsfshell_init					vsf.framework.shell->init
-#define vsfshell_register_handlers		vsf.framework.shell->register_handlers
-#define vsfshell_free_handler_thread	vsf.framework.shell->free_handler_thread
-#else
-#define vsfshell_init					vsf.framework.shell.init
-#define vsfshell_register_handlers		vsf.framework.shell.register_handlers
-#define vsfshell_free_handler_thread	vsf.framework.shell.free_handler_thread
-#endif
-#endif
-
-#ifdef VSFCFG_STREAM
-#define stream_init						vsf.component.stream.init
-#define stream_fini						vsf.component.stream.fini
-#define stream_read						vsf.component.stream.read
-#define stream_write					vsf.component.stream.write
-#define stream_get_data_size			vsf.component.stream.get_data_size
-#define stream_get_free_size			vsf.component.stream.get_free_size
-#define stream_connect_rx				vsf.component.stream.connect_rx
-#define stream_connect_tx				vsf.component.stream.connect_tx
-#define stream_disconnect_rx			vsf.component.stream.disconnect_rx
-#define stream_disconnect_tx			vsf.component.stream.disconnect_tx
-#define fifostream_op					(*vsf.component.stream.fifostream_op)
-#define mbufstream_op					(*vsf.component.stream.mbufstream_op)
-#define bufstream_op					(*vsf.component.stream.bufstream_op)
-#endif
-
-#ifdef VSFCFG_MAL
-#define vsfmal_init						vsf.component.mal.init
-#define vsfmal_fini						vsf.component.mal.fini
-#define vsfmal_erase_all				vsf.component.mal.erase_all
-#define vsfmal_erase					vsf.component.mal.erase
-#define vsfmal_read						vsf.component.mal.read
-#define vsfmal_write					vsf.component.mal.write
-#define vsf_malstream_init				vsf.component.mal.malstream.init
-#define vsf_malstream_read				vsf.component.mal.malstream.read
-#define vsf_malstream_write				vsf.component.mal.malstream.write
-#ifdef VSFCFG_SCSI
-#define vsfscsi_init					vsf.component.mal.scsi.init
-#define vsfscsi_execute					vsf.component.mal.scsi.execute
-#define vsfscsi_cancel_transact			vsf.component.mal.scsi.cancel_transact
-#define vsfscsi_release_transact		vsf.component.mal.scsi.release_transact
-#define vsf_mal2scsi_op					(*vsf.component.mal.scsi.mal2scsi_op)
-#endif
-#endif
-
-#ifdef VSFCFG_FILE
-#define vsfile_init						vsf.component.file.init
-#define vsfile_mount					vsf.component.file.mount
-#define vsfile_unmount					vsf.component.file.unmount
-#define vsfile_getfile					vsf.component.file.getfile
-#define vsfile_findfirst				vsf.component.file.findfirst
-#define vsfile_findnext					vsf.component.file.findnext
-#define vsfile_findend					vsf.component.file.findend
-#define vsfile_open						vsf.component.file.open
-#define vsfile_close					vsf.component.file.close
-#define vsfile_read						vsf.component.file.read
-#define vsfile_write					vsf.component.file.write
-#define vsfile_getfileext				vsf.component.file.getfileext
-#define vsfile_is_div					vsf.component.file.is_div
-#define vsfile_dummy_file				vsf.component.file.dummy_file
-#define vsfile_dummy_rw					vsf.component.file.dummy_rw
-#define vsfile_memfs_op					(*vsf.component.file.memfs_op)
-#endif
-
 #ifdef VSFCFG_BUFFER
 #define vsfq_init						vsf.component.buffer.queue.init
 #define vsfq_append						vsf.component.buffer.queue.append
@@ -811,12 +568,25 @@ struct vsf_t
 #define vsf_fifo_get_data_length		vsf.component.buffer.fifo.get_data_length
 #define vsf_fifo_get_avail_length		vsf.component.buffer.fifo.get_avail_length
 
+#define vsf_multibuf_init				vsf.component.buffer.multibuf.init
+#define vsf_multibuf_get_empty			vsf.component.buffer.multibuf.get_empty
+#define vsf_multibuf_push				vsf.component.buffer.multibuf.push
+#define vsf_multibuf_get_payload		vsf.component.buffer.multibuf.get_payload
+#define vsf_multibuf_pop				vsf.component.buffer.multibuf.pop
+
 #define vsf_bufmgr_malloc_aligned_do	vsf.component.buffer.bufmgr.malloc_aligned_do
 #define vsf_bufmgr_free_do				vsf.component.buffer.bufmgr.free_do
 
 #define vsfpool_init					vsf.component.buffer.pool.init
 #define vsfpool_alloc					vsf.component.buffer.pool.alloc
 #define vsfpool_free					vsf.component.buffer.pool.free
+#endif
+
+#ifdef VSFCFG_LIST
+#define sllist_is_in					vsf.component.list.is_in
+#define sllist_remove					vsf.component.list.remove
+#define sllist_append					vsf.component.list.append
+#define sllist_delete_next				vsf.component.list.delete_next
 #endif
 
 #define BIT_REVERSE_U8					vsf.tool.bittool.bit_reverse_u8
@@ -847,171 +617,6 @@ struct vsf_t
 #define mskarr_set						vsf.tool.bittool.mskarr.set
 #define mskarr_clr						vsf.tool.bittool.mskarr.clr
 #define mskarr_ffz						vsf.tool.bittool.mskarr.ffz
-
-#ifdef VSFCFG_FUNC_USBD
-#ifdef VSFCFG_MODULE_USBD
-#define vsfusbd_device_init				vsf.stack.usb.device->init
-#define vsfusbd_device_fini				vsf.stack.usb.device->fini
-#define vsfusbd_ep_send					vsf.stack.usb.device->ep_send
-#define vsfusbd_ep_recv					vsf.stack.usb.device->ep_recv
-#define vsfusbd_set_IN_handler			vsf.stack.usb.device->set_IN_handler
-#define vsfusbd_set_OUT_handler			vsf.stack.usb.device->set_OUT_handler
-#define vsfusbd_HID_class				vsf.stack.usb.device->classes.hid.protocol
-#define vsfusbd_CDCControl_class		vsf.stack.usb.device->classes.cdc.control_protocol
-#define vsfusbd_CDCData_class			vsf.stack.usb.device->classes.cdc.data_protocol
-#define vsfusbd_CDCACMControl_class		vsf.stack.usb.device->classes.cdcacm.control_protocol
-#define vsfusbd_CDCACMData_class		vsf.stack.usb.device->classes.cdcacm.data_protocol
-
-#define vsfusbd_standard_req_filter		vsf.stack.usb.device->stdreq_filter
-#else
-#define vsfusbd_device_init				vsf.stack.usb.device.init
-#define vsfusbd_device_fini				vsf.stack.usb.device.fini
-#define vsfusbd_ep_send					vsf.stack.usb.device.ep_send
-#define vsfusbd_ep_recv					vsf.stack.usb.device.ep_recv
-#define vsfusbd_set_IN_handler			vsf.stack.usb.device.set_IN_handler
-#define vsfusbd_set_OUT_handler			vsf.stack.usb.device.set_OUT_handler
-#define vsfusbd_HID_class				(*vsf.stack.usb.device.classes.hid.protocol)
-#define vsfusbd_CDCControl_class		(*vsf.stack.usb.device.classes.cdc.control_protocol)
-#define vsfusbd_CDCData_class			(*vsf.stack.usb.device.classes.cdc.data_protocol)
-#define vsfusbd_CDCACMControl_class		(*vsf.stack.usb.device.classes.cdcacm.control_protocol)
-#define vsfusbd_CDCACMData_class		(*vsf.stack.usb.device.classes.cdcacm.data_protocol)
-
-#define vsfusbd_standard_req_filter		vsf.stack.usb.device.stdreq_filter
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_USBD
-#ifdef VSFCFG_MODULE_USBD
-#define vsfusbh_init					vsf.stack.usb.host->init
-#define vsfusbh_fini					vsf.stack.usb.host->fini
-#define vsfusbh_register_driver			vsf.stack.usb.host->register_driver
-#define vsfusbh_submit_urb				vsf.stack.usb.host->submit_urb
-
-#define vsfohci_drv						vsf.stack.usb.host->hcd.driver
-
-#define vsfusbh_hub_drv					vsf.stack.usb.host->classes.hub.driver
-#else
-#define vsfusbh_init					vsf.stack.usb.host.init
-#define vsfusbh_fini					vsf.stack.usb.host.fini
-#define vsfusbh_register_driver			vsf.stack.usb.host.register_driver
-#define vsfusbh_submit_urb				vsf.stack.usb.host.submit_urb
-
-#define vsfohci_drv						vsf.stack.usb.host.hcd.driver
-
-#define vsfusbh_hub_drv					vsf.stack.usb.host.classes.hub.driver
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_TCPIP
-#ifdef VSFCFG_MODULE_TCPIP
-#define vsfip							vsf.stack.net.tcpip->local
-#define vsfip_input_sniffer				vsf.stack.net.tcpip->local.input_sniffer
-#define vsfip_output_sniffer			vsf.stack.net.tcpip->local.output_sniffer
-
-#define vsfip_init						vsf.stack.net.tcpip->init
-#define vsfip_fini						vsf.stack.net.tcpip->fini
-#define vsfip_netif_add					vsf.stack.net.tcpip->netif_add
-#define vsfip_netif_remove				vsf.stack.net.tcpip->netif_remove
-#define vsfip_buffer_get				vsf.stack.net.tcpip->buffer_get
-#define vsfip_appbuffer_get				vsf.stack.net.tcpip->appbuffer_get
-#define vsfip_buffer_reference			vsf.stack.net.tcpip->buffer_reference
-#define vsfip_buffer_release			vsf.stack.net.tcpip->buffer_release
-#define vsfip_socket					vsf.stack.net.tcpip->socket
-#define vsfip_close						vsf.stack.net.tcpip->close
-#define vsfip_listen					vsf.stack.net.tcpip->listen
-#define vsfip_bind						vsf.stack.net.tcpip->bind
-#define vsfip_tcp_connect				vsf.stack.net.tcpip->tcp_connect
-#define vsfip_tcp_accept				vsf.stack.net.tcpip->tcp_accept
-#define vsfip_tcp_async_send			vsf.stack.net.tcpip->tcp_async_send
-#define vsfip_tcp_send					vsf.stack.net.tcpip->tcp_send
-#define vsfip_tcp_async_recv			vsf.stack.net.tcpip->tcp_async_recv
-#define vsfip_tcp_recv					vsf.stack.net.tcpip->tcp_recv
-#define vsfip_tcp_close					vsf.stack.net.tcpip->tcp_close
-#define vsfip_udp_async_send			vsf.stack.net.tcpip->udp_async_send
-#define vsfip_udp_send					vsf.stack.net.tcpip->udp_send
-#define vsfip_udp_async_recv			vsf.stack.net.tcpip->udp_async_recv
-#define vsfip_udp_recv					vsf.stack.net.tcpip->udp_recv
-
-#define vsfip_eth_header				vsf.stack.net.tcpip->netif.eth.header
-#define vsfip_eth_input					vsf.stack.net.tcpip->netif.eth.input
-
-#define vsfip_dhcpc						vsf.stack.net.tcpip->protocol.dhcpc.local
-#define vsfip_dhcpc_start				vsf.stack.net.tcpip->protocol.dhcpc.start
-
-#define vsfip_dns						vsf.stack.net.tcpip->protocol.dns.local
-#define vsfip_dns_init					vsf.stack.net.tcpip->protocol.dns.init
-#define vsfip_dns_setserver				vsf.stack.net.tcpip->protocol.dns.setserver
-#define vsfip_dns_gethostbyname			vsf.stack.net.tcpip->protocol.dns.gethostbyname
-
-#define vsfip_httpc_op_stream			vsf.stack.net.tcpip->protocol.httpc.op_stream
-#define vsfip_httpc_op_buffer			vsf.stack.net.tcpip->protocol.httpc.op_buffer
-#else
-#define vsfip							vsf.stack.net.tcpip.local
-#define vsfip_input_sniffer				vsf.stack.net.tcpip.local.input_sniffer
-#define vsfip_output_sniffer			vsf.stack.net.tcpip.local.output_sniffer
-
-#define vsfip_init						vsf.stack.net.tcpip.init
-#define vsfip_fini						vsf.stack.net.tcpip.fini
-#define vsfip_netif_add					vsf.stack.net.tcpip.netif_add
-#define vsfip_netif_remove				vsf.stack.net.tcpip.netif_remove
-#define vsfip_buffer_get				vsf.stack.net.tcpip.buffer_get
-#define vsfip_appbuffer_get				vsf.stack.net.tcpip.appbuffer_get
-#define vsfip_buffer_reference			vsf.stack.net.tcpip.buffer_reference
-#define vsfip_buffer_release			vsf.stack.net.tcpip.buffer_release
-#define vsfip_socket					vsf.stack.net.tcpip.socket
-#define vsfip_close						vsf.stack.net.tcpip.close
-#define vsfip_listen					vsf.stack.net.tcpip.listen
-#define vsfip_bind						vsf.stack.net.tcpip.bind
-#define vsfip_tcp_connect				vsf.stack.net.tcpip.tcp_connect
-#define vsfip_tcp_accept				vsf.stack.net.tcpip.tcp_accept
-#define vsfip_tcp_async_send			vsf.stack.net.tcpip.tcp_async_send
-#define vsfip_tcp_send					vsf.stack.net.tcpip.tcp_send
-#define vsfip_tcp_async_recv			vsf.stack.net.tcpip.tcp_async_recv
-#define vsfip_tcp_recv					vsf.stack.net.tcpip.tcp_recv
-#define vsfip_tcp_close					vsf.stack.net.tcpip.tcp_close
-#define vsfip_udp_async_send			vsf.stack.net.tcpip.udp_async_send
-#define vsfip_udp_send					vsf.stack.net.tcpip.udp_send
-#define vsfip_udp_async_recv			vsf.stack.net.tcpip.udp_async_recv
-#define vsfip_udp_recv					vsf.stack.net.tcpip.udp_recv
-
-#define vsfip_eth_header				vsf.stack.net.tcpip.netif.eth.header
-#define vsfip_eth_input					vsf.stack.net.tcpip.netif.eth.input
-
-#define vsfip_dhcpc						vsf.stack.net.tcpip.protocol.dhcpc.local
-#define vsfip_dhcpc_start				vsf.stack.net.tcpip.protocol.dhcpc.start
-
-#define vsfip_dns						vsf.stack.net.tcpip.protocol.dns.local
-#define vsfip_dns_init					vsf.stack.net.tcpip.protocol.dns.init
-#define vsfip_dns_setserver				vsf.stack.net.tcpip.protocol.dns.setserver
-#define vsfip_dns_gethostbyname			vsf.stack.net.tcpip.protocol.dns.gethostbyname
-
-#define vsfip_httpc_op_stream			vsf.stack.net.tcpip.protocol.httpc.op_stream
-#define vsfip_httpc_op_buffer			vsf.stack.net.tcpip.protocol.httpc.op_buffer
-#endif
-#endif
-
-#ifdef VSFCFG_FUNC_BCMWIFI
-#ifdef VSFCFG_MODULE_BCMWIFI
-#define bcm_bus_spi_op					vsf.stack.net.bcmwifi->bus.spi_op
-#define bcm_bus_sdio_op					vsf.stack.net.bcmwifi->bus.sdio_op
-#define bcm_wifi_netdrv_op				vsf.stack.net.bcmwifi->netdrv_op
-#define bcm_wifi_scan					vsf.stack.net.bcmwifi->scan
-#define bcm_wifi_join					vsf.stack.net.bcmwifi->join
-#define bcm_wifi_leave					vsf.stack.net.bcmwifi->leave
-#else
-#define bcm_bus_spi_op					(*vsf.stack.net.bcmwifi.bus.spi_op)
-#define bcm_bus_sdio_op					(*vsf.stack.net.bcmwifi.bus.sdio_op)
-#define bcm_wifi_netdrv_op				(*vsf.stack.net.bcmwifi.netdrv_op)
-#define bcm_wifi_scan					vsf.stack.net.bcmwifi.scan
-#define bcm_wifi_join					vsf.stack.net.bcmwifi.join
-#define bcm_wifi_leave					vsf.stack.net.bcmwifi.leave
-#endif
-#endif
-
-// undefine some MACROs to avoid collisions in some module environment
-#ifdef VSFCFG_STANDALONE_MODULE
-#include "vsf_undef.h"
-#endif
 
 #else
 

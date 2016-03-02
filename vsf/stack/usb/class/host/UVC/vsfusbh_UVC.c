@@ -16,13 +16,11 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "app_cfg.h"
-#include "app_type.h"
+#include "vsf.h"
 
-#include "interfaces.h"
-#include "component/buffer/buffer.h"
+#undef vsfusbh_uvc_report
+#undef vsfusbh_uvc_set
 
-#include "stack/usb/core/vsfusbh.h"
 #include "stack/usb/class/host/UVC/vsfusbh_UVC.h"
 
 #define UVC_PROBE_CRTL_DATA_SIZE 36
@@ -80,8 +78,10 @@ struct vsfusbh_uvc_t
 
 };
 
+#ifndef VSFCFG_STANDALONE_MODULE
 void (*vsfusbh_uvc_report)(void *dev_data, struct vsfusbh_uvc_param_t *param,
 		struct vsfusbh_uvc_payload_t *payload) = NULL;
+#endif
 
 static vsf_err_t uvc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
@@ -388,13 +388,6 @@ static void vsfusbh_uvc_free(struct vsfusbh_device_t *dev)
 	vsf_bufmgr_free(cdata);
 }
 
-const struct vsfusbh_class_drv_t vsfusbh_uvc_drv =
-{
-	vsfusbh_uvc_init,
-	vsfusbh_uvc_free,
-	vsfusbh_uvc_match,
-};
-
 vsf_err_t vsfusbh_uvc_set(void *dev_data, struct vsfusbh_uvc_param_t *param)
 {
 	struct vsfusbh_uvc_t *hdata = (struct vsfusbh_uvc_t *)dev_data;
@@ -404,3 +397,32 @@ vsf_err_t vsfusbh_uvc_set(void *dev_data, struct vsfusbh_uvc_param_t *param)
 	return VSFERR_NONE;
 }
 
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbh_ucv_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbh_uvc_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbh_uvc_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbh_uvc_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->drv.name = "uvc";
+	ifs->set = vsfusbh_uvc_set;
+	ifs->report = vsfusbh_uvc_report;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
+const struct vsfusbh_class_drv_t vsfusbh_uvc_drv =
+{
+	vsfusbh_uvc_init,
+	vsfusbh_uvc_free,
+	vsfusbh_uvc_match,
+};
+#endif

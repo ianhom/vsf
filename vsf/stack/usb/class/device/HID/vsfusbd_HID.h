@@ -40,10 +40,6 @@ enum usb_HID_req_t
 #define USB_HID_PROTOCOL_BOOT				0
 #define USB_HID_PROTOCOL_REPORT				1
 
-#ifndef VSFCFG_STANDALONE_MODULE
-extern const struct vsfusbd_class_protocol_t vsfusbd_HID_class;
-#endif
-
 enum usb_HID_report_type_t
 {
 	USB_HID_REPORT_INPUT = 1,
@@ -102,7 +98,29 @@ struct vsfusbd_HID_param_t
 	bool busy;
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFUSBD_HID_MODNAME					"vsf.stack.usb.device.classes.hid"
+
+struct vsfusbd_HID_modifs_t
+{
+	struct vsfusbd_class_protocol_t protocol;
+	vsf_err_t (*IN_report_changed)(struct vsfusbd_HID_param_t*,
+									struct vsfusbd_HID_report_t*);
+};
+
+void vsfusbd_HID_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_HID_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define VSFUSBD_HIDMOD						\
+	((struct vsfusbd_HID_modifs_t *)vsf_module_get(VSFUSBD_HID_MODNAME))
+#define vsfusbd_HID_class					VSFUSBD_HIDMOD->protocol
+#define vsfusbd_HID_IN_report_changed		VSFUSBD_HIDMOD->IN_report_changed
+
+#else
+extern const struct vsfusbd_class_protocol_t vsfusbd_HID_class;
+
 vsf_err_t vsfusbd_HID_IN_report_changed(struct vsfusbd_HID_param_t *param,
 										struct vsfusbd_HID_report_t *report);
+#endif
 
 #endif	// __VSFUSBD_HID_H_INCLUDED__

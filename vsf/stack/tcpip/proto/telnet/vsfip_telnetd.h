@@ -59,6 +59,24 @@ struct vsfip_telnetd_t
 	struct vsfip_telnetd_session_t sessions[0];
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+#define VSFIP_TELNETD_MODNAME				"vsf.stack.net.tcpip.proto.telnetd"
+
+struct vsfip_telnetd_modifs_t
+{
+	vsf_err_t (*start)(struct vsfip_telnetd_t*);
+};
+
+void vsfip_telnetd_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_telnetd_modinit(struct vsf_module_t*,
+										struct app_hwcfg_t const*);
+
+#define VSFIP_TELNETDMOD					\
+	((struct vsfip_telnetd_modifs_t *)vsf_module_get(VSFIP_TELNETD_MODNAME))
+#define vsfip_telnetd_start					VSFIP_TELNETDMOD->start
+
+#else
 vsf_err_t vsfip_telnetd_start(struct vsfip_telnetd_t *telnetd);
+#endif
 
 #endif		// __VSFIP_TELNETD_H_INCLUDED__

@@ -459,7 +459,7 @@ static struct vsfsm_state_t *vsfusbh_hub_evt_handler_init(struct vsfsm_t *sm,
 			}
 			if (err < 0)
 			{
-				vsfusbh_remove_intrface(hub->usbh, hub->dev, hub->interface);
+				vsfusbh_remove_interface(hub->usbh, hub->dev, hub->interface);
 			}
 		}
 		else
@@ -545,12 +545,34 @@ const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 	{0},
 };
 
+#ifdef VSFCFG_STANDALONE_MODULE
+void vsfusbh_hub_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t vsfusbh_hub_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfusbh_hub_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct vsfusbh_hub_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->drv.name = "hub";
+	ifs->drv.id_table = vsfusbh_hub_id_table;
+	ifs->drv.probe = vsfusbh_hub_probe;
+	ifs->drv.disconnect = vsfusbh_hub_disconnect;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
 const struct vsfusbh_class_drv_t vsfusbh_hub_drv =
 {
 	.name = "hub",
 	.id_table = vsfusbh_hub_id_table,
 	.probe = vsfusbh_hub_probe,
 	.disconnect = vsfusbh_hub_disconnect,
-	.ioctl = NULL,
 };
-
+#endif
