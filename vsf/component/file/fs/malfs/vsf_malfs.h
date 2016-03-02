@@ -54,7 +54,7 @@ void vsf_malfs_modexit(struct vsf_module_t*);
 vsf_err_t vsf_malfs_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSF_MALFS_MOD						\
-	((struct vsf_malfs_modifs_t *)vsf_module_get(VSF_MALFS_MODNAME))
+	((struct vsf_malfs_modifs_t *)vsf_module_load(VSF_MALFS_MODNAME))
 #define vsf_malfs_init						VSF_MALFS_MOD->init
 #define vsf_malfs_fini						VSF_MALFS_MOD->fini
 #define vsf_malfs_read						VSF_MALFS_MOD->read

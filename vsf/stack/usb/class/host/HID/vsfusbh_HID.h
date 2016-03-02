@@ -159,7 +159,7 @@ void vsfusbh_hid_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_HIDCMOD						\
-	((struct vsfusbh_hid_modifs_t *)vsf_module_get(VSFUSBH_HID_MODNAME))
+	((struct vsfusbh_hid_modifs_t *)vsf_module_load(VSFUSBH_HID_MODNAME))
 #define vsfusbh_hid_drv						VSFUSBH_HIDCMOD->drv
 
 #else

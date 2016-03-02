@@ -31,7 +31,7 @@ void vsfohci_modexit(struct vsf_module_t*);
 vsf_err_t vsfohci_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFOHCICMOD							\
-	((struct vsfohci_modifs_t *)vsf_module_get(VSFOHCI_MODNAME))
+	((struct vsfohci_modifs_t *)vsf_module_load(VSFOHCI_MODNAME))
 #define vsfohci_drv							VSFOHCICMOD->drv
 
 #else

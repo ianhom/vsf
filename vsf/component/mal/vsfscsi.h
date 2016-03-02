@@ -186,7 +186,7 @@ void vsfscsi_modexit(struct vsf_module_t*);
 vsf_err_t vsfscsi_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFSCSI_MOD						\
-	((struct vsfscsi_modifs_t *)vsf_module_get(VSFSCSI_MODNAME))
+	((struct vsfscsi_modifs_t *)vsf_module_load(VSFSCSI_MODNAME))
 #define vsfscsi_init						VSFSCSI_MOD->init
 #define vsfscsi_execute						VSFSCSI_MOD->execute
 #define vsfscsi_cancel_transact				VSFSCSI_MOD->cancel_transact

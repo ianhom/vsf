@@ -82,7 +82,7 @@ vsf_err_t vsfusbd_RNDIS_modinit(struct vsf_module_t*,
 										struct app_hwcfg_t const*);
 
 #define VSFUSBD_RNDISMOD					\
-	((struct vsfusbd_RNDIS_modifs_t *)vsf_module_get(VSFUSBD_RNDIS_MODNAME))
+	((struct vsfusbd_RNDIS_modifs_t *)vsf_module_load(VSFUSBD_RNDIS_MODNAME))
 #define vsfusbd_RNDISData_class				VSFUSBD_RNDISMOD->data_protocol
 #define vsfusbd_RNDIS_netdrv_op				VSFUSBD_RNDISMOD->netdrv_op
 

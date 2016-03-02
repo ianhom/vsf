@@ -32,7 +32,7 @@ void vsfusbh_hub_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_hub_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_HUBCMOD						\
-	((struct vsfusbh_hub_modifs_t *)vsf_module_get(VSFUSBH_HUB_MODNAME))
+	((struct vsfusbh_hub_modifs_t *)vsf_module_load(VSFUSBH_HUB_MODNAME))
 #define vsfusbh_hub_drv						VSFUSBH_HUBCMOD->drv
 
 #else

@@ -84,7 +84,7 @@ void vsfusbd_MSC_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_MSC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_MSCMOD						\
-	((struct vsfusbd_MSC_modifs_t *)vsf_module_get(VSFUSBD_MSC_MODNAME))
+	((struct vsfusbd_MSC_modifs_t *)vsf_module_load(VSFUSBD_MSC_MODNAME))
 #define vsfusbd_MSCBOT_class				VSFUSBD_MSCMOD->protocol
 
 #else

@@ -344,10 +344,10 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 		// Application
 		// app init
-		app->usbd.cdc.param.CDC_param.ep_out = 3;
-		app->usbd.cdc.param.CDC_param.ep_in = 3;
-		app->usbd.cdc.param.CDC_param.stream_tx = &app->usbd.cdc.stream_tx;
-		app->usbd.cdc.param.CDC_param.stream_rx = &app->usbd.cdc.stream_rx;
+		app->usbd.cdc.param.CDC.ep_out = 3;
+		app->usbd.cdc.param.CDC.ep_in = 3;
+		app->usbd.cdc.param.CDC.stream_tx = &app->usbd.cdc.stream_tx;
+		app->usbd.cdc.param.CDC.stream_rx = &app->usbd.cdc.stream_rx;
 
 		app->usbd.cdc.fifo_tx.buffer.buffer = app->usbd.cdc.txbuff;
 		app->usbd.cdc.fifo_rx.buffer.buffer = app->usbd.cdc.rxbuff;
@@ -477,7 +477,6 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 							struct app_hwcfg_t const *hwcfg)
 {
 	struct vsfapp_t *app;
-	vsf_err_t err = VSFERR_FAIL;
 
 	// check board and api version
 	if (strcmp(hwcfg->board, APP_BOARD_NAME) ||
@@ -486,30 +485,10 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 		return VSFERR_NOT_SUPPORT;
 	}
 
-#ifdef VSFCFG_STANDALONE_MODULE
-	if (NULL == vsf_module_load(VSF_MODULE_USBD_NAME))
-	{
-		goto fail_load_usbd;
-	}
-	if (NULL == vsf_module_load(VSF_MODULE_SHELL_NAME))
-	{
-		goto fail_load_shell;
-	}
-	if (NULL == vsf_module_load(VSF_MODULE_BCMWIFI_NAME))
-	{
-		goto fail_load_bcmwifi;
-	}
-	if (NULL == vsf_module_load(VSF_MODULE_TCPIP_NAME))
-	{
-		goto fail_load_tcpip;
-	}
-#endif
-
 	app = vsf_bufmgr_malloc(sizeof(struct vsfapp_t));
 	if (NULL == app)
 	{
-		err = VSFERR_NOT_ENOUGH_RESOURCES;
-		goto fail_malloc_app;
+		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
 	module->ifs = (void *)app;
 
@@ -517,19 +496,6 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 	app->hwcfg = hwcfg;
 
 	return main(app);
-
-fail_malloc_app:
-#ifdef VSFCFG_STANDALONE_MODULE
-	vsf_module_unload(VSF_MODULE_TCPIP_NAME);
-fail_load_tcpip:
-	vsf_module_unload(VSF_MODULE_BCMWIFI_NAME);
-fail_load_bcmwifi:
-	vsf_module_unload(VSF_MODULE_SHELL_NAME);
-fail_load_shell:
-	vsf_module_unload(VSF_MODULE_USBD_NAME);
-fail_load_usbd:
-#endif
-	return err;
 }
 
 // for app module, module_exit is just a place holder

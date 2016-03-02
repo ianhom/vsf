@@ -153,7 +153,7 @@ void vsfip_httpd_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_httpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_HTTPDMOD						\
-	((struct vsfip_httpd_modifs_t *)vsf_module_get(VSFIP_HTTPD_MODNAME))
+	((struct vsfip_httpd_modifs_t *)vsf_module_load(VSFIP_HTTPD_MODNAME))
 #define vsfip_httpd_start					VSFIP_HTTPDMOD->start
 #define vsfip_http_getpostvaluebyname		VSFIP_HTTPDMOD->getpostvaluebyname
 #define vsfip_http400						VSFIP_HTTPDMOD->http400

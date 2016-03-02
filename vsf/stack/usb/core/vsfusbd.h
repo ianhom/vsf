@@ -197,7 +197,7 @@ void vsfusbd_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_MOD							\
-	((struct vsfusbd_modifs_t *)vsf_module_get(VSFUSBD_MODNAME))
+	((struct vsfusbd_modifs_t *)vsf_module_load(VSFUSBD_MODNAME))
 #define vsfusbd_device_get_descriptor		VSFUSBD_MOD->get_descriptor
 #define vsfusbd_device_init					VSFUSBD_MOD->init
 #define vsfusbd_device_fini					VSFUSBD_MOD->fini

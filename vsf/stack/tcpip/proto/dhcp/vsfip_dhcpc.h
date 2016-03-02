@@ -62,7 +62,7 @@ void vsfip_dhcpc_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_dhcpc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_DHCPCMOD						\
-	((struct vsfip_dhcpc_modifs_t *)vsf_module_get(VSFIP_DHCPC_MODNAME))
+	((struct vsfip_dhcpc_modifs_t *)vsf_module_load(VSFIP_DHCPC_MODNAME))
 #define vsfip_dhcpc							VSFIP_DHCPCMOD->dhcpc
 #define vsfip_dhcpc_start					VSFIP_DHCPCMOD->start
 

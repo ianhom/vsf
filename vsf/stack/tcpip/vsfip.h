@@ -384,7 +384,7 @@ void vsfip_modexit(struct vsf_module_t *module);
 vsf_err_t vsfip_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_MOD							\
-	((struct vsfip_modifs_t *)vsf_module_get(VSFIP_MODNAME))
+	((struct vsfip_modifs_t *)vsf_module_load(VSFIP_MODNAME))
 #define vsfip								VSFIP_MOD->vsfip
 #define vsfip_buffer_get					VSFIP_MOD->buffer_get
 #define vsfip_appbuffer_get					VSFIP_MOD->appbuffer_get
