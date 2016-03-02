@@ -64,6 +64,9 @@ struct vsf_module_t* vsf_module_get(char *name)
 {
 	struct vsf_module_t *module = modulelist;
 
+	if (!name)
+		return module;
+
 	while ((module != NULL) && strcmp(module->flash->name, name))
 		module = module->next;
 	return module;
