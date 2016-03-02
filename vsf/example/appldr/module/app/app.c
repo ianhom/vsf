@@ -486,25 +486,19 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 		return VSFERR_NOT_SUPPORT;
 	}
 
-#ifdef VSFCFG_MODULE_USBD
+#ifdef VSFCFG_STANDALONE_MODULE
 	if (NULL == vsf_module_load(VSF_MODULE_USBD_NAME))
 	{
 		goto fail_load_usbd;
 	}
-#endif
-#ifdef VSFCFG_MODULE_SHELL
 	if (NULL == vsf_module_load(VSF_MODULE_SHELL_NAME))
 	{
 		goto fail_load_shell;
 	}
-#endif
-#ifdef VSFCFG_MODULE_BCMWIFI
 	if (NULL == vsf_module_load(VSF_MODULE_BCMWIFI_NAME))
 	{
 		goto fail_load_bcmwifi;
 	}
-#endif
-#ifdef VSFCFG_MODULE_TCPIP
 	if (NULL == vsf_module_load(VSF_MODULE_TCPIP_NAME))
 	{
 		goto fail_load_tcpip;
@@ -525,19 +519,13 @@ ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
 	return main(app);
 
 fail_malloc_app:
-#ifdef VSFCFG_MODULE_TCPIP
+#ifdef VSFCFG_STANDALONE_MODULE
 	vsf_module_unload(VSF_MODULE_TCPIP_NAME);
 fail_load_tcpip:
-#endif
-#ifdef VSFCFG_MODULE_BCMWIFI
 	vsf_module_unload(VSF_MODULE_BCMWIFI_NAME);
 fail_load_bcmwifi:
-#endif
-#ifdef VSFCFG_MODULE_SHELL
 	vsf_module_unload(VSF_MODULE_SHELL_NAME);
 fail_load_shell:
-#endif
-#ifdef VSFCFG_MODULE_USBD
 	vsf_module_unload(VSF_MODULE_USBD_NAME);
 fail_load_usbd:
 #endif

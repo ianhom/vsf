@@ -21,9 +21,10 @@
 #define VSFCFG_API_ADDR				(SYS_MAIN_ADDR + 0x200)
 
 //#define VSFCFG_DEBUG
-//#define VSFCFG_DEBUG_INFO_LEN		(16 * 1024)
+//#define VSFCFG_DEBUG_INFO_LEN		(1024)
 
 #define VSFCFG_BUFFER
+#define VSFCFG_LIST
 #define VSFCFG_STREAM
 #define VSFCFG_MAL
 #define VSFCFG_SCSI
@@ -33,21 +34,11 @@
 //#define VSFCFG_STANDALONE_MODULE
 
 // include VSFCFG_MODULE to enable module support
-#define VSFCFG_MODULE
+//#define VSFCFG_MODULE
 
 // define VSFCFG_FUNC_XXXX to include corresponding func
-// define VSFCFG_MODULE_XXXX to declare corresponding func to be a module
 #define VSFCFG_FUNC_USBD
-//#define VSFCFG_MODULE_USBD
-
 //#define VSFCFG_FUNC_USBH
-//#define VSFCFG_MODULE_USBH
-
 //#define VSFCFG_FUNC_SHELL
-//#define VSFCFG_MODULE_SHELL
-
 //#define VSFCFG_FUNC_TCPIP
-//#define VSFCFG_MODULE_TCPIP
-
 //#define VSFCFG_FUNC_BCMWIFI
-//#define VSFCFG_MODULE_BCMWIFI
