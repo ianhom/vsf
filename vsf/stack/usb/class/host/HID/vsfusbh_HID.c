@@ -568,7 +568,7 @@ static struct vsfsm_state_t *vsfusbh_hid_evt_handler_init(struct vsfsm_t *sm,
 	return NULL;
 }
 
-void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
+static void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
 			struct usb_interface_t *interface,
 			const struct vsfusbh_device_id_t *id)
 {
@@ -624,7 +624,7 @@ void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
 	return hid;
 }
 
-void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh, 
+static void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh, 
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_hid_t *hid = priv;
@@ -643,7 +643,7 @@ void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh,
 	vsf_bufmgr_free(hid);
 }
 
-const struct vsfusbh_device_id_t vsfusbh_hid_id_table[] =
+static const struct vsfusbh_device_id_t vsfusbh_hid_id_table[] =
 {
 	{
 		.match_flags = USB_DEVICE_ID_MATCH_INT_CLASS,

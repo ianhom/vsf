@@ -19,7 +19,7 @@
 
 #include "vsf.h"
 
-void vsfusbd_RNDIS_on_tx_finish(void *param)
+static void vsfusbd_RNDIS_on_tx_finish(void *param)
 {
 	struct vsfusbd_RNDIS_param_t *rndis_param =
 						(struct vsfusbd_RNDIS_param_t *)param;
@@ -62,7 +62,7 @@ void vsfusbd_RNDIS_on_tx_finish(void *param)
 	}
 }
 
-void vsfusbd_RNDIS_on_rx_finish(void *param)
+static void vsfusbd_RNDIS_on_rx_finish(void *param)
 {
 	struct vsfusbd_RNDIS_param_t *rndis_param =
 						(struct vsfusbd_RNDIS_param_t *)param;
@@ -136,7 +136,7 @@ vsfusbd_RNDIS_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfip_netif_t *netif = (struct vsfip_netif_t *)pt->user_data;
 	struct vsfusbd_RNDIS_param_t *param =
@@ -154,7 +154,7 @@ vsf_err_t vsfusbd_RNDIS_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return vsfsm_init(&param->sm);
 }
 
-vsf_err_t vsfusbd_RNDIS_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfusbd_RNDIS_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	((struct vsfusbd_RNDIS_param_t *)pt->user_data)->netif_inited = false;
 	return VSFERR_NONE;
@@ -388,7 +388,7 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 	return VSFERR_NONE;
 }
 
-vsf_err_t
+static vsf_err_t
 vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];

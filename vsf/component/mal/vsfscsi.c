@@ -412,7 +412,7 @@ exit_not_ready:
 	return VSFERR_FAIL;
 }
 
-vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
+static vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
 {
 	struct vsf_mal2scsi_t *mal2scsi = (struct vsf_mal2scsi_t *)lun->param;
 	mal2scsi->malstream.mbufstream =

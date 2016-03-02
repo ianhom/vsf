@@ -19,7 +19,7 @@
 
 #include "vsf.h"
 
-vsf_err_t
+static vsf_err_t
 vsfusbd_CDCACMData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
@@ -35,7 +35,7 @@ vsfusbd_CDCACMData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	return vsfusbd_CDCData_class.init(iface, device);
 }
 
-vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
@@ -96,7 +96,7 @@ vsf_err_t vsfusbd_CDCACMControl_request_prepare(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;

@@ -174,7 +174,7 @@ static void vsfusbd_MSCBOT_on_idle(void *p)
 	vsfusbd_ep_recv(param->device, &param->transact);
 }
 
-vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
+static vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 											struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
@@ -186,7 +186,7 @@ vsf_err_t vsfusbd_MSCBOT_class_init(uint8_t iface,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_MSCBOT_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct interface_usbd_t *drv = device->drv;
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;

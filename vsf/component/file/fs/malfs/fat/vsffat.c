@@ -446,7 +446,7 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
 	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
@@ -538,7 +538,7 @@ fail:
 	return err;
 }
 
-vsf_err_t vsffat_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
 	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
@@ -546,13 +546,13 @@ vsf_err_t vsffat_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsffat_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr)
 {
 	return VSFERR_NOT_SUPPORT;
 }
 
-vsf_err_t vsffat_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name)
 {
 	return VSFERR_NOT_SUPPORT;
@@ -648,21 +648,21 @@ exit:
 	return err;
 }
 
-vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
+static vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
 	return vsffat_getchild(pt, evt, dir, file, name, 0);
 }
 
-vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
+static vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
 	return vsffat_getchild(pt, evt, dir, file, NULL, idx);
 }
 
-vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file)
 {
 	if (file->name != NULL)
@@ -674,7 +674,7 @@ vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
@@ -810,7 +810,7 @@ exit:
 	return err;
 }
 
-vsf_err_t vsffat_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {

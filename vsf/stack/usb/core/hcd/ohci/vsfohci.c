@@ -773,7 +773,7 @@ static uint32_t vsfohci_init_hc_start(struct vsfohci_t *vsfohci)
 	return (ohci->regs->roothub.a >> 23) & 0x1fe;
 }
 
-vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	vsf_err_t err;
 	struct vsfohci_t *vsfohci;
@@ -814,33 +814,33 @@ vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_fini(void *param)
+static vsf_err_t vsfohci_fini(void *param)
 {
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_suspend(void *param)
+static vsf_err_t vsfohci_suspend(void *param)
 {
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_resume(void *param)
+static vsf_err_t vsfohci_resume(void *param)
 {
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_alloc_device(void *param, struct vsfusbh_device_t *dev)
+static vsf_err_t vsfohci_alloc_device(void *param, struct vsfusbh_device_t *dev)
 {
 	dev->priv = NULL;
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
+static vsf_err_t vsfohci_free_device(void *param, struct vsfusbh_device_t *dev)
 {
 	return VSFERR_NONE;
 }
 
-struct vsfusbh_urb_t *vsfohci_alloc_urb(void)
+static struct vsfusbh_urb_t *vsfohci_alloc_urb(void)
 {
 	uint32_t size;
 	struct vsfusbh_urb_t *vsfurb;
@@ -857,7 +857,7 @@ struct vsfusbh_urb_t *vsfohci_alloc_urb(void)
 	return vsfurb;
 }
 
-vsf_err_t vsfohci_free_urb(void *param, struct vsfusbh_urb_t **vsfurbp)
+static vsf_err_t vsfohci_free_urb(void *param, struct vsfusbh_urb_t **vsfurbp)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
@@ -892,7 +892,7 @@ vsf_err_t vsfohci_free_urb(void *param, struct vsfusbh_urb_t **vsfurbp)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
+static vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	uint32_t i, size = 0;
 	struct ed_t *ed;
@@ -968,7 +968,7 @@ vsf_err_t vsfohci_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 }
 
 // use for int/iso urb
-vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
+static vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;
 	struct ohci_t *ohci = vsfohci->ohci;
@@ -1005,14 +1005,14 @@ vsf_err_t vsfohci_relink_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	return VSFERR_FAIL;
 }
 
-const static uint8_t root_hub_str_index0[] =
+static const uint8_t root_hub_str_index0[] =
 {
 	0x04,				/* u8  bLength; */
 	0x03,				/* u8  bDescriptorType; String-descriptor */
 	0x09,				/* u8  lang ID */
 	0x04,				/* u8  lang ID */
 };
-const static uint8_t root_hub_str_index1[] =
+static const uint8_t root_hub_str_index1[] =
 {
 	28,					/* u8  bLength; */
 	0x03,				/* u8  bDescriptorType; String-descriptor */
@@ -1044,7 +1044,7 @@ const static uint8_t root_hub_str_index1[] =
 	0,					/* u8  Unicode */
 };
 
-vsf_err_t vsfohci_rh_control(void *param, struct vsfusbh_urb_t *vsfurb)
+static vsf_err_t vsfohci_rh_control(void *param, struct vsfusbh_urb_t *vsfurb)
 {
 	uint16_t typeReq, wValue, wIndex, wLength;
 	struct vsfohci_t *vsfohci = (struct vsfohci_t *)param;

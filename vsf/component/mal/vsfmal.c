@@ -128,7 +128,7 @@ vsf_err_t vsfmal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
 }
 
 // mim: mal in mal
-uint32_t vsfmim_blocksize(struct vsfmal_t *mal, uint64_t addr,
+static uint32_t vsfmim_blocksize(struct vsfmal_t *mal, uint64_t addr,
 					uint32_t size, enum vsfmal_op_t op)
 {
 	struct vsfmim_t *mim = (struct vsfmim_t *)mal;
@@ -136,7 +136,7 @@ uint32_t vsfmim_blocksize(struct vsfmal_t *mal, uint64_t addr,
 	return realmal->drv->block_size(realmal, mim->addr + addr, size, op);
 }
 
-vsf_err_t vsfmim_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfmim_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfmim_t *mim = (struct vsfmim_t *)pt->user_data;
 	mim->mal.cap.block_size = mim->realmal->cap.block_size;
@@ -145,27 +145,27 @@ vsf_err_t vsfmim_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return vsfmal_init(pt, evt);
 }
 
-vsf_err_t vsfmim_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfmim_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	pt->user_data = ((struct vsfmim_t *)pt->user_data)->realmal;
 	return vsfmal_fini(pt, evt);
 }
 
-vsf_err_t vsfmim_erase_all(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfmim_erase_all(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	// CAN not erase all for a mim
 	return VSFERR_NOT_SUPPORT;
 }
 
-vsf_err_t vsfmim_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint64_t addr,
-					uint32_t size)
+static vsf_err_t vsfmim_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					uint64_t addr, uint32_t size)
 {
 	struct vsfmim_t *mim = (struct vsfmim_t *)pt->user_data;
 	pt->user_data = mim->realmal;
 	return vsfmal_erase(pt, evt, mim->addr + addr, size);
 }
 
-vsf_err_t vsfmim_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsfmim_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmim_t *mim = (struct vsfmim_t *)pt->user_data;
@@ -173,7 +173,7 @@ vsf_err_t vsfmim_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return vsfmal_read(pt, evt, mim->addr + addr, buff, size);
 }
 
-vsf_err_t vsfmim_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsfmim_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmim_t *mim = (struct vsfmim_t *)pt->user_data;

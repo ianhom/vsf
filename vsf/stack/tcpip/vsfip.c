@@ -2144,6 +2144,10 @@ void vsfip_modexit(struct vsf_module_t *module)
 vsf_err_t vsfip_eth_header(struct vsfip_buffer_t *buf,
 	enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest_addr);
 void vsfip_eth_input(struct vsfip_buffer_t *buf);
+#undef vsfip_netif_arp_add_assoc
+void vsfip_netif_arp_add_assoc(struct vsfip_netif_t *netif,
+		uint8_t hwlen, uint8_t *hwaddr, uint8_t protolen, uint8_t *protoaddr);
+
 vsf_err_t vsfip_modinit(struct vsf_module_t *module,
 								struct app_hwcfg_t const *cfg)
 {
@@ -2179,6 +2183,7 @@ vsf_err_t vsfip_modinit(struct vsf_module_t *module,
 	ifs->ip4_pton = vsfip_ip4_pton;
 	ifs->netif.eth.header = vsfip_eth_header;
 	ifs->netif.eth.input = vsfip_eth_input;
+	ifs->netif.arp_add_assoc = vsfip_netif_arp_add_assoc;
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }

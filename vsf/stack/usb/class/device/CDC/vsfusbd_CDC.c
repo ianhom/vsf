@@ -72,7 +72,7 @@ static void vsfusbd_CDCData_on_in(void *p)
 	}
 }
 
-void vsfusbd_CDCData_on_IN_finish(void *p)
+static void vsfusbd_CDCData_on_IN_finish(void *p)
 {
 	struct vsfusbd_CDC_param_t *param = (struct vsfusbd_CDC_param_t *)p;
 	struct vsf_stream_t *stream = param->stream_tx;
@@ -262,7 +262,7 @@ vsfusbd_CDCData_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 }
 #endif		// VSFUSBD_CDCCFG_TRANSACT
 
-vsf_err_t
+static vsf_err_t
 vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
@@ -304,7 +304,7 @@ void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 	stream_connect_rx(param->stream_tx);
 }
 
-vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
@@ -339,7 +339,7 @@ vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_CDCControl_request_process(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;

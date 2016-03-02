@@ -1,4 +1,3 @@
-
 #ifndef __VSF_BASETYPE_H_INCLUDED__
 #define __VSF_BASETYPE_H_INCLUDED__
 

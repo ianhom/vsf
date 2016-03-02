@@ -253,7 +253,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	return NULL;
 }
 
-vsf_err_t vsfusbd_HID_class_init(uint8_t iface, struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_HID_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_config_t *config = &device->config[device->configuration];
 	struct vsfusbd_iface_t *ifs = &config->iface[iface];
@@ -268,7 +268,7 @@ vsf_err_t vsfusbd_HID_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 	return vsfsm_init(&ifs->sm);
 }
 
-vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
+static vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
 			uint8_t index, uint16_t lanid, struct vsf_buffer_t *buffer)
 {
 	struct usb_ctrlrequest_t *request = &device->ctrl_handler.request;
@@ -286,7 +286,7 @@ vsf_err_t vsfusbd_HID_get_desc(struct vsfusbd_device_t *device, uint8_t type,
 											lanid, buffer);
 }
 
-vsf_err_t vsfusbd_HID_request_prepare(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_HID_request_prepare(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct vsf_buffer_t *buffer = &ctrl_handler->bufstream.mem.buffer;
@@ -363,7 +363,7 @@ vsf_err_t vsfusbd_HID_request_prepare(struct vsfusbd_device_t *device)
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfusbd_HID_request_process(struct vsfusbd_device_t *device)
+static vsf_err_t vsfusbd_HID_request_process(struct vsfusbd_device_t *device)
 {
 	struct vsfusbd_ctrl_handler_t *ctrl_handler = &device->ctrl_handler;
 	struct usb_ctrlrequest_t *request = &ctrl_handler->request;

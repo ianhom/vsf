@@ -352,8 +352,8 @@ static void vsfip_httpc_outstream_onout_int(void *p)
 	vsfsm_post_evt_pending(sm, VSFSM_EVT_HTTPC_STREAM_OUT);
 }
 
-vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-										void *output)
+static vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt,
+										vsfsm_evt_t evt, void *output)
 {
 	struct vsf_stream_t *outstream = (struct vsf_stream_t *)output;
 
@@ -365,8 +365,8 @@ vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					void *output, uint32_t offset, struct vsfip_buffer_t *buf)
+static vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
+	vsfsm_evt_t evt, void *output, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_stream_t *outstream = (struct vsf_stream_t *)output;
 
@@ -384,8 +384,8 @@ vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // op_buffer
-vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					void *output, uint32_t offset, struct vsfip_buffer_t *buf)
+static vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
+	vsfsm_evt_t evt, void *output, uint32_t offset, struct vsfip_buffer_t *buf)
 {
 	struct vsf_buffer_t *outbuf = (struct vsf_buffer_t *)output;
 

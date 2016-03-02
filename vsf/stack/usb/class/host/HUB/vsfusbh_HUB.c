@@ -536,7 +536,7 @@ static void vsfusbh_hub_disconnect(struct vsfusbh_t *usbh,
 	vsf_bufmgr_free(hub);
 }
 
-const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
+static const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 {
 	{
 		.match_flags = USB_DEVICE_ID_MATCH_INT_CLASS,
