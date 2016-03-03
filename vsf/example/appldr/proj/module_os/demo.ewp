@@ -1020,7 +1020,7 @@
         </option>
         <option>
           <name>OGCoreOrChip</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>GRuntimeLibSelect</name>
@@ -1093,7 +1093,7 @@
         <option>
           <name>GBECoreSlave</name>
           <version>22</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -1110,7 +1110,7 @@
         <option>
           <name>CoreVariant</name>
           <version>22</version>
-          <state>38</state>
+          <state>34</state>
         </option>
         <option>
           <name>GFPUDeviceSlave</name>
@@ -1133,7 +1133,7 @@
         <option>
           <name>GFPUCoreSlave2</name>
           <version>22</version>
-          <state>38</state>
+          <state>34</state>
         </option>
       </data>
     </settings>
@@ -1971,7 +1971,10 @@
     <name>$PROJ_DIR$\vsf_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\..\module\vsfos\vsfsys.c</name>
+    <name>$PROJ_DIR$\..\..\module\vsfos\vsfos.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\module\vsfos\vsfos_busybox.c</name>
   </file>
 </project>
 

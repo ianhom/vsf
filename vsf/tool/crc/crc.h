@@ -43,7 +43,7 @@ struct crc_modifs_t
 void crc_modexit(struct vsf_module_t*);
 vsf_err_t crc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
-#define CRC_MOD							\
+#define CRC_MOD								\
 	((struct crc_modifs_t *)vsf_module_load(CRC_MODNAME))
 #define crc_calc							CRC_MOD->calc
 

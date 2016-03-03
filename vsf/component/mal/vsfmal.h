@@ -53,7 +53,7 @@ struct vsfmal_t
 {
 	struct vsfmal_capacity_t cap;
 	struct vsfmal_drv_t const *drv;
-	void const *cparam;
+	void *cparam;
 	void *param;
 
 	// private

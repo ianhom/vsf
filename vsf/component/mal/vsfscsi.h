@@ -131,10 +131,10 @@ struct vsfscsi_device_t
 struct vsf_mal2scsi_cparam_t
 {
 	uint32_t block_size;
-	const bool removable;
-	const char vendor[8];
-	const char product[16];
-	const char revision[4];
+	bool removable;
+	char vendor[8];
+	char product[16];
+	char revision[4];
 	enum SCSI_PDT_t type;
 };
 
@@ -158,7 +158,7 @@ struct vsf_mal2scsi_t
 	} multibuf;
 
 	struct vsfscsi_handler_t *vendor_handlers;
-	struct vsf_mal2scsi_cparam_t const cparam;
+	struct vsf_mal2scsi_cparam_t cparam;
 	void *param;
 
 	struct vsf_malstream_t malstream;
