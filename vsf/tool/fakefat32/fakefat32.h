@@ -61,7 +61,27 @@ struct fakefat32_param_t
 	struct fakefat32_file_t root[2];
 };
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+#define FAKEFAT32_MODNAME					"vsf.tool.fakefat32"
+
+struct fakefat32_modifs_t
+{
+	struct vsfmal_drv_t mal_drv;
+	struct vsfile_fsop_t fs_op;
+
+	uint8_t mbr[512];
+};
+
+void fakefat32_modexit(struct vsf_module_t*);
+vsf_err_t fakefat32_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define FAKEFAT32_MOD						\
+	((struct fakefat32_modifs_t *)vsf_module_load(FAKEFAT32_MODNAME))
+#define fakefat32_mal_drv					FAKEFAT32_MOD->mal_drv
+#define fakefat32_fs_op						FAKEFAT32_MOD->fs_op
+#define fakefat32_mbr						FAKEFAT32_MOD->mbr
+
+#else
 extern const struct vsfmal_drv_t fakefat32_mal_drv;
 extern const struct vsfile_fsop_t fakefat32_fs_op;
 #endif

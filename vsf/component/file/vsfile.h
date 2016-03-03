@@ -233,10 +233,6 @@ vsf_err_t vsfile_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define vsfile_is_div						VSFILE_MOD->is_div
 #define vsfile_vfs_op						VSFILE_MOD->vfs.op
 #define vsfile_memfs_op						VSFILE_MOD->memfs.op
-#define vsfile_memfs_getchild_byname		VSFILE_MOD->memfs.op.d_op.getchild_byname
-#define vsfile_memfs_getchild_byidx			VSFILE_MOD->memfs.op.d_op.getchild_byidx
-#define vsfile_memfs_read					VSFILE_MOD->memfs.op.f_op.read
-#define vsfile_memfs_write					VSFILE_MOD->memfs.op.f_op.write
 #define vsfile								VSFILE_MOD->vsfile
 
 #else

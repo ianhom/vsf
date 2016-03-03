@@ -72,9 +72,15 @@ struct vsf_module_t
 #include "component/file/fs/malfs/vsf_malfs.h"
 #include "component/file/fs/malfs/fat/vsffat.h"
 #endif
+#if defined(VSFCFG_MAL) && defined(VSFCFG_FILE)
+#include "tool/fakefat32/fakefat32.h"
+#endif
 #ifdef VSFCFG_DEBUG
 #include "component/debug/debug.h"
 #endif
+
+// some tools
+#include "tool/crc/crc.h"
 
 #define VSF_API_VERSION						0x00000001
 

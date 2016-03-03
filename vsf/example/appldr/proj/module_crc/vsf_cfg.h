@@ -17,38 +17,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __CRC_H_INCLUDED__
-#define __CRC_H_INCLUDED__
+// define the address of the api table
+#define VSFCFG_API_ADDR				0x00000200
 
-struct crc_t
-{
-	enum crc_bitlen_t
-	{
-		CRC_BITLEN_8 = 8,
-		CRC_BITLEN_16 = 16,
-		CRC_BITLEN_32 = 32,
-	} bitlen;
-	uint32_t result;
-	uint32_t poly;
-};
+#define VSFCFG_DEBUG
+#define VSFCFG_DEBUG_INFO_LEN		(1024)
 
-#ifdef VSFCFG_STANDALONE_MODULE
-#define CRC_MODNAME							"vsf.tool.crc"
+#define VSFCFG_BUFFER
+#define VSFCFG_LIST
+#define VSFCFG_STREAM
+#define VSFCFG_MAL
+#define VSFCFG_SCSI
+#define VSFCFG_FILE
 
-struct crc_modifs_t
-{
-	uint32_t (*calc)(struct crc_t *crc, void *buff, uint32_t num);
-};
+// include VSFCFG_STANDALONE_MODULE to compile the project as a module
+#define VSFCFG_STANDALONE_MODULE
 
-void crc_modexit(struct vsf_module_t*);
-vsf_err_t crc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+// include VSFCFG_MODULE to enable module support
+#define VSFCFG_MODULE
 
-#define CRC_MOD							\
-	((struct crc_modifs_t *)vsf_module_load(CRC_MODNAME))
-#define crc_calc							CRC_MOD->calc
-
-#else
-uint32_t crc_calc(struct crc_t *crc, void *buff, uint32_t num);
-#endif
-
-#endif	// __CRC_H_INCLUDED__
+// define VSFCFG_FUNC_XXXX to include corresponding func
+#define VSFCFG_FUNC_USBD
+#define VSFCFG_FUNC_USBH
+#define VSFCFG_FUNC_SHELL
+#define VSFCFG_FUNC_TCPIP
+#define VSFCFG_FUNC_BCMWIFI

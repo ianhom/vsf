@@ -17,9 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "app_type.h"
-
-#include "crc.h"
+#include "vsf.h"
+#undef crc_calc
 
 uint32_t crc_calc(struct crc_t *crc, void *buff, uint32_t num)
 {
@@ -59,3 +58,24 @@ uint32_t crc_calc(struct crc_t *crc, void *buff, uint32_t num)
 	crc->result = result;
 	return result;
 }
+
+#ifdef VSFCFG_STANDALONE_MODULE
+void crc_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t crc_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct crc_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct crc_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->calc = crc_calc;
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#endif

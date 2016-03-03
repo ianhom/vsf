@@ -17,10 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <ctype.h>
 #include "vsf.h"
-#include "component/file/fs/malfs/fat/vsffat.h"
-#include "fakefat32.h"
 
 #define FAKEFAT32_FILEATTR_LONGNAME			\
 				(VSFILE_ATTR_READONLY | VSFILE_ATTR_HIDDEN |\
@@ -33,13 +30,18 @@
 #define FAT32_FAT_START						0x0FFFFFF8
 #define FAT32_FAT_INVALID					0xFFFFFFFF
 
-#define FAT32_RES_SECTORS					GET_LE_U16(&fat32_mbr[0x0E])
-#define FAT32_FAT_NUM						fat32_mbr[0x10]
-#define FAT32_HIDDEN_SECTORS				GET_LE_U32(&fat32_mbr[0x1C])
-#define FAT32_ROOT_CLUSTER					GET_LE_U32(&fat32_mbr[0x2C])
-#define FAT32_FSINFO_SECTOR					fat32_mbr[0x30]
-#define FAT32_BACKUP_SECTOR					GET_LE_U16(&fat32_mbr[0x32])
-static uint8_t fat32_mbr[512] =
+#define FAT32_RES_SECTORS					GET_LE_U16(&fakefat32_mbr[0x0E])
+#define FAT32_FAT_NUM						fakefat32_mbr[0x10]
+#define FAT32_HIDDEN_SECTORS				GET_LE_U32(&fakefat32_mbr[0x1C])
+#define FAT32_ROOT_CLUSTER					GET_LE_U32(&fakefat32_mbr[0x2C])
+#define FAT32_FSINFO_SECTOR					fakefat32_mbr[0x30]
+#define FAT32_BACKUP_SECTOR					GET_LE_U16(&fakefat32_mbr[0x32])
+
+#ifdef VSFCFG_STANDALONE_MODULE
+static const uint8_t fakefat32_mbr_const[512] =
+#else
+static uint8_t fakefat32_mbr[512] =
+#endif
 {
 //00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F
 0xEB,0x58,0x90,0x4D,0x53,0x44,0x4F,0x53,0x35,0x2E,0x30,0x00,0x00,0x00,0x10,0x00,
@@ -642,7 +644,7 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // fs
-vsf_err_t fakefat32_fs_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t fakefat32_fs_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
 	struct fakefat32_param_t *param = (struct fakefat32_param_t *)pt->user_data;
@@ -656,7 +658,7 @@ vsf_err_t fakefat32_fs_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return fakefat32_init(param, param->root, &cur_cluster);
 }
 
-vsf_err_t fakefat32_getchild_byname(struct vsfsm_pt_t *pt,
+static vsf_err_t fakefat32_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
@@ -670,7 +672,7 @@ vsf_err_t fakefat32_getchild_byname(struct vsfsm_pt_t *pt,
 	return vsfile_memfs_op.d_op.getchild_byname(pt, evt, dir, name, file);
 }
 
-vsf_err_t fakefat32_getchild_byidx(struct vsfsm_pt_t *pt,
+static vsf_err_t fakefat32_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
@@ -684,29 +686,13 @@ vsf_err_t fakefat32_getchild_byidx(struct vsfsm_pt_t *pt,
 	return vsfile_memfs_op.d_op.getchild_byidx(pt, evt, dir, idx, file);
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
-const struct vsfile_fsop_t fakefat32_fs_op =
-{
-	// mount / unmount
-	.mount = fakefat32_fs_mount,
-	.unmount = vsfile_dummy_unmount,
-	// f_op
-	.f_op.close = vsfile_dummy_close,
-	.f_op.read = vsfile_memfs_read,
-	.f_op.write = vsfile_memfs_write,
-	// d_op
-	.d_op.getchild_byname = fakefat32_getchild_byname,
-	.d_op.getchild_byidx = fakefat32_getchild_byidx,
-};
-#endif
-
-uint32_t fakefat32_mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
+static uint32_t fakefat32_mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
 										uint32_t size, enum vsfmal_op_t op)
 {
 	return mal->cap.block_size;
 }
 
-vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t*)pt->user_data;
 	struct fakefat32_param_t *param = (struct fakefat32_param_t *)mal->param;
@@ -717,12 +703,12 @@ vsf_err_t fakefat32_mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-vsf_err_t fakefat32_mal_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t fakefat32_mal_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	return VSFERR_NONE;
 }
 
-vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 									uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
@@ -777,7 +763,7 @@ vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		((FAT32_HIDDEN_SECTORS + FAT32_BACKUP_SECTOR) == block_addr))
 	{
 		// MBR
-		memcpy(buff, fat32_mbr, sizeof(fat32_mbr));
+		memcpy(buff, fakefat32_mbr, sizeof(fakefat32_mbr));
 
 		// Sector size in bytes
 		SET_LE_U16(&buff[0x0B], param->sector_size);
@@ -925,7 +911,7 @@ vsf_err_t fakefat32_mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 									uint64_t addr, uint8_t *buff, uint32_t size)
 {
 	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
@@ -950,7 +936,7 @@ vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		if ((FAT32_HIDDEN_SECTORS == block_addr) ||
 			((FAT32_HIDDEN_SECTORS + FAT32_BACKUP_SECTOR) == block_addr))
 		{
-			memcpy(fat32_mbr, buff, sizeof(fat32_mbr));
+			memcpy(fakefat32_mbr, buff, sizeof(fakefat32_mbr));
 		}
 		return VSFERR_NONE;
 	}
@@ -978,14 +964,57 @@ vsf_err_t fakefat32_mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-#ifndef VSFCFG_STANDALONE_MODULE
+#ifdef VSFCFG_STANDALONE_MODULE
+void fakefat32_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
+
+vsf_err_t fakefat32_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct fakefat32_modifs_t *ifs;
+	ifs = vsf_bufmgr_malloc(sizeof(struct fakefat32_modifs_t));
+	if (!ifs) return VSFERR_FAIL;
+	memset(ifs, 0, sizeof(*ifs));
+
+	ifs->fs_op.mount = fakefat32_fs_mount;
+	ifs->fs_op.unmount = vsfile_dummy_unmount;
+	ifs->fs_op.f_op.close = vsfile_dummy_close;
+	ifs->fs_op.f_op.read = vsfile_memfs_op.f_op.read;
+	ifs->fs_op.f_op.write = vsfile_memfs_op.f_op.write;
+	ifs->fs_op.d_op.getchild_byname = fakefat32_getchild_byname;
+	ifs->fs_op.d_op.getchild_byidx = fakefat32_getchild_byidx;
+	ifs->mal_drv.block_size = fakefat32_mal_blocksize;
+	ifs->mal_drv.init = fakefat32_mal_init;
+	ifs->mal_drv.fini = fakefat32_mal_fini;
+	ifs->mal_drv.read = fakefat32_mal_read;
+	ifs->mal_drv.write = fakefat32_mal_write;
+	memcpy(ifs->mbr, fakefat32_mbr_const, sizeof(ifs->mbr));
+	module->ifs = ifs;
+	return VSFERR_NONE;
+}
+#else
+const struct vsfile_fsop_t fakefat32_fs_op =
+{
+	// mount / unmount
+	.mount = fakefat32_fs_mount,
+	.unmount = vsfile_dummy_unmount,
+	// f_op
+	.f_op.close = vsfile_dummy_close,
+	.f_op.read = vsfile_memfs_read,
+	.f_op.write = vsfile_memfs_write,
+	// d_op
+	.d_op.getchild_byname = fakefat32_getchild_byname,
+	.d_op.getchild_byidx = fakefat32_getchild_byidx,
+};
+
 const struct vsfmal_drv_t fakefat32_mal_drv =
 {
 	.block_size = fakefat32_mal_blocksize,
 	.init = fakefat32_mal_init,
 	.fini = fakefat32_mal_fini,
-	.erase_all = NULL,
-	.erase = NULL,
 	.read = fakefat32_mal_read,
 	.write = fakefat32_mal_write,
 };
