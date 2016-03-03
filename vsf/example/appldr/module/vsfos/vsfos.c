@@ -18,9 +18,6 @@
  ***************************************************************************/
 #include "vsf.h"
 
-#include "fakefat32_fs.h"
-#include "usbd_desc.h"
-
 #define VSFOSCFG_VSFSM_PENDSVQ_LEN				16
 #define VSFOSCFG_VSFTIMER_NUM					16
 
@@ -128,6 +125,10 @@ struct vsfos_modifs_t
 			((struct vsfos_modifs_t *)vsf_module_load(VSFOS_MODNAME))
 #define USB_descriptors						VSFOS_MOD->usbd.desc
 #define fakefat32_root_dir					VSFOS_MOD->fakefat32_fs.root_dir
+
+#include "fakefat32_fs.h"
+#include "usbd_desc.h"
+#include "vsfos_busybox.h"
 
 // event queue
 static void vsfos_pendsv_activate(struct vsfsm_evtq_t *q)
@@ -284,6 +285,7 @@ static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfscsi_init(&ifs->mal.scsi_dev);
 	vsfusbd_device_init(&ifs->usbd.device);
 	vsfshell_init(&ifs->shell);
+	vsfos_busybox_init();
 
 	if (ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
 	{

@@ -16,27 +16,10 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "vsf.h"
-#include "app_hw_cfg.h"
 
-// dummy main, make compiler happy
-int main(void)
-{
-	return 0;
-}
+#ifndef __VSFOS_BUSYBOX_H_INCLUDED__
+#define __VSFOS_BUSYBOX_H_INCLUDED__
 
-ROOTFUNC void module_exit(struct vsf_module_t *module)
-{
-	MODULE_EXIT(module);
-}
+vsf_err_t vsfos_busybox_init(void);
 
-ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
-							struct app_hwcfg_t const *hwcfg)
-{
-	// check api version
-	if (api_ver != VSF_API_VERSION)
-	{
-		return VSFERR_NOT_SUPPORT;
-	}
-	return MODULE_INIT(module, hwcfg);
-}
+#endif	// __VSFOS_BUSYBOX_H_INCLUDED__
