@@ -30,7 +30,7 @@
         <option>
           <name>Variant</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -65,7 +65,7 @@
         </option>
         <option>
           <name>OGCoreOrChip</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelect</name>
@@ -83,7 +83,7 @@
         </option>
         <option>
           <name>OGProductVersion</name>
-          <state>5.10.0.159</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
@@ -99,7 +99,7 @@
         </option>
         <option>
           <name>OGChipSelectEditMenu</name>
-          <state>STM32F103xE	ST STM32F103xE</state>
+          <state>STM32F103x8	ST STM32F103x8</state>
         </option>
         <option>
           <name>GenLowLevelInterface</name>
@@ -111,7 +111,7 @@
         </option>
         <option>
           <name>OGBufferedTerminalOutput</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>GenStdoutInterface</name>
@@ -138,12 +138,12 @@
         <option>
           <name>GFPUCoreSlave</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -172,7 +172,10 @@
         </option>
         <option>
           <name>CCDefines</name>
-          <state></state>
+          <state>VSF_STANDALONE_MODULE</state>
+          <state>MODULE_NAME="vsf.os"</state>
+          <state>MODULE_INIT=vsfos_modinit</state>
+          <state>MODULE_EXIT=vsfos_modexit</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -233,7 +236,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>11111110</state>
+          <state>00000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -327,7 +330,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -336,7 +339,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>1</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -354,7 +357,7 @@
         </option>
         <option>
           <name>CCPosIndRwpi</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPosIndNoDynInit</name>
@@ -469,9 +472,8 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state>VSF_APP_BASE=0x00000000</state>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="app"</state>
+          <state>MODULE_NAME="vsf.os"</state>
         </option>
         <option>
           <name>AList</name>
@@ -980,7 +982,7 @@
         <option>
           <name>Variant</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>GEndianMode</name>
@@ -1015,29 +1017,29 @@
         </option>
         <option>
           <name>OGCoreOrChip</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelect</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelectSlave</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>RTDescription</name>
-          <state>Use the full configuration of the C/C++ runtime library. Full locale interface, C locale, file descriptor support, multibytes in printf and scanf, and hex floats in strtod.</state>
+          <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
         </option>
         <option>
           <name>OGProductVersion</name>
-          <state>5.10.0.159</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.10.3.6927</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -1049,11 +1051,11 @@
         </option>
         <option>
           <name>OGChipSelectEditMenu</name>
-          <state>STM32F103xC	ST STM32F103xC</state>
+          <state>STM32F103xB	ST STM32F103xB</state>
         </option>
         <option>
           <name>GenLowLevelInterface</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>GEndianModeBE</name>
@@ -1061,7 +1063,7 @@
         </option>
         <option>
           <name>OGBufferedTerminalOutput</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>GenStdoutInterface</name>
@@ -1083,17 +1085,17 @@
         </option>
         <option>
           <name>RTConfigPath2</name>
-          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Full.h</state>
+          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Normal.h</state>
         </option>
         <option>
           <name>GFPUCoreSlave</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
           <version>21</version>
-          <state>34</state>
+          <state>38</state>
         </option>
         <option>
           <name>OGUseCmsis</name>
@@ -1123,6 +1125,10 @@
         <option>
           <name>CCDefines</name>
           <state>NDEBUG</state>
+          <state>VSF_STANDALONE_MODULE</state>
+          <state>MODULE_NAME="vsf.os"</state>
+          <state>MODULE_INIT=vsfos_modinit</state>
+          <state>MODULE_EXIT=vsfos_modexit</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1419,7 +1425,8 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state></state>
+          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_NAME="vsf.os"</state>
         </option>
         <option>
           <name>AList</name>
@@ -1541,7 +1548,7 @@
         <option>
           <name>OOCOutputFormat</name>
           <version>2</version>
-          <state>2</state>
+          <state>3</state>
         </option>
         <option>
           <name>OCOutputOverride</name>
@@ -1549,7 +1556,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>demo.bin</state>
+          <state>demo.sim</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -1922,21 +1929,6 @@
       </group>
     </group>
   </group>
-  <group>
-    <name>vsf_cfg</name>
-    <file>
-      <name>$PROJ_DIR$\vsf_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
-    </file>
-  </group>
-  <file>
-    <name>$PROJ_DIR$\..\..\module\app\app.c</name>
-  </file>
   <file>
     <name>$PROJ_DIR$\app_cfg.h</name>
   </file>
@@ -1947,7 +1939,13 @@
     <name>$PROJ_DIR$\interfaces_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\vsf_undef.h</name>
+    <name>$PROJ_DIR$\..\..\module\modmain.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\vsf_cfg.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\module\vsfos\vsfsys.c</name>
   </file>
 </project>
 

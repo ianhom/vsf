@@ -143,6 +143,7 @@ succeed:
 		return module->ifs;
 	}
 fail:
+	while (1);
 	return NULL;
 }
 #endif		// VSFCFG_MODULE

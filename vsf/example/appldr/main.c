@@ -33,61 +33,36 @@ const struct app_hwcfg_t app_hwcfg =
 
 struct vsfapp_t
 {
-	struct vsf_module_t bootloader;
 	uint8_t bufmgr_buffer[APPCFG_BUFMGR_SIZE];
-} static app =
-{
-	.bootloader.flash = (struct vsf_module_info_t *)APPCFG_BOOTLOADER_ADDR,
-};
+} static app;
 
 void main(void)
 {
 	struct vsf_module_t *module;
-	uint32_t module_base = APPCFG_MODULES_ADDR;
-	uint32_t *flash = (uint32_t *)module_base;
-	uint32_t *module_ptr;
+	struct vsf_module_info_t *minfo =
+						(struct vsf_module_info_t *)APPCFG_MODULES_ADDR;
 
 	vsf_enter_critical();
 	vsfhal_core_init(NULL);
 	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 
-	// initialize modules
-	module_ptr = (uint32_t *)(app.bootloader.flash);
-	if (*module_ptr != 0xFFFFFFFF)
+	// register modules
+	while (minfo->entry != 0xFFFFFFFF)
 	{
-		vsf_module_register(&app.bootloader);
-	}
-
-	while (*flash != 0xFFFFFFFF)
-	{
-		module_ptr = (uint32_t *)(module_base + *flash);
-		if (*module_ptr != 0xFFFFFFFF)
+		module = vsf_bufmgr_malloc(sizeof(struct vsf_module_t));
+		if (NULL == module)
 		{
-			module = vsf_bufmgr_malloc(sizeof(struct vsf_module_t));
-			if (NULL == module)
-			{
-				break;
-			}
-
-			module->flash = (struct vsf_module_info_t *)module_ptr;
-			vsf_module_register(module);
+			break;
 		}
-		flash++;
+
+		module->flash = minfo;
+		// APPCFG_MODULES_GRANULARITY aligned and leave one more empty block
+		minfo = (struct vsf_module_info_t *)((uint8_t *)minfo +\
+			((minfo->size + (1 << APPCFG_MODULES_GRANULARITY) - 1) &\
+				(1 << APPCFG_MODULES_GRANULARITY)));
+		vsf_module_register(module);
 	}
 
-	vsfhal_gpio_init(app_hwcfg.key.port);
-	vsfhal_gpio_config_pin(app_hwcfg.key.port, app_hwcfg.key.port, GPIO_INPU);
-
-	// run bootloader if key pressed OR app load fail
-	if (!vsfhal_gpio_get(app_hwcfg.key.port, 1 << app_hwcfg.key.pin) ||
-		vsf_module_load("app"))
-	{
-		vsf_module_load("bootloader");
-	}
-
-	while (1)
-	{
-		// remove for debug
-//		vsfhal_core_sleep(SLEEP_WFI);
-	}
+	vsf_module_load("vsf.os");
+	// vsfsys module SHALL never return;
 }

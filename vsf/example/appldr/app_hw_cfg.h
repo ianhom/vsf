@@ -25,11 +25,7 @@
 struct app_hwcfg_t
 {
 	char *board;
-	struct
-	{
-		uint8_t port;
-		uint8_t pin;
-	} key;
+	struct interface_gpio_pin_t key;
 	struct
 	{
 		struct interface_gpio_pin_t pullup;
