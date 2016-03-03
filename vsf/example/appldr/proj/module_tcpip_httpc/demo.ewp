@@ -1985,9 +1985,6 @@
   <file>
     <name>$PROJ_DIR$\vsf_cfg.h</name>
   </file>
-  <file>
-    <name>$PROJ_DIR$\vsf_undef.h</name>
-  </file>
 </project>
 
 

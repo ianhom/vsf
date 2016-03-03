@@ -186,9 +186,9 @@
         <option>
           <name>CCDefines</name>
           <state>VSF_STANDALONE_MODULE</state>
-          <state>MODULE_NAME="vsf.stack.usb.host.hub"</state>
-          <state>MODULE_INIT=vsfusbh_hub_modinit</state>
-          <state>MODULE_EXIT=vsfusbh_hub_modexit</state>
+          <state>MODULE_NAME="vsf.stack.usb.host.uvc"</state>
+          <state>MODULE_INIT=vsfusbh_uvc_modinit</state>
+          <state>MODULE_EXIT=vsfusbh_uvc_modexit</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -486,7 +486,7 @@
         <option>
           <name>ADefines</name>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="vsf.stack.usb.host.hub"</state>
+          <state>MODULE_NAME="vsf.stack.usb.host.uvc"</state>
         </option>
         <option>
           <name>AList</name>
@@ -1152,9 +1152,9 @@
           <name>CCDefines</name>
           <state>NDEBUG</state>
           <state>VSF_STANDALONE_MODULE</state>
-          <state>MODULE_NAME="vsf.stack.usb.host.hub"</state>
-          <state>MODULE_INIT=vsfusbh_hub_modinit</state>
-          <state>MODULE_EXIT=vsfusbh_hub_modexit</state>
+          <state>MODULE_NAME="vsf.stack.usb.host.uvc"</state>
+          <state>MODULE_INIT=vsfusbh_uvc_modinit</state>
+          <state>MODULE_EXIT=vsfusbh_uvc_modexit</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1452,7 +1452,7 @@
         <option>
           <name>ADefines</name>
           <state>MODULE_SIZE=0x1000</state>
-          <state>MODULE_NAME="vsf.stack.usb.host.hub"</state>
+          <state>MODULE_NAME="vsf.stack.usb.host.uvc"</state>
         </option>
         <option>
           <name>AList</name>
@@ -1987,9 +1987,6 @@
   </file>
   <file>
     <name>$PROJ_DIR$\vsf_cfg.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\vsf_undef.h</name>
   </file>
 </project>
 
