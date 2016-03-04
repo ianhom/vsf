@@ -59,10 +59,10 @@ void main(void)
 		// APPCFG_MODULES_GRANULARITY aligned and leave one more empty block
 		minfo = (struct vsf_module_info_t *)((uint8_t *)minfo +\
 			((minfo->size + (1 << APPCFG_MODULES_GRANULARITY) - 1) &\
-				(1 << APPCFG_MODULES_GRANULARITY)));
+				~((1 << APPCFG_MODULES_GRANULARITY) - 1)));
 		vsf_module_register(module);
 	}
 
 	vsf_module_load("vsf.os");
-	// vsfsys module SHALL never return;
+	// vsfos module SHALL never return;
 }
