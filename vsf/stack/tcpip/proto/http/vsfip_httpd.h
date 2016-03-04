@@ -38,6 +38,7 @@ enum vsfip_httpd_post_type
 	VSFIP_HTTPD_TYPE_XWWW,
 	VSFIP_HTTPD_TYPE_MUTIFORM,
 	VSFIP_HTTPD_TYPE_HTML,
+	VSFIP_HTTPD_TYPE_HTM,
 	VSFIP_HTTPD_TYPE_JPG,
 	VSFIP_HTTPD_TYPE_TXT,
 	VSFIP_HTTPD_TYPE_XML,
@@ -127,7 +128,7 @@ struct vsfip_httpd_t
 #endif
 };
 
-#define VSFIP_HTTPD_SUPPORTTYPECNT			8
+#define VSFIP_HTTPD_SUPPORTTYPECNT			9
 struct vsfip_http_contenttype_t
 {
 	uint8_t type;

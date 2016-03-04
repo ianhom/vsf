@@ -478,8 +478,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			// create msc_root and httpd_root under root
 			app.caller_pt.state = 0;
 			vsfile_addfile(&app.caller_pt, 0, NULL, "msc_root", VSFILE_ATTR_DIRECTORY);
-			app.caller_pt.state = 0;
-			vsfile_addfile(&app.caller_pt, 0, NULL, "httpd_root", VSFILE_ATTR_DIRECTORY);
 
 			// mount fakefat32 under /msc_root
 			app.caller_pt.state = 0;

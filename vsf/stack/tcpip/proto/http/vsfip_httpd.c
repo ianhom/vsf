@@ -47,7 +47,8 @@ static const struct vsfip_http_contenttype_t\
 {
 	{VSFIP_HTTPD_TYPE_MUTIFORM, "multipart/form-data", " "},
 	{VSFIP_HTTPD_TYPE_XWWW, "application/x-www-form-urlencoded", " "},
-	{VSFIP_HTTPD_TYPE_HTML, "text/html", "htm"},
+	{VSFIP_HTTPD_TYPE_HTM, "text/html", "htm"},
+	{VSFIP_HTTPD_TYPE_HTML, "text/html", "html"},
 	{VSFIP_HTTPD_TYPE_JPG, "image/jpeg", "jpg"},
 	{VSFIP_HTTPD_TYPE_TXT, "text/plain", "txt"},
 	{VSFIP_HTTPD_TYPE_XML, "text/xml", "xml"},
@@ -684,30 +685,15 @@ vsf_err_t vsfip_httpd_modinit(struct vsf_module_t *module,
 	ifs->http404.file.attr = VSFILE_ATTR_READONLY;
 	ifs->http404.file.op = (struct vsfile_fsop_t *)&vsfile_memfs_op;
 	ifs->http404.f.buff = "HTTP/1.0 404 Not Found\r\n\r\nNot Found";
-	ifs->supporttype[0].type = VSFIP_HTTPD_TYPE_MUTIFORM;
-	ifs->supporttype[0].str = "multipart/form-data";
-	ifs->supporttype[0].ext = " ";
-	ifs->supporttype[1].type = VSFIP_HTTPD_TYPE_XWWW;
-	ifs->supporttype[1].str = "application/x-www-form-urlencoded";
-	ifs->supporttype[1].ext = " ";
-	ifs->supporttype[2].type = VSFIP_HTTPD_TYPE_HTML;
-	ifs->supporttype[2].str = "text/html";
-	ifs->supporttype[2].ext = "htm";
-	ifs->supporttype[3].type = VSFIP_HTTPD_TYPE_JPG;
-	ifs->supporttype[3].str = "image/jpeg";
-	ifs->supporttype[3].ext = "jpg";
-	ifs->supporttype[4].type = VSFIP_HTTPD_TYPE_TXT;
-	ifs->supporttype[4].str = "text/plain";
-	ifs->supporttype[4].ext = "txt";
-	ifs->supporttype[5].type = VSFIP_HTTPD_TYPE_XML;
-	ifs->supporttype[5].str = "text/xml";
-	ifs->supporttype[5].ext = "xml";
-	ifs->supporttype[6].type = VSFIP_HTTPD_TYPE_JS;
-	ifs->supporttype[6].str = "application/x-javascript";
-	ifs->supporttype[6].ext = "js";
-	ifs->supporttype[7].type = VSFIP_HTTPD_TYPE_UNKNOW;
-	ifs->supporttype[7].str = "application/octet-stream";
-	ifs->supporttype[7].ext = " ";
+	ifs->supporttype[0] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_MUTIFORM, "multipart/form-data", " "};
+	ifs->supporttype[1] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_XWWW, "application/x-www-form-urlencoded", " "};
+	ifs->supporttype[2] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_HTM, "text/html", "htm"};
+	ifs->supporttype[3] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_HTML, "text/html", "html"};
+	ifs->supporttype[4] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_JPG, "image/jpeg", "jpg"};
+	ifs->supporttype[5] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_TXT, "text/plain", "txt"};
+	ifs->supporttype[6] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_XML, "text/xml", "xml"};
+	ifs->supporttype[7] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_JS, "application/x-javascript", "js"};
+	ifs->supporttype[8] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_UNKNOW, "application/octet-stream", " "};
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }
