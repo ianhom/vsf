@@ -75,21 +75,6 @@ void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact)
 }
 
 // mal2scsi
-static void vsf_mal2scsi_malstream_on_write_finish(void *param)
-{
-	struct vsfscsi_transact_t *transact = (struct vsfscsi_transact_t *)param;
-	transact->lun = NULL;
-}
-
-static void vsf_mal2scsi_bufstream_on_out(void *param)
-{
-	struct vsfscsi_transact_t *transact = (struct vsfscsi_transact_t *)param;
-	if (!stream_get_data_size(transact->stream))
-	{
-		transact->lun = NULL;
-	}
-}
-
 static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 									uint32_t size, bool write, bool bufstream)
 {
@@ -116,7 +101,7 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		bufstream->mem.read = true;
 		stream->op = &bufstream_op;
 		stream->callback_tx.param = transact;
-		stream->callback_tx.on_inout = vsf_mal2scsi_bufstream_on_out;
+		stream->callback_tx.on_inout = NULL;
 		stream->callback_tx.on_connect = NULL;
 		stream->callback_tx.on_disconnect = NULL;
 		stream_init(stream);
@@ -132,8 +117,7 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		mbufstream->mem.multibuf.buffer_list = mal2scsi->multibuf.buffer_list;
 		mbufstream->mem.multibuf.count = mal2scsi->multibuf.count;
 		mal2scsi->malstream.cb.param = transact;
-		mal2scsi->malstream.cb.on_finish = write ?
-							vsf_mal2scsi_malstream_on_write_finish : NULL;
+		mal2scsi->malstream.cb.on_finish = NULL;
 		stream->op = &mbufstream_op;
 		stream_init(stream);
 		transact->stream = stream;
