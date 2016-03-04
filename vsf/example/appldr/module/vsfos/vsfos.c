@@ -120,11 +120,6 @@ struct vsfos_modifs_t
 	struct vsfile_t *file;
 	struct vsfsm_pt_t caller_pt;
 };
-#define VSFOS_MODNAME						"vsf.os"
-#define VSFOS_MOD							\
-			((struct vsfos_modifs_t *)vsf_module_load(VSFOS_MODNAME))
-#define USB_descriptors						VSFOS_MOD->usbd.desc
-#define fakefat32_root_dir					VSFOS_MOD->fakefat32_fs.root_dir
 
 #include "fakefat32_fs.h"
 #include "usbd_desc.h"
@@ -351,15 +346,7 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->vsftimer_memop.alloc = vsftimer_memop_alloc;
 	ifs->vsftimer_memop.free = vsftimer_memop_free;
 
-	// init fakefat32
-	ifs->mal.fakefat32.sector_size = 512;
-	ifs->mal.fakefat32.sector_number = 0x1000;
-	ifs->mal.fakefat32.sectors_per_cluster = 8;
-	ifs->mal.fakefat32.volume_id = 0xDEADBEEF;
-	ifs->mal.fakefat32.disk_id = 0xBABECAFE;
-	ifs->mal.fakefat32.root[0].memfile.file.name = "ROOT";
-	ifs->mal.fakefat32.root[0].memfile.d.child = (struct vsfile_memfile_t *)fakefat32_root_dir,
-
+	// init fakefat32_fs
 	ifs->fakefat32_fs.Windows_dir[0].memfile.file.name = ".";
 	ifs->fakefat32_fs.Windows_dir[0].memfile.file.attr = VSFILE_ATTR_DIRECTORY;
 	ifs->fakefat32_fs.Windows_dir[1].memfile.file.name = "..";
@@ -418,6 +405,15 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->fakefat32_fs.root_dir[4].memfile.file.name = "Driver";
 	ifs->fakefat32_fs.root_dir[4].memfile.file.attr = VSFILE_ATTR_DIRECTORY;
 	ifs->fakefat32_fs.root_dir[4].memfile.d.child = (struct vsfile_memfile_t *)ifs->fakefat32_fs.Driver_dir;
+
+	// init fakefat32
+	ifs->mal.fakefat32.sector_size = 512;
+	ifs->mal.fakefat32.sector_number = 0x1000;
+	ifs->mal.fakefat32.sectors_per_cluster = 8;
+	ifs->mal.fakefat32.volume_id = 0xDEADBEEF;
+	ifs->mal.fakefat32.disk_id = 0xBABECAFE;
+	ifs->mal.fakefat32.root[0].memfile.file.name = "ROOT";
+	ifs->mal.fakefat32.root[0].memfile.d.child = (struct vsfile_memfile_t *)ifs->fakefat32_fs.root_dir,
 
 	// init mal
 	ifs->mal.mal.drv = &fakefat32_mal_drv;
@@ -508,7 +504,7 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->usbd.config[0].iface = ifs->usbd.ifaces;
 	ifs->usbd.device.num_of_configuration = dimof(ifs->usbd.config);
 	ifs->usbd.device.config = ifs->usbd.config;
-	ifs->usbd.device.desc_filter = (struct vsfusbd_desc_filter_t *)USB_descriptors;
+	ifs->usbd.device.desc_filter = ifs->usbd.desc;
 	ifs->usbd.device.device_class_iface = 0;
 	ifs->usbd.device.drv = (struct interface_usbd_t *)&core_interfaces.usbd;
 	ifs->usbd.device.int_priority = 0x01;
