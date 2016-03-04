@@ -280,7 +280,7 @@ static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfscsi_init(&ifs->mal.scsi_dev);
 	vsfusbd_device_init(&ifs->usbd.device);
 	vsfshell_init(&ifs->shell);
-	vsfos_busybox_init();
+	vsfos_busybox_init(&ifs->shell);
 
 	if (ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
 	{

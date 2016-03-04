@@ -20,6 +20,6 @@
 #ifndef __VSFOS_BUSYBOX_H_INCLUDED__
 #define __VSFOS_BUSYBOX_H_INCLUDED__
 
-vsf_err_t vsfos_busybox_init(void);
+vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell);
 
 #endif	// __VSFOS_BUSYBOX_H_INCLUDED__
