@@ -55,8 +55,8 @@ vsf_err_t vsfusbd_CDCACM_modinit(struct vsf_module_t*, struct app_hwcfg_t const*
 
 #define VSFUSBD_CDCACMMOD					\
 	((struct vsfusbd_CDCACM_modifs_t *)vsf_module_load(VSFUSBD_CDCACM_MODNAME))
-#define vsfusbd_CDCACMControl_class			VSFUSBD_CDCMOD->control_protocol
-#define vsfusbd_CDCACMData_class			VSFUSBD_CDCMOD->data_protocol
+#define vsfusbd_CDCACMControl_class			VSFUSBD_CDCACMMOD->control_protocol
+#define vsfusbd_CDCACMData_class			VSFUSBD_CDCACMMOD->data_protocol
 
 #else
 extern const struct vsfusbd_class_protocol_t vsfusbd_CDCACMControl_class;
