@@ -136,7 +136,7 @@ struct vsfapp_t
 			uint8_t txbuff[65];
 			uint8_t rxbuff[65];
 		} telnetd;
-		
+
 		struct
 		{
 			struct vsfip_httpd_t httpd;
@@ -396,29 +396,29 @@ vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	if (type != VSFIP_HTTPD_TYPE_XWWW)
 		goto loginfail;
-	
+
 	//set a str end maybe danger overmem
 	buf[size] = '\0';
-	
+
 	//postdat is xwww type
 	user = vsfip_http_getpostvaluebyname(buf, "user", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->user, user, tmpsize);
-	
+
 	pass = vsfip_http_getpostvaluebyname(buf, "pass", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->pass, pass, tmpsize);
-	
+
 	*rspfilename = "loginsuccess.htm";
 	param->islogin = true;
 	param->rsp = true;
 	return VSFERR_NONE;
-	
+
 loginfail:
 	*rspfilename = "loginfail.htm";
-	
+
 	param->rsp = false;
 	return VSFERR_NONE;
 }
@@ -437,13 +437,13 @@ vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		if (memcmp(useripaddr->addr.s_addr_buf, param->userip.addr.s_addr_buf, param->userip.size) == 0)
 			return VSFERR_NONE;
 	}
-	
+
 	memcpy(&param->userip, useripaddr, sizeof(struct vsfip_ipaddr_t));
-	
+
 	//access to login is vaild
 	if (strcmp(reqfilename, "login") == 0)
 		return VSFERR_NONE;
-	
+
 	*redirectfilename = "login.htm";
 	return VSFERR_NONE;
 }

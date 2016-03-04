@@ -279,7 +279,7 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // memfs
-static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
+vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
 {
@@ -310,7 +310,7 @@ static vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 	}
 }
 
-static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
+vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
 					struct vsfile_t **file)
 {
@@ -338,7 +338,7 @@ static vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 	}
 }
 
-static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize)
 {
@@ -355,7 +355,7 @@ static vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+vsf_err_t vsfile_memfs_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *wsize)
 {
