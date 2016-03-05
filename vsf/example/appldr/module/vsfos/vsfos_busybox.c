@@ -110,7 +110,8 @@ static vsf_err_t vsfos_busybox_lsmod(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	while (lparam->module != NULL)
 	{
-		vsfshell_printf(outpt, "%s" VSFSHELL_LINEEND, lparam->module->flash->name);
+		vsfshell_printf(outpt, "%08X: %s" VSFSHELL_LINEEND,
+				(uint32_t)lparam->module->flash, lparam->module->flash->name);
 		lparam->module = lparam->module->next;
 	}
 
@@ -204,14 +205,42 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		goto end;
 	}
 
-	lparam->local_pt.state = 0;
-	vsfsm_pt_entry(pt);
-	err = vsfile_getfile(&lparam->local_pt, evt, ctx->curfile, param->argv[1],
-							&lparam->file);
-	if (err > 0) return err; else if (err < 0)
+	if (!strcmp(param->argv[1], "."))
 	{
-		vsfshell_printf(outpt, "file not found: %s" VSFSHELL_LINEEND,
-							param->argv[1]);
+		goto end;
+	}
+	else if (!strcmp(param->argv[1], ".."))
+	{
+		if (ctx->curfile == (struct vsfile_t *)&vsfile.rootfs)
+		{
+			goto end;
+		}
+
+		vsfshell_printf(outpt, "not support" VSFSHELL_LINEEND);
+		goto end;
+	}
+	else if (!strcmp(param->argv[1], "/"))
+	{
+		lparam->file = (struct vsfile_t *)&vsfile.rootfs;
+	}
+	else
+	{
+		lparam->local_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfile_getfile(&lparam->local_pt, evt, ctx->curfile,
+								param->argv[1], &lparam->file);
+		if (err > 0) return err; else if (err < 0)
+		{
+			vsfshell_printf(outpt, "file not found: %s" VSFSHELL_LINEEND,
+								param->argv[1]);
+			goto end;
+		}
+	}
+
+	if (!(lparam->file->attr & VSFILE_ATTR_DIRECTORY))
+	{
+		vsfshell_printf(outpt, "%s is not a directory" VSFSHELL_LINEEND,
+								param->argv[1]);
 		goto end;
 	}
 
@@ -223,6 +252,20 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	ctx->curfile = lparam->file;
 end:
+	vsfshell_handler_exit(pt);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsfos_busybox_pwd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+
+	vsfsm_pt_begin(pt);
+	vsfshell_printf(outpt, "%s" VSFSHELL_LINEEND, ctx->curfile->name);
 	vsfshell_handler_exit(pt);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -385,6 +428,7 @@ vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell)
 	{
 		handlers[idx++] = (struct vsfshell_handler_t){"ls", vsfos_busybox_ls, ctx};
 		handlers[idx++] = (struct vsfshell_handler_t){"cd", vsfos_busybox_cd, ctx};
+		handlers[idx++] = (struct vsfshell_handler_t){"pwd", vsfos_busybox_pwd, ctx};
 		handlers[idx++] = (struct vsfshell_handler_t){"mkdir", vsfos_busybox_mkdir, ctx};
 		handlers[idx++] = (struct vsfshell_handler_t){"rmdir", vsfos_busybox_rmdir, ctx};
 		handlers[idx++] = (struct vsfshell_handler_t){"rm", vsfos_busybox_rm, ctx};

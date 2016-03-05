@@ -2,10 +2,10 @@
 /*-Editor annotation file-*/
 /* IcfEditorFile="$TOOLKIT_DIR$\config\ide\IcfEditor\cortex_v1_0.xml" */
 /*-Specials-*/
-define symbol __ICFEDIT_entry_start__ = 0x08009000;
+define symbol __ICFEDIT_entry_start__ = 0x00000000;
 /*-Memory Regions-*/
-define symbol __ICFEDIT_region_ROM_start__ = 0x08009000;
-define symbol __ICFEDIT_region_ROM_end__   = 0x080FFFFF;
+define symbol __ICFEDIT_region_ROM_start__ = 0x00000000;
+define symbol __ICFEDIT_region_ROM_end__   = 0x000FFFFF;
 /*-Sizes-*/
 /**** End of ICF editor section. ###ICF###*/
 
