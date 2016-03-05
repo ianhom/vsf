@@ -23,17 +23,6 @@
 #undef vsfshell_register_handlers
 #undef vsfshell_free_handler_thread
 
-enum vsfshell_EVT_t
-{
-	VSFSHELL_EVT_STREAMRX_ONIN = VSFSM_EVT_USER_LOCAL + 0,
-	VSFSHELL_EVT_STREAMTX_ONOUT = VSFSM_EVT_USER_LOCAL + 1,
-	VSFSHELL_EVT_STREAMRX_ONCONN = VSFSM_EVT_USER_LOCAL + 2,
-	VSFSHELL_EVT_STREAMTX_ONCONN = VSFSM_EVT_USER_LOCAL + 3,
-	
-	VSFSHELL_EVT_OUTPUT_CRIT_AVAIL = VSFSM_EVT_USER_LOCAL_INSTANT + 0,
-	VSFSHELL_EVT_USER = VSFSM_EVT_USER_LOCAL_INSTANT + 1,
-};
-
 static void vsfshell_streamrx_on_in(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
@@ -281,11 +270,10 @@ vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 	struct vsfshell_handler_param_t *param =
 		(struct vsfshell_handler_param_t *)vsf_bufmgr_malloc(sizeof(*param));
 	struct vsfshell_handler_t *handler;
-	vsf_err_t err = VSFERR_NONE;
 	
 	if (NULL == param)
 	{
-		goto exit;
+		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
 	memset(param, 0, sizeof(*param));
 	param->shell = shell;
@@ -314,13 +302,10 @@ vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 	
 	shell->input_sm = &param->sm;
 	vsfsm_pt_init(&param->sm, &param->pt);
-	goto exit;
-	
+	return VSFERR_NONE;
 exit_free_argv:
 	vsfshell_free_param(param);
-	err = VSFERR_FAIL;
-exit:
-	return err;
+	return VSFERR_FAIL;
 }
 
 void vsfshell_free_handler_thread(struct vsfshell_t *shell, struct vsfsm_t *sm)
@@ -360,7 +345,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	while (1)
 	{
 		vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMRX_ONIN);
-		do
+		while (1)
 		{
 			buffer.buffer = (uint8_t *)&shell->ch;
 			buffer.size = 1;
@@ -407,21 +392,27 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 						vsfshell_printf(output_pt,
 							"Fail to execute : %s" VSFSHELL_LINEEND, cmd);
 						vsfshell_printf(output_pt, VSFSHELL_PROMPT);
+						shell->tbuffer.position = 0;
+						shell->prompted = true;
 					}
-					shell->tbuffer.position = 0;
+					else
+					{
+						shell->tbuffer.position = 0;
+						shell->prompted = true;
+						break;
+					}
 				}
 				else
 				{
 					vsfshell_printf(output_pt, VSFSHELL_PROMPT);
+					shell->prompted = true;
 				}
-				shell->prompted = true;
-				break;
 			}
 			else if (shell->ch != '\n')
 			{
 				cmd[shell->tbuffer.position++] = shell->ch;
 			}
-		} while (buffer.size > 0);
+		}
 	}
 	vsfsm_pt_end(pt);
 	return VSFERR_NOT_READY;
@@ -476,10 +467,6 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			// pass to shell->input_pt
 			shell->input_pt.thread(&shell->input_pt, evt);
-		}
-		else if (shell->input_sm != NULL)
-		{
-			vsfsm_post_evt(shell->input_sm, evt);
 		}
 		break;
 	case VSFSHELL_EVT_STREAMTX_ONOUT:

@@ -20,6 +20,17 @@
 #ifndef __VSFSHELL_H_INCLUDED__
 #define __VSFSHELL_H_INCLUDED__
 
+enum vsfshell_EVT_t
+{
+	VSFSHELL_EVT_STREAMRX_ONIN = VSFSM_EVT_USER_LOCAL + 0,
+	VSFSHELL_EVT_STREAMTX_ONOUT = VSFSM_EVT_USER_LOCAL + 1,
+	VSFSHELL_EVT_STREAMRX_ONCONN = VSFSM_EVT_USER_LOCAL + 2,
+	VSFSHELL_EVT_STREAMTX_ONCONN = VSFSM_EVT_USER_LOCAL + 3,
+	
+	VSFSHELL_EVT_OUTPUT_CRIT_AVAIL = VSFSM_EVT_USER_LOCAL_INSTANT + 0,
+	VSFSHELL_EVT_USER = VSFSM_EVT_USER_LOCAL_INSTANT + 1,
+};
+
 #define VSFSHELL_HANDLER(name, thread, context)\
 											{(name), (thread), (context), NULL}
 #define VSFSHELL_HANDLER_NONE				VSFSHELL_HANDLER(NULL, NULL, NULL)
@@ -92,26 +103,20 @@ typedef vsf_err_t (*vsfshell_printf_thread_t)(struct vsfsm_pt_t *pt,
 
 // for handlers
 // vsfshell_handler_release_io is called when pt want to run in back-end
-#define vsfshell_handler_release_io(pt)\
+#define vsfshell_handler_release_io(param)\
 	do {\
-		if (((struct vsfshell_handler_param_t *)(pt)->user_data)->shell->input_sm ==\
-				&((struct vsfshell_handler_param_t *)(pt)->user_data)->sm)\
+		if (param->shell->input_sm == &param->sm)\
 		{\
-			vsfshell_printf(&((struct vsfshell_handler_param_t *)(pt)->user_data)->output_pt, VSFSHELL_PROMPT);\
-			((struct vsfshell_handler_param_t *)(pt)->user_data)->shell->input_sm =\
-				&(((struct vsfshell_handler_param_t *)(pt)->user_data))->shell->sm;\
+			vsfshell_printf(&param->output_pt, VSFSHELL_PROMPT);\
+			param->shell->input_sm = &param->shell->sm;\
+			vsfsm_post_evt_pending(&param->shell->sm, VSFSHELL_EVT_STREAMRX_ONIN);\
 		}\
 	} while (0)
 // vsfshell_handler_exit is called when pt exit
-#define vsfshell_handler_exit(pt)\
+#define vsfshell_handler_exit(param)\
 	do {\
-		vsfshell_handler_release_io(pt);\
-		{\
-			struct vsfshell_handler_param_t *param =\
-							(struct vsfshell_handler_param_t *)(pt)->user_data;\
-			struct vsfshell_t *shell = param->shell;\
-			vsfshell_free_handler_thread(shell, &param->sm);\
-		}\
+		vsfshell_handler_release_io(param);\
+		vsfshell_free_handler_thread(param->shell, &param->sm);\
 	} while (0)
 
 #ifdef VSFCFG_STANDALONE_MODULE
