@@ -472,7 +472,8 @@ static vsf_err_t vsfos_busybox_ipconfig(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			"netif%d:"VSFSHELL_LINEEND\
 				"\tmac: %02X:%02X:%02X:%02X:%02X:%02X"VSFSHELL_LINEEND\
 				"\tipaddr: %d.%d.%d.%d"VSFSHELL_LINEEND\
-				"\tnetmask: %d.%d.%d.%d"VSFSHELL_LINEEND,
+				"\tnetmask: %d.%d.%d.%d"VSFSHELL_LINEEND\
+				"\tgateway: %d.%d.%d.%d"VSFSHELL_LINEEND,
 			lparam->i,
 			lparam->netif->macaddr.addr.s_addr_buf[0],
 			lparam->netif->macaddr.addr.s_addr_buf[1],
@@ -487,7 +488,11 @@ static vsf_err_t vsfos_busybox_ipconfig(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			lparam->netif->netmask.addr.s_addr_buf[0],
 			lparam->netif->netmask.addr.s_addr_buf[1],
 			lparam->netif->netmask.addr.s_addr_buf[2],
-			lparam->netif->netmask.addr.s_addr_buf[3]);
+			lparam->netif->netmask.addr.s_addr_buf[3],
+			lparam->netif->gateway.addr.s_addr_buf[0],
+			lparam->netif->gateway.addr.s_addr_buf[1],
+			lparam->netif->gateway.addr.s_addr_buf[2],
+			lparam->netif->gateway.addr.s_addr_buf[3]);
 		lparam->i++;
 		lparam->netif = lparam->netif->next;
 	}
@@ -589,43 +594,57 @@ static vsf_err_t vsfos_busybox_dns(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		struct vsfip_ipaddr_t ip;
 		struct vsfsm_pt_t local_pt;
+		struct vsfip_ipaddr_t *dns_server;
 	} *lparam = (struct vsfos_busybox_dns_t *)ctx->user_buff;
 	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
 
-	if (param->argc != 3)
+	if ((param->argc > 3) || (param->argc < 2))
 	{
-		vsfshell_printf(outpt, "format: %s SERVER DOMAIN"VSFSHELL_LINEEND,
+		vsfshell_printf(outpt, "format: %s DOMAIN [SERVER]"VSFSHELL_LINEEND,
 							param->argv[0]);
 		goto end;
 	}
 
-	err = vsfip_ip4_pton(&lparam->ip, param->argv[1]);
-	if (err < 0)
+	if (param->argc == 3)
 	{
-		vsfshell_printf(outpt, "fail to parse ip address: %s"VSFSHELL_LINEEND,
-							param->argv[1]);
-		goto end;
+		err = vsfip_ip4_pton(&lparam->ip, param->argv[2]);
+		if (err < 0)
+		{
+			vsfshell_printf(outpt,
+						"fail to parse ip address: %s"VSFSHELL_LINEEND,
+							param->argv[2]);
+			goto end;
+		}
+		lparam->dns_server = &lparam->ip;
+	}
+	else
+	{
+		lparam->dns_server = &vsfos->usbd.rndis.param.netif.dns[0];
 	}
 
-	err = vsfip_dnsc_setserver(0, &lparam->ip);
+	err = vsfip_dnsc_setserver(0, lparam->dns_server);
 	if (err < 0)
 	{
-		vsfshell_printf(outpt, "fail to set dns server: %s"VSFSHELL_LINEEND,
-							param->argv[1]);
+		vsfshell_printf(outpt,
+						"fail to set dns server: %d.%d.%d.%d"VSFSHELL_LINEEND,
+							lparam->dns_server->addr.s_addr_buf[0],
+							lparam->dns_server->addr.s_addr_buf[1],
+							lparam->dns_server->addr.s_addr_buf[2],
+							lparam->dns_server->addr.s_addr_buf[3]);
 		goto end;
 	}
 
 	lparam->local_pt.sm = pt->sm;
 	lparam->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_gethostbyname(&lparam->local_pt, evt, param->argv[2],
+	err = vsfip_gethostbyname(&lparam->local_pt, evt, param->argv[1],
 							&lparam->ip);
 	if (err > 0) return err; else if (err < 0)
 	{
 		vsfshell_printf(outpt, "fail to get ip address for: %s"VSFSHELL_LINEEND,
-							param->argv[2]);
+							param->argv[1]);
 		goto end;
 	}
 
