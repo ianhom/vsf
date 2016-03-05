@@ -19,7 +19,7 @@
 #include "vsf.h"
 #include "vsfos.h"
 
-#define VSFOSCFG_HANDLER_NUM				20
+#define VSFOSCFG_HANDLER_NUM				32
 
 struct vsfos_ctx_t
 {
@@ -158,6 +158,7 @@ static vsf_err_t vsfos_busybox_ls(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
+	lparam->local_pt.sm = pt->sm;
 	lparam->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
 	err = vsfile_findfirst(&lparam->local_pt, evt, ctx->curfile, &lparam->file);
@@ -213,6 +214,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 							param->argv[0]);
 		goto end;
 	}
+	lparam->local_pt.sm = pt->sm;
 
 	if (!strcmp(param->argv[1], "."))
 	{
@@ -240,7 +242,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 								param->argv[1], &lparam->file);
 		if (err > 0) return err; else if (err < 0)
 		{
-			vsfshell_printf(outpt, "file not found: %s"VSFSHELL_LINEEND,
+			vsfshell_printf(outpt, "directory not found: %s"VSFSHELL_LINEEND,
 								param->argv[1]);
 			goto end;
 		}
@@ -378,11 +380,17 @@ static vsf_err_t vsfos_busybox_cat(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		goto end;
 	}
 
+	lparam->local_pt.sm = pt->sm;
 	lparam->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
 	err = vsfile_getfile(&lparam->local_pt, evt, ctx->curfile, param->argv[1],
 							&lparam->file);
-	if (err > 0) return err; else if (err < 0) goto end;
+	if (err > 0) return err; else if (err < 0)
+	{
+		vsfshell_printf(outpt, "file not found: %s"VSFSHELL_LINEEND,
+								param->argv[1]);
+		goto end;
+	}
 
 	if (!(lparam->file->attr & VSFILE_ATTR_ARCHIVE))
 	{
@@ -576,9 +584,58 @@ static vsf_err_t vsfos_busybox_dns(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfshell_handler_param_t *param =
 						(struct vsfshell_handler_param_t *)pt->user_data;
 	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_dns_t
+	{
+		struct vsfip_ipaddr_t ip;
+		struct vsfsm_pt_t local_pt;
+	} *lparam = (struct vsfos_busybox_dns_t *)ctx->user_buff;
+	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
+
+	if (param->argc != 3)
+	{
+		vsfshell_printf(outpt, "format: %s SERVER DOMAIN"VSFSHELL_LINEEND,
+							param->argv[0]);
+		goto end;
+	}
+
+	err = vsfip_ip4_pton(&lparam->ip, param->argv[1]);
+	if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to parse ip address: %s"VSFSHELL_LINEEND,
+							param->argv[1]);
+		goto end;
+	}
+
+	err = vsfip_dnsc_setserver(0, &lparam->ip);
+	if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to set dns server: %s"VSFSHELL_LINEEND,
+							param->argv[1]);
+		goto end;
+	}
+
+	lparam->local_pt.sm = pt->sm;
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_gethostbyname(&lparam->local_pt, evt, param->argv[2],
+							&lparam->ip);
+	if (err > 0) return err; else if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to get ip address for: %s"VSFSHELL_LINEEND,
+							param->argv[2]);
+		goto end;
+	}
+
+	vsfshell_printf(outpt, "%d.%d.%d.%d"VSFSHELL_LINEEND,
+							lparam->ip.addr.s_addr_buf[0],
+							lparam->ip.addr.s_addr_buf[1],
+							lparam->ip.addr.s_addr_buf[2],
+							lparam->ip.addr.s_addr_buf[3]);
+
+end:
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -645,6 +702,7 @@ vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell)
 		if (vsf_module_get(VSFIP_DNSC_MODNAME) != NULL)
 		{
 			handlers[idx++] = (struct vsfshell_handler_t){"dns", vsfos_busybox_dns, ctx};
+			vsfip_dnsc_init();
 		}
 	}
 

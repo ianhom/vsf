@@ -34,6 +34,7 @@ struct vsfip_dnsc_local_t
 	uint16_t id;
 	uint8_t try_cnt;
 	struct vsfip_ipaddr_t server[2];
+	int i;
 };
 
 struct vsfip_hostent_t

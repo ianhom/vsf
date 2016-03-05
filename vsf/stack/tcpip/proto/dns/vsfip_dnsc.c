@@ -267,7 +267,6 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							char *domain, struct vsfip_ipaddr_t *domainip)
 {
 	vsf_err_t err;
-	uint8_t i;
 
 	vsfsm_pt_begin(pt);
 
@@ -294,13 +293,13 @@ vsf_err_t vsfip_gethostbyname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	vsfip_dnsc.try_cnt = VSFIP_DNS_TRY_CNT;
 	do
 	{
-		for (i = 0 ; i < dimof(vsfip_dnsc.server) ; i++)
+		for (vsfip_dnsc.i = 0; vsfip_dnsc.i < dimof(vsfip_dnsc.server);
+				vsfip_dnsc.i++)
 		{
 			vsfip_dnsc.dnsaddr.sin_port = VSFIP_DNS_CLIENT_PORT;
-			vsfip_dnsc.dnsaddr.sin_addr = vsfip_dnsc.server[i];
+			vsfip_dnsc.dnsaddr.sin_addr = vsfip_dnsc.server[vsfip_dnsc.i];
 			vsfip_dnsc.socket_pt.state = 0;
-			vsfsm_pt_entry(pt);
-			vsfip_udp_send(NULL, 0, vsfip_dnsc.so, &vsfip_dnsc.dnsaddr,
+			vsfip_udp_async_send(vsfip_dnsc.so, &vsfip_dnsc.dnsaddr,
 						vsfip_dnsc.outbuf);
 
 			// receive
