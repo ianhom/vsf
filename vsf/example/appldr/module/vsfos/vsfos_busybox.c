@@ -44,7 +44,7 @@ static vsf_err_t vsfos_busybox_help(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	while ((lparam->handler != NULL) && (lparam->handler->name != NULL))
 	{
-		vsfshell_printf(outpt, "%s" VSFSHELL_LINEEND, lparam->handler->name);
+		vsfshell_printf(outpt, "%s"VSFSHELL_LINEEND, lparam->handler->name);
 		lparam->handler = lparam->handler->next;
 	}
 
@@ -60,7 +60,7 @@ static vsf_err_t vsfos_busybox_uname(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "%s" VSFSHELL_LINEEND, vsfos->hwcfg->board);
+	vsfshell_printf(outpt, "%s"VSFSHELL_LINEEND, vsfos->hwcfg->board);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -73,7 +73,7 @@ static vsf_err_t vsfos_busybox_free(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -86,7 +86,7 @@ static vsf_err_t vsfos_busybox_top(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -110,7 +110,7 @@ static vsf_err_t vsfos_busybox_lsmod(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	while (lparam->module != NULL)
 	{
-		vsfshell_printf(outpt, "%08X: %s" VSFSHELL_LINEEND,
+		vsfshell_printf(outpt, "%08X: %s"VSFSHELL_LINEEND,
 				(uint32_t)lparam->module->flash, lparam->module->flash->name);
 		lparam->module = lparam->module->next;
 	}
@@ -127,7 +127,7 @@ static vsf_err_t vsfos_busybox_repo(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -165,7 +165,7 @@ static vsf_err_t vsfos_busybox_ls(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	while (lparam->file)
 	{
-		vsfshell_printf(outpt, "%s(%lld):%s" VSFSHELL_LINEEND,
+		vsfshell_printf(outpt, "%s(%lld):%s"VSFSHELL_LINEEND,
 				vsfos_busybox_filetype(lparam->file),
 				lparam->file->size, lparam->file->name);
 
@@ -209,7 +209,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	if (param->argc != 2)
 	{
-		vsfshell_printf(outpt, "format: %s PATH" VSFSHELL_LINEEND,
+		vsfshell_printf(outpt, "format: %s PATH"VSFSHELL_LINEEND,
 							param->argv[0]);
 		goto end;
 	}
@@ -225,7 +225,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			goto end;
 		}
 
-		vsfshell_printf(outpt, "not support" VSFSHELL_LINEEND);
+		vsfshell_printf(outpt, "not support"VSFSHELL_LINEEND);
 		goto end;
 	}
 	else if (!strcmp(param->argv[1], "/"))
@@ -240,7 +240,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 								param->argv[1], &lparam->file);
 		if (err > 0) return err; else if (err < 0)
 		{
-			vsfshell_printf(outpt, "file not found: %s" VSFSHELL_LINEEND,
+			vsfshell_printf(outpt, "file not found: %s"VSFSHELL_LINEEND,
 								param->argv[1]);
 			goto end;
 		}
@@ -248,7 +248,7 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	if (!(lparam->file->attr & VSFILE_ATTR_DIRECTORY))
 	{
-		vsfshell_printf(outpt, "%s is not a directory" VSFSHELL_LINEEND,
+		vsfshell_printf(outpt, "%s is not a directory"VSFSHELL_LINEEND,
 								param->argv[1]);
 		goto end;
 	}
@@ -274,7 +274,7 @@ static vsf_err_t vsfos_busybox_pwd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "%s" VSFSHELL_LINEEND, ctx->curfile->name);
+	vsfshell_printf(outpt, "%s"VSFSHELL_LINEEND, ctx->curfile->name);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -287,7 +287,7 @@ static vsf_err_t vsfos_busybox_mkdir(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -300,7 +300,7 @@ static vsf_err_t vsfos_busybox_rmdir(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -313,7 +313,7 @@ static vsf_err_t vsfos_busybox_rm(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -326,7 +326,7 @@ static vsf_err_t vsfos_busybox_mv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -339,7 +339,7 @@ static vsf_err_t vsfos_busybox_cp(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -352,7 +352,7 @@ static vsf_err_t vsfos_busybox_cat(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -364,9 +364,111 @@ static vsf_err_t vsfos_busybox_ipconfig(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfshell_handler_param_t *param =
 						(struct vsfshell_handler_param_t *)pt->user_data;
 	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_ipconfig_t
+	{
+		int i;
+		struct vsfip_netif_t *netif;
+	} *lparam = (struct vsfos_busybox_ipconfig_t *)ctx->user_buff;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+
+	lparam->i = 0;
+	lparam->netif = vsfip.netif_list;
+	while (lparam->netif != NULL)
+	{
+		vsfshell_printf(outpt,
+			"netif%d:"VSFSHELL_LINEEND\
+				"\tmac: %02X:%02X:%02X:%02X:%02X:%02X"VSFSHELL_LINEEND\
+				"\tipaddr: %d.%d.%d.%d"VSFSHELL_LINEEND\
+				"\tnetmask: %d.%d.%d.%d"VSFSHELL_LINEEND,
+			lparam->i,
+			lparam->netif->macaddr.addr.s_addr_buf[0],
+			lparam->netif->macaddr.addr.s_addr_buf[1],
+			lparam->netif->macaddr.addr.s_addr_buf[2],
+			lparam->netif->macaddr.addr.s_addr_buf[3],
+			lparam->netif->macaddr.addr.s_addr_buf[4],
+			lparam->netif->macaddr.addr.s_addr_buf[5],
+			lparam->netif->ipaddr.addr.s_addr_buf[0],
+			lparam->netif->ipaddr.addr.s_addr_buf[1],
+			lparam->netif->ipaddr.addr.s_addr_buf[2],
+			lparam->netif->ipaddr.addr.s_addr_buf[3],
+			lparam->netif->netmask.addr.s_addr_buf[0],
+			lparam->netif->netmask.addr.s_addr_buf[1],
+			lparam->netif->netmask.addr.s_addr_buf[2],
+			lparam->netif->netmask.addr.s_addr_buf[3]);
+		lparam->i++;
+		lparam->netif = lparam->netif->next;
+	}
+
+	vsfshell_handler_exit(param);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsfos_busybox_arp(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_arp_t
+	{
+		int i;
+		struct vsfip_netif_t *netif;
+		struct vsfip_ipaddr_t *ip;
+		struct vsfip_macaddr_t *mac;
+	} *lparam = (struct vsfos_busybox_arp_t *)ctx->user_buff;
+
+	vsfsm_pt_begin(pt);
+
+	lparam->netif = vsfip.netif_list;
+	while (lparam->netif != NULL)
+	{
+		vsfshell_printf(outpt, "%d.%d.%d.%d:"VSFSHELL_LINEEND,
+					lparam->netif->ipaddr.addr.s_addr_buf[0],
+					lparam->netif->ipaddr.addr.s_addr_buf[1],
+					lparam->netif->ipaddr.addr.s_addr_buf[2],
+					lparam->netif->ipaddr.addr.s_addr_buf[3]);
+	
+		for (lparam->i = 0; lparam->i < dimof(lparam->netif->arp_cache);
+				lparam->i++)
+		{
+			if (lparam->netif->arp_cache[lparam->i].time != 0)
+			{
+				lparam->ip = &lparam->netif->arp_cache[lparam->i].assoc.ip;
+				lparam->mac = &lparam->netif->arp_cache[lparam->i].assoc.mac;
+				vsfshell_printf(outpt,
+					"%d.%d.%d.%d-%02X:%02X:%02X:%02X:%02X:%02X"VSFSHELL_LINEEND,
+					lparam->ip->addr.s_addr_buf[0],
+					lparam->ip->addr.s_addr_buf[1],
+					lparam->ip->addr.s_addr_buf[2],
+					lparam->ip->addr.s_addr_buf[3],
+					lparam->mac->addr.s_addr_buf[0],
+					lparam->mac->addr.s_addr_buf[1],
+					lparam->mac->addr.s_addr_buf[2],
+					lparam->mac->addr.s_addr_buf[3],
+					lparam->mac->addr.s_addr_buf[4],
+					lparam->mac->addr.s_addr_buf[5]);
+			}
+		}
+
+		lparam->netif = lparam->netif->next;
+	}
+
+	vsfshell_handler_exit(param);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsfos_busybox_ping(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfsm_pt_t *outpt = &param->output_pt;
+
+	vsfsm_pt_begin(pt);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -379,7 +481,7 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -392,7 +494,7 @@ static vsf_err_t vsfos_busybox_dns(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -406,7 +508,7 @@ static vsf_err_t vsfos_busybox_lsusb(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *outpt = &param->output_pt;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now" VSFSHELL_LINEEND);
+	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -450,7 +552,8 @@ vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell)
 	if (vsf_module_get(VSFIP_MODNAME) != NULL)
 	{
 		handlers[idx++] = (struct vsfshell_handler_t){"ipconfig", vsfos_busybox_ipconfig, ctx};
-		handlers[idx++] = (struct vsfshell_handler_t){"ping", vsfos_busybox_ipconfig, ctx};
+		handlers[idx++] = (struct vsfshell_handler_t){"arp", vsfos_busybox_arp, ctx};
+		handlers[idx++] = (struct vsfshell_handler_t){"ping", vsfos_busybox_ping, ctx};
 		if (vsf_module_get(VSFIP_HTTPD_MODNAME) != NULL)
 		{
 			handlers[idx++] = (struct vsfshell_handler_t){"httpd", vsfos_busybox_httpd, ctx};
