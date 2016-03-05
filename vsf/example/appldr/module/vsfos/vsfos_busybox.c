@@ -250,16 +250,21 @@ static vsf_err_t vsfos_busybox_cd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		vsfshell_printf(outpt, "%s is not a directory"VSFSHELL_LINEEND,
 								param->argv[1]);
-		goto end;
+		goto close_end;
 	}
 
-	// close original curfile
+	ctx->curfile = (struct vsfile_t *)\
+					((uint32_t)lparam->file - (uint32_t)ctx->curfile);
+	lparam->file = (struct vsfile_t *)\
+					((uint32_t)lparam->file - (uint32_t)ctx->curfile);
+	ctx->curfile = (struct vsfile_t *)\
+					((uint32_t)lparam->file + (uint32_t)ctx->curfile);
+
+close_end:
 	lparam->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfile_close(&lparam->local_pt, evt, ctx->curfile);
+	err = vsfile_close(&lparam->local_pt, evt, lparam->file);
 	if (err > 0) return err; else if (err < 0) goto end;
-
-	ctx->curfile = lparam->file;
 end:
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
@@ -350,9 +355,87 @@ static vsf_err_t vsfos_busybox_cat(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfshell_handler_param_t *param =
 						(struct vsfshell_handler_param_t *)pt->user_data;
 	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_cat_t
+	{
+		struct vsfile_t *file;
+		uint8_t *buff;
+		struct vsfsm_pt_t local_pt;
+		uint32_t rsize;
+		char *line;
+		int pos;
+		char tmp;
+		bool enter;
+	} *lparam = (struct vsfos_busybox_cat_t *)ctx->user_buff;
+	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
+
+	if (param->argc != 2)
+	{
+		vsfshell_printf(outpt, "format: %s TEXT_FILE"VSFSHELL_LINEEND,
+							param->argv[0]);
+		goto end;
+	}
+
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_getfile(&lparam->local_pt, evt, ctx->curfile, param->argv[1],
+							&lparam->file);
+	if (err > 0) return err; else if (err < 0) goto end;
+
+	if (!(lparam->file->attr & VSFILE_ATTR_ARCHIVE))
+	{
+		vsfshell_printf(outpt, "%s is not a file"VSFSHELL_LINEEND,
+								param->argv[1]);
+		goto close_end;
+	}
+
+	lparam->buff = vsf_bufmgr_malloc(lparam->file->size + 1);
+	if (!lparam->buff)
+	{
+		vsfshell_printf(outpt, "can not allocate buffer"VSFSHELL_LINEEND);
+		goto close_end;
+	}
+
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_read(&lparam->local_pt, evt, lparam->file, 0,
+				lparam->file->size, lparam->buff, &lparam->rsize);
+	if (err > 0) return err; else if (err < 0) goto free_end;
+
+	// output line by line, because vsfshell_printf not use big buffer
+	lparam->line = (char *)lparam->buff;
+
+	while (lparam->rsize > 0)
+	{
+		lparam->enter = false;
+		for (lparam->pos = 0; lparam->pos < lparam->rsize;)
+		{
+			if (lparam->line[lparam->pos++] == '\r')
+			{
+				lparam->tmp = lparam->line[lparam->pos];
+				lparam->enter = true;
+				break;
+			}
+		}
+		lparam->line[lparam->pos] = '\0';
+
+		vsfshell_printf(outpt, "%s%s", lparam->line,
+				lparam->enter ? "" : VSFSHELL_LINEEND);
+		lparam->rsize -= strlen(lparam->line);
+		lparam->line += strlen(lparam->line);
+		lparam->line[0] = lparam->tmp;
+	}
+
+free_end:
+	vsf_bufmgr_free(lparam->buff);
+close_end:
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_close(&lparam->local_pt, evt, lparam->file);
+	if (err > 0) return err; else if (err < 0) goto end;
+end:
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -439,7 +522,8 @@ static vsf_err_t vsfos_busybox_arp(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				lparam->ip = &lparam->netif->arp_cache[lparam->i].assoc.ip;
 				lparam->mac = &lparam->netif->arp_cache[lparam->i].assoc.mac;
 				vsfshell_printf(outpt,
-					"%d.%d.%d.%d-%02X:%02X:%02X:%02X:%02X:%02X"VSFSHELL_LINEEND,
+					"\t%d.%d.%d.%d"
+					"-%02X:%02X:%02X:%02X:%02X:%02X"VSFSHELL_LINEEND,
 					lparam->ip->addr.s_addr_buf[0],
 					lparam->ip->addr.s_addr_buf[1],
 					lparam->ip->addr.s_addr_buf[2],
