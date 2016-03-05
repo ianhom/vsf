@@ -24,6 +24,7 @@
 //#define VSFCFG_DEBUG_INFO_LEN		(16 * 1024)
 
 #define VSFCFG_BUFFER
+#define VSFCFG_LIST
 #define VSFCFG_STREAM
 #define VSFCFG_MAL
 #define VSFCFG_SCSI
