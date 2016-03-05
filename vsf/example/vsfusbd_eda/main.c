@@ -206,6 +206,7 @@ struct vsfapp_t
 	.usbd.rndis.param.CDCACM.CDC.ep_notify	= 1,
 	.usbd.rndis.param.CDCACM.CDC.ep_out		= 2,
 	.usbd.rndis.param.CDCACM.CDC.ep_in		= 2,
+	.usbd.rndis.param.host					= true,
 	.usbd.rndis.param.mac.size				= 6,
 	.usbd.rndis.param.mac.addr.s_addr64		= 0x0605040302E0,
 	.usbd.cdc.param.CDC.ep_notify			= 3,

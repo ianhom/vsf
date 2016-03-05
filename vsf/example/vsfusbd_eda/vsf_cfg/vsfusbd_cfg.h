@@ -22,3 +22,6 @@
 #define VSFUSBD_CFG_EPISO_EN				0
 
 #define VSFUSBD_CFG_LP_EN					0
+
+#define VSFUSBD_RNDIS_CFG_HOST_EN			1
+#define VSFUSBD_RNDIS_CFG_SLAVE_EN			0

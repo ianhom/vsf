@@ -321,11 +321,25 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 					pt.user_data = &rndis_param->netif;
 					if (!vsfip_netif_add(&pt, 0, &rndis_param->netif))
 					{
-						struct vsfip_dhcpd_t *dhcpd = &rndis_param->dhcpd;
+#if VSFUSBD_RNDIS_CFG_HOST_EN
+						if (rndis_param->host)
+						{
+							struct vsfip_dhcpd_t *d = &rndis_param->dhcpd;
 
-						rndis_param->netif_inited = true;
-						dhcpd->netif = &rndis_param->netif;
-						vsfip_dhcpd_start(dhcpd->netif, dhcpd);
+							rndis_param->netif_inited = true;
+							vsfip_dhcpd_start(&rndis_param->netif, d);
+						}
+#endif
+#if VSFUSBD_RNDIS_CFG_SLAVE_EN
+						if (!rndis_param->host)
+						{
+							struct vsfip_dhcpc_t *c = &rndis_param->dhcpc;
+
+							rndis_param->netif_inited = true;
+							vsfsm_sem_init(&c->update_sem, 0, VSFSM_EVT_USER);
+							vsfip_dhcpc_start(&rndis_param->netif, c);
+						}
+#endif
 					}
 				}
 				break;

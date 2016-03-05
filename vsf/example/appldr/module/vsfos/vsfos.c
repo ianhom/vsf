@@ -346,14 +346,18 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->usbd.rndis.param.CDCACM.CDC.ep_in = 2;
 	ifs->usbd.rndis.param.mac.size = 6;
 	ifs->usbd.rndis.param.mac.addr.s_addr64 = 0x0605040302E0;
+	ifs->usbd.rndis.param.host = false;
 	ifs->usbd.rndis.param.netif.macaddr.size = 6;
 	ifs->usbd.rndis.param.netif.macaddr.addr.s_addr64 = 0x0E0D0C0B0AE0;
-	ifs->usbd.rndis.param.netif.ipaddr.size = 4;
-	ifs->usbd.rndis.param.netif.ipaddr.addr.s_addr = 0x01202020;
-	ifs->usbd.rndis.param.netif.netmask.size = 4;
-	ifs->usbd.rndis.param.netif.netmask.addr.s_addr = 0x00FFFFFF;
-	ifs->usbd.rndis.param.netif.gateway.size = 4;
-	ifs->usbd.rndis.param.netif.gateway.addr.s_addr = 0x01202020;
+	if (ifs->usbd.rndis.param.host)
+	{
+		ifs->usbd.rndis.param.netif.ipaddr.size = 4;
+		ifs->usbd.rndis.param.netif.ipaddr.addr.s_addr = 0x01202020;
+		ifs->usbd.rndis.param.netif.netmask.size = 4;
+		ifs->usbd.rndis.param.netif.netmask.addr.s_addr = 0x00FFFFFF;
+		ifs->usbd.rndis.param.netif.gateway.size = 4;
+		ifs->usbd.rndis.param.netif.gateway.addr.s_addr = 0x01202020;
+	}
 
 	// init cdc
 	ifs->usbd.cdc.stream_tx.stream.op = &fifostream_op;
