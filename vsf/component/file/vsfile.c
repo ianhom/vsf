@@ -334,7 +334,7 @@ vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 		}
 
 		*file = child;
-		return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+		return (!child) || (!child->name) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
 	}
 }
 
@@ -579,6 +579,7 @@ vsf_err_t vsfile_modinit(struct vsf_module_t *module,
 	ifs->is_div = vsfile_is_div;
 	ifs->vfs.op.mount = vsfile_vfs_mount;
 	ifs->vfs.op.unmount = vsfile_vfs_unmount;
+	ifs->vfs.op.f_op.close = vsfile_dummy_close;
 	ifs->vfs.op.d_op.getchild_byname = vsfile_vfs_getchild_byname;
 	ifs->vfs.op.d_op.getchild_byidx = vsfile_vfs_getchild_byidx;
 	ifs->vfs.op.d_op.addfile = vsfile_vfs_addfile;
@@ -614,7 +615,7 @@ const struct vsfile_fsop_t vsfile_vfs_op =
 	.mount = vsfile_vfs_mount,
 	.unmount = vsfile_vfs_unmount,
 	// f_op
-	.f_op.close = NULL,
+	.f_op.close = vsfile_dummy_close,
 	.f_op.read = NULL,
 	.f_op.write = NULL,
 	// d_op
