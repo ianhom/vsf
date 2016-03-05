@@ -134,6 +134,15 @@ static vsf_err_t vsfos_busybox_repo(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 }
 
 // fs handlers
+static char* vsfos_busybox_filetype(struct vsfile_t *file)
+{
+	if (file->attr & VSFILE_ATTR_VOLUMID)
+		return "VOL";
+	else if (file->attr & VSFILE_ATTR_DIRECTORY)
+		return "DIR";
+	else
+		return "FIL";
+}
 static vsf_err_t vsfos_busybox_ls(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfshell_handler_param_t *param =
@@ -157,7 +166,7 @@ static vsf_err_t vsfos_busybox_ls(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	while (lparam->file)
 	{
 		vsfshell_printf(outpt, "%s(%lld):%s" VSFSHELL_LINEEND,
-				lparam->file->attr & VSFILE_ATTR_DIRECTORY ? "DIR" : "FIL",
+				vsfos_busybox_filetype(lparam->file),
 				lparam->file->size, lparam->file->name);
 
 		// close file
