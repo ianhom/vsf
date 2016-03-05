@@ -40,7 +40,7 @@ static vsf_err_t vsfos_busybox_help(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	lparam->handler = vsfos->shell.handlers;
+	lparam->handler = param->shell->handlers;
 
 	while ((lparam->handler != NULL) && (lparam->handler->name != NULL))
 	{
@@ -621,7 +621,7 @@ static vsf_err_t vsfos_busybox_dns(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 	else
 	{
-		lparam->dns_server = &vsfos->usbd.rndis.param.netif.dns[0];
+		lparam->dns_server = &vsfip.netif_default->dns[0];
 	}
 
 	err = vsfip_dnsc_setserver(0, lparam->dns_server);
