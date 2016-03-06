@@ -22,8 +22,8 @@
 #undef vsfip_dnsc_setserver
 #undef vsfip_gethostbyname
 
-#define VSFIP_DNS_CLIENT_PORT			53
-#define VSFIP_DNS_TRY_CNT				3
+#define VSFIP_DNS_CLIENT_PORT	53
+#define VSFIP_DNS_TRY_CNT		3
 
 PACKED_HEAD struct PACKED_MID vsfip_dns_head_t
 {
@@ -34,7 +34,6 @@ PACKED_HEAD struct PACKED_MID vsfip_dns_head_t
 	uint16_t auth;
 	uint16_t addrrs;
 }; PACKED_TAIL
-
 
 #define VSFIP_DNS_QTYPE_A		1			// A - IP
 #define VSFIP_DNS_QTYPE_NS		2			// NS - NameServer
@@ -54,7 +53,6 @@ PACKED_HEAD struct PACKED_MID vsfip_dns_query_type_t
 
 PACKED_HEAD struct PACKED_MID vsfip_dns_response_t
 {
-	uint16_t nameptr;
 	uint16_t type;
 	uint16_t classtype;
 	uint32_t ttl;
@@ -66,8 +64,7 @@ static struct vsfip_dnsc_local_t vsfip_dnsc;
 #endif
 
 #define VSFIP_DNS_PKG_SIZE		512
-#define VSFIP_DNS_AFNET			0x0100
-#define VSFIP_DNS_AFDOMAINADDR	0x0100
+#define VSFIP_DNS_AFNET			1
 
 static uint16_t vsfip_dns_parse_name(uint8_t *orgin, uint16_t size)
 {
@@ -116,11 +113,11 @@ struct vsfip_buffer_t *vsfip_dns_build_query(char *domain, uint16_t id)
 	// fill header
 	head = (struct vsfip_dns_head_t *)buf->app.buffer;
 	head->id = id;
-	head->flag = 0x0001;// unknow
-	head->ques = 0x100;
-	head->answ = 0;
-	head->auth = 0;
-	head->addrrs = 0;
+	head->flag = SYS_TO_BE_U16(0x0100);
+	head->ques = SYS_TO_BE_U16(1);
+	head->answ = SYS_TO_BE_U16(0);
+	head->auth = SYS_TO_BE_U16(0);
+	head->addrrs = SYS_TO_BE_U16(0);
 	name = (uint8_t *)head + sizeof(struct vsfip_dns_head_t);
 	// fill name array
 	// empty next size
@@ -154,8 +151,8 @@ struct vsfip_buffer_t *vsfip_dns_build_query(char *domain, uint16_t id)
 	name++;
 	// finish
 	end = (struct vsfip_dns_query_type_t *)name;
-	end->type = VSFIP_DNS_AFDOMAINADDR;
-	end->classtype = VSFIP_DNS_AFNET;
+	end->type = SYS_TO_BE_U16(VSFIP_DNS_QTYPE_A);
+	end->classtype = SYS_TO_BE_U16(VSFIP_DNS_AFNET);
 	buf->app.size = name - (uint8_t *)head +
 						sizeof(struct vsfip_dns_query_type_t);
 	return buf;
@@ -166,71 +163,65 @@ vsf_err_t vsfip_dns_decode_ans(uint8_t *ans , uint16_t size, uint16_t id,
 {
 	struct vsfip_dns_head_t *head = (struct vsfip_dns_head_t *)ans;
 	struct vsfip_dns_response_t *atype;
-	uint16_t ac;
+	uint16_t qc, ac, i;
 	uint8_t	*pdat;
 	uint16_t dsize;
-	uint16_t cache;
 
 	if ((size < sizeof(struct vsfip_dns_head_t)) || (head->id != id))
 	{
 		return VSFERR_FAIL;
 	}
 
-//	qc = SYS_TO_BE_U16(head->ques);
-	ac = SYS_TO_BE_U16(head->answ);
-	pdat = (uint8_t *) ans + sizeof(struct vsfip_dns_head_t);
+	qc = BE_TO_SYS_U16(head->ques);
+	ac = BE_TO_SYS_U16(head->answ);
+	pdat = (uint8_t *)ans + sizeof(struct vsfip_dns_head_t);
 	dsize = size - sizeof(struct vsfip_dns_head_t);
-	// Skip the name in the "question" part
-	cache = vsfip_dns_parse_name(pdat, dsize);
 
-	if (dsize < cache)
+	for (i = 0; i < qc; i++)
 	{
-		return VSFERR_FAIL;
+		uint16_t nsize = vsfip_dns_parse_name(pdat, dsize);
+		if (dsize < (nsize + sizeof(struct vsfip_dns_query_type_t)))
+		{
+			return VSFERR_FAIL;
+		}
+
+		// skip name and type class
+		pdat += nsize + sizeof(struct vsfip_dns_query_type_t);
+		dsize -= nsize + sizeof(struct vsfip_dns_query_type_t);
 	}
 
-	pdat += cache;
-	dsize -= cache;
-
-	// skip type class
-	if (dsize < sizeof(struct vsfip_dns_query_type_t))
+	for (i = 0 ; i < ac ; i++)
 	{
-		return VSFERR_FAIL;
-	}
+		uint16_t nsize = vsfip_dns_parse_name(pdat, dsize);
 
-	pdat += sizeof(struct vsfip_dns_query_type_t);
-	dsize -= sizeof(struct vsfip_dns_query_type_t);
-
-	for (uint16_t i = 0 ; i < ac ; i++)
-	{
-		// skip ansdomain
-		atype = (struct vsfip_dns_response_t *)pdat;
-
+		pdat += nsize;
+		dsize -= nsize;
 		if (dsize < sizeof(struct vsfip_dns_response_t))
 		{
 			return VSFERR_FAIL;
 		}
 
-		// type err next
-		if ((atype->classtype != VSFIP_DNS_AFNET) ||
-			(atype->type != VSFIP_DNS_AFDOMAINADDR))
+		atype = (struct vsfip_dns_response_t *)pdat;
+		if ((atype->classtype != SYS_TO_BE_U16(VSFIP_DNS_AFNET)) ||
+			(atype->type != SYS_TO_BE_U16(VSFIP_DNS_QTYPE_A)))
 		{
-			cache = sizeof(struct vsfip_dns_response_t) +
+			uint16_t nsize = sizeof(struct vsfip_dns_response_t) +
 						SYS_TO_BE_U16(atype->len);
 
-			if (dsize < cache)
+			if (dsize < nsize)
 			{
 				return VSFERR_FAIL;
 			}
 
-			pdat += cache;
-			dsize -= cache;
+			pdat += nsize;
+			dsize -= nsize;
 			continue;
 		}
 
 		// no need ttl
 		// get ip size
-		domainip->size = SYS_TO_BE_U16(atype->len);
-		if (dsize < sizeof(struct vsfip_dns_response_t) + domainip->size)
+		domainip->size = BE_TO_SYS_U16(atype->len);
+		if (dsize < (sizeof(struct vsfip_dns_response_t) + domainip->size))
 		{
 			return VSFERR_FAIL;
 		}
@@ -240,7 +231,7 @@ vsf_err_t vsfip_dns_decode_ans(uint8_t *ans , uint16_t size, uint16_t id,
 		// copy addr
 		if (domainip->size == 4)
 		{
-			domainip->addr.s_addr = * (uint32_t *) pdat;
+			domainip->addr.s_addr = *(uint32_t *)pdat;
 			return VSFERR_NONE;
 		}
 	}
