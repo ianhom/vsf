@@ -485,7 +485,7 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_SIZE=0x2000</state>
           <state>MODULE_NAME="vsf.component.file.fs.malfs.fat"</state>
         </option>
         <option>
@@ -1451,7 +1451,7 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_SIZE=0x2000</state>
           <state>MODULE_NAME="vsf.component.file.fs.malfs.fat"</state>
         </option>
         <option>

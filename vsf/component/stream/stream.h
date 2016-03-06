@@ -134,7 +134,7 @@ void vsfstream_modexit(struct vsf_module_t*);
 vsf_err_t vsfstream_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFSTREAM_MOD						\
-	((struct vsfstream_modifs_t *)vsf_module_load(VSFSTREAM_MODNAME))
+	((struct vsfstream_modifs_t *)vsf_module_load(VSFSTREAM_MODNAME, true))
 #define stream_init							VSFSTREAM_MOD->init
 #define stream_fini							VSFSTREAM_MOD->fini
 #define stream_write						VSFSTREAM_MOD->write

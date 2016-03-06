@@ -65,7 +65,7 @@ void vsfusbh_uvc_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_uvc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_UVCMOD						\
-	((struct vsfusbh_uvc_modifs_t *)vsf_module_load(VSFUSBH_UVC_MODNAME))
+	((struct vsfusbh_uvc_modifs_t *)vsf_module_load(VSFUSBH_UVC_MODNAME, true))
 #define vsfusbh_uvc_drv						VSFUSBH_UVCMOD->drv
 #define vsfusbh_uvc_set						VSFUSBH_UVCMOD->set
 #define vsfusbh_uvc_report					VSFUSBH_UVCMOD->report

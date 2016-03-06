@@ -120,6 +120,34 @@ static vsf_err_t vsfos_busybox_lsmod(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
+static vsf_err_t vsfos_busybox_insmod(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfsm_pt_t *outpt = &param->output_pt;
+
+	vsfsm_pt_begin(pt);
+
+	if (param->argc != 2)
+	{
+		vsfshell_printf(outpt, "format: %s MODULE"VSFSHELL_LINEEND,
+							param->argv[0]);
+		goto end;
+	}
+
+	if (!vsf_module_load(param->argv[1], false))
+	{
+		vsfshell_printf(outpt, "fail to load %s MODULE"VSFSHELL_LINEEND,
+							param->argv[1]);
+		goto end;
+	}
+
+end:
+	vsfshell_handler_exit(param);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
 static vsf_err_t vsfos_busybox_repo(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfshell_handler_param_t *param =
@@ -692,6 +720,7 @@ vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell)
 
 	// module handlers
 	handlers[idx++] = (struct vsfshell_handler_t){"lsmod", vsfos_busybox_lsmod, ctx};
+	handlers[idx++] = (struct vsfshell_handler_t){"insmod", vsfos_busybox_insmod, ctx};
 	handlers[idx++] = (struct vsfshell_handler_t){"repo", vsfos_busybox_repo, ctx};
 
 	// fs handlers

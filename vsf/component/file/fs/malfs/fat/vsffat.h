@@ -107,7 +107,7 @@ void vsffat_modexit(struct vsf_module_t*);
 vsf_err_t vsffat_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFFAT_MOD							\
-	((struct vsffat_modifs_t *)vsf_module_load(VSFFAT_MODNAME))
+	((struct vsffat_modifs_t *)vsf_module_load(VSFFAT_MODNAME, true))
 #define vsffat_op							VSFFAT_MOD->op
 #define vsffat_is_LFN						VSFFAT_MOD->is_LFN
 

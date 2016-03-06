@@ -281,7 +281,7 @@ struct vsf_t
 			struct vsf_module_t* (*get)(char*);
 			void (*reg)(struct vsf_module_t*);
 			void (*unreg)(struct vsf_module_t*);
-			void* (*load)(char*);
+			void* (*load)(char*, bool);
 			void (*unload)(char*);
 		} module;
 #endif
@@ -633,7 +633,7 @@ extern const struct vsf_t vsf;
 struct vsf_module_t* vsf_module_get(char *name);
 void vsf_module_register(struct vsf_module_t *module);
 void vsf_module_unregister(struct vsf_module_t *module);
-void* vsf_module_load(char *name);
+void* vsf_module_load(char *name, bool dead);
 void vsf_module_unload(char *name);
 #endif
 #endif		// VSFCFG_STANDALONE_MODULE

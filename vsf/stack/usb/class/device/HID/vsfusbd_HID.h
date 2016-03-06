@@ -112,7 +112,7 @@ void vsfusbd_HID_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_HID_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_HIDMOD						\
-	((struct vsfusbd_HID_modifs_t *)vsf_module_load(VSFUSBD_HID_MODNAME))
+	((struct vsfusbd_HID_modifs_t *)vsf_module_load(VSFUSBD_HID_MODNAME, true))
 #define vsfusbd_HID_class					VSFUSBD_HIDMOD->protocol
 #define vsfusbd_HID_IN_report_changed		VSFUSBD_HIDMOD->IN_report_changed
 

@@ -41,7 +41,7 @@ void vsfdbg_modexit(struct vsf_module_t*);
 vsf_err_t vsfdbg_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFDBG_MOD							\
-	((struct vsfdbg_modifs_t *)vsf_module_load(VSFDBG_MODNAME))
+	((struct vsfdbg_modifs_t *)vsf_module_load(VSFDBG_MODNAME, true))
 #define debug_init							VSFDBG_MOD->init
 #define debug_fini							VSFDBG_MOD->fini
 #define debug								VSFDBG_MOD->debug

@@ -72,7 +72,7 @@ vsf_err_t vsfip_telnetd_modinit(struct vsf_module_t*,
 										struct app_hwcfg_t const*);
 
 #define VSFIP_TELNETDMOD					\
-	((struct vsfip_telnetd_modifs_t *)vsf_module_load(VSFIP_TELNETD_MODNAME))
+	((struct vsfip_telnetd_modifs_t *)vsf_module_load(VSFIP_TELNETD_MODNAME, true))
 #define vsfip_telnetd_start					VSFIP_TELNETDMOD->start
 
 #else

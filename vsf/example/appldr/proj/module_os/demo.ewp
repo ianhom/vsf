@@ -249,7 +249,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>00000000</state>
+          <state>11111110</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -343,7 +343,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>1</state>
+          <state>3</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -352,7 +352,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>1</state>
+          <state>3</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -485,7 +485,7 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_SIZE=0x6000</state>
           <state>MODULE_NAME="vsf.os"</state>
         </option>
         <option>
@@ -1451,7 +1451,7 @@
         </option>
         <option>
           <name>ADefines</name>
-          <state>MODULE_SIZE=0x1000</state>
+          <state>MODULE_SIZE=0x6000</state>
           <state>MODULE_NAME="vsf.os"</state>
         </option>
         <option>
@@ -1574,7 +1574,7 @@
         <option>
           <name>OOCOutputFormat</name>
           <version>3</version>
-          <state>4</state>
+          <state>3</state>
         </option>
         <option>
           <name>OCOutputOverride</name>
@@ -1582,7 +1582,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>demo.sim</state>
+          <state>demo.bin</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>

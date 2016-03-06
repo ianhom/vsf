@@ -130,7 +130,7 @@ void vsfos_modexit(struct vsf_module_t*);
 vsf_err_t vsfos_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFOS_MOD								\
-	((struct vsfos_modifs_t *)vsf_module_load(VSFOS_MODNAME))
+	((struct vsfos_modifs_t *)vsf_module_load(VSFOS_MODNAME, true))
 #define vsfos									VSFOS_MOD
 
 #endif	// __VSFOS_H_INCLUDED__

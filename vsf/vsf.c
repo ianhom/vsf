@@ -96,7 +96,7 @@ void vsf_module_unload(char *name)
 	}
 }
 
-void* vsf_module_load(char *name)
+void* vsf_module_load(char *name, bool dead)
 {
 	struct vsf_module_t *module = vsf_module_get(name);
 	vsf_err_t (*mod_entry)(struct vsf_module_t *, struct app_hwcfg_t const *);
@@ -143,7 +143,7 @@ succeed:
 		return module->ifs;
 	}
 fail:
-	while (1);
+	if (dead) while (1);
 	return NULL;
 }
 #endif		// VSFCFG_MODULE

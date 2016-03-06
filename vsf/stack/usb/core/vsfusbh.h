@@ -217,7 +217,7 @@ void vsfusbh_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBHMOD						\
-	((struct vsfusbh_modifs_t *)vsf_module_load(VSFUSBH_MODNAME))
+	((struct vsfusbh_modifs_t *)vsf_module_load(VSFUSBH_MODNAME, true))
 #define vsfusbh_init						VSFUSBHMOD->init
 #define vsfusbh_fini						VSFUSBHMOD->fini
 #define vsfusbh_register_driver				VSFUSBHMOD->register_driver

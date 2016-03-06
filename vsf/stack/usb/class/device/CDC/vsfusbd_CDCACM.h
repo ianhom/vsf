@@ -54,7 +54,7 @@ void vsfusbd_CDCACM_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_CDCACM_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_CDCACMMOD					\
-	((struct vsfusbd_CDCACM_modifs_t *)vsf_module_load(VSFUSBD_CDCACM_MODNAME))
+	((struct vsfusbd_CDCACM_modifs_t *)vsf_module_load(VSFUSBD_CDCACM_MODNAME, true))
 #define vsfusbd_CDCACMControl_class			VSFUSBD_CDCACMMOD->control_protocol
 #define vsfusbd_CDCACMData_class			VSFUSBD_CDCACMMOD->data_protocol
 

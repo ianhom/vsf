@@ -126,7 +126,7 @@ void vsfmal_modexit(struct vsf_module_t*);
 vsf_err_t vsfmal_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFMAL_MOD							\
-	((struct vsfmal_modifs_t *)vsf_module_load(VSFMAL_MODNAME))
+	((struct vsfmal_modifs_t *)vsf_module_load(VSFMAL_MODNAME, true))
 #define vsfmal_init							VSFMAL_MOD->init
 #define vsfmal_fini							VSFMAL_MOD->fini
 #define vsfmal_erase_all					VSFMAL_MOD->erase_all

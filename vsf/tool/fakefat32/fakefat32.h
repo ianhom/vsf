@@ -76,7 +76,7 @@ void fakefat32_modexit(struct vsf_module_t*);
 vsf_err_t fakefat32_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define FAKEFAT32_MOD						\
-	((struct fakefat32_modifs_t *)vsf_module_load(FAKEFAT32_MODNAME))
+	((struct fakefat32_modifs_t *)vsf_module_load(FAKEFAT32_MODNAME, true))
 #define fakefat32_mal_drv					FAKEFAT32_MOD->mal_drv
 #define fakefat32_fs_op						FAKEFAT32_MOD->fs_op
 #define fakefat32_mbr						FAKEFAT32_MOD->mbr

@@ -62,7 +62,7 @@ void vsfip_dnsc_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_dnsc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_DNSCMOD						\
-	((struct vsfip_dnsc_modifs_t *)vsf_module_load(VSFIP_DNSC_MODNAME))
+	((struct vsfip_dnsc_modifs_t *)vsf_module_load(VSFIP_DNSC_MODNAME, true))
 #define vsfip_dnsc							VSFIP_DNSCMOD->dnsc
 #define vsfip_dnsc_init						VSFIP_DNSCMOD->init
 #define vsfip_dnsc_setserver				VSFIP_DNSCMOD->setserver

@@ -214,7 +214,7 @@ void vsfile_modexit(struct vsf_module_t*);
 vsf_err_t vsfile_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFILE_MOD							\
-	((struct vsfile_modifs_t *)vsf_module_load(VSFILE_MODNAME))
+	((struct vsfile_modifs_t *)vsf_module_load(VSFILE_MODNAME, true))
 #define vsfile_init							VSFILE_MOD->init
 #define vsfile_mount						VSFILE_MOD->mount
 #define vsfile_unmount						VSFILE_MOD->unmount

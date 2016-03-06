@@ -75,7 +75,7 @@ void vsfusbd_CDC_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_CDC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_CDCMOD						\
-	((struct vsfusbd_CDC_modifs_t *)vsf_module_load(VSFUSBD_CDC_MODNAME))
+	((struct vsfusbd_CDC_modifs_t *)vsf_module_load(VSFUSBD_CDC_MODNAME, true))
 #define vsfusbd_CDCControl_class			VSFUSBD_CDCMOD->control_protocol
 #define vsfusbd_CDCData_class				VSFUSBD_CDCMOD->data_protocol
 #define vsfusbd_CDCData_connect				VSFUSBD_CDCMOD->connect

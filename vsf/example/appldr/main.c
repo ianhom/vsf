@@ -63,6 +63,6 @@ void main(void)
 		vsf_module_register(module);
 	}
 
-	vsf_module_load("vsf.os");
+	vsf_module_load("vsf.os", true);
 	// vsfos module SHALL never return;
 }
