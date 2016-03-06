@@ -19,7 +19,7 @@
 #include "vsf.h"
 
 #undef vsfip_httpd_start
-#undef vsfip_http_getpostvaluebyname
+#undef vsfip_httpd_getarg
 
 #ifdef HTTPD_DEBUG	
 #include "framework/vsfshell/vsfshell.h"
@@ -32,28 +32,22 @@
 static const char VSFIP_HTTP_HEAD_GET[] =				"GET ";
 static const char VSFIP_HTTP_HEAD_POST[] =				"POST ";
 
-static const char POST_ContentLength[] =				"Content-Length: ";
-static const char POST_ContentDisposition[] =			"Content-Disposition: ";
-static const char POST_ContentType[] =					"Content-Type: ";
-
-static const char POST_ContentType_MutiFormData[] =		"multipart/form-data; ";
-static const char POST_boundary[] =						"boundary=";
-static const char POST_ContentType_ApplicationXWWW[] =	"application/x-www-form-urlencoded";
-static const char POST_ContentType_ApplicationBin[] =	"application/octet-stream";
-
 #ifndef VSFCFG_STANDALONE_MODULE
-static const struct vsfip_http_contenttype_t\
-					vsfip_httpd_supporttype[VSFIP_HTTPD_SUPPORTTYPECNT] =
+static const struct vsfip_http_mimetype_t\
+					vsfip_httpd_mimetype[VSFIP_HTTPD_MIMETYPECNT] =
 {
-	{VSFIP_HTTPD_TYPE_MUTIFORM, "multipart/form-data", " "},
-	{VSFIP_HTTPD_TYPE_XWWW, "application/x-www-form-urlencoded", " "},
-	{VSFIP_HTTPD_TYPE_HTM, "text/html", "htm"},
-	{VSFIP_HTTPD_TYPE_HTML, "text/html", "html"},
-	{VSFIP_HTTPD_TYPE_JPG, "image/jpeg", "jpg"},
-	{VSFIP_HTTPD_TYPE_TXT, "text/plain", "txt"},
-	{VSFIP_HTTPD_TYPE_XML, "text/xml", "xml"},
-	{VSFIP_HTTPD_TYPE_JS, "application/x-javascript", "js"},
-	{VSFIP_HTTPD_TYPE_UNKNOW, "application/octet-stream", " "},
+	// can not change order of the first 2 types, they are used for post
+	{"application/x-www-form-urlencoded", " "},
+	{"multipart/form-data", " "},
+	// random order below
+	{"text/html", "htm"},
+	{"text/html", "html"},
+	{"image/jpeg", "jpg"},
+	{"image/jpeg", "jpeg"},
+	{"text/plain", "txt"},
+	{"text/xml", "xml"},
+	{"application/x-javascript", "js"},
+	{"application/octet-stream", " "},
 };
 
 static const struct vsfile_memfile_t vsfip_http400 =
@@ -91,44 +85,27 @@ static char* vsfip_httpd_getnextline(char *buf, uint32_t size)
 	return NULL;
 }
 
-static char* vsfip_httpd_gettypestr(uint8_t type)
-{
-	uint8_t i;
-	for (i = 0; i < VSFIP_HTTPD_SUPPORTTYPECNT; i++)
-	{
-		if (type == vsfip_httpd_supporttype[i].type)
-			return vsfip_httpd_supporttype[i].str;
-	}
-	return vsfip_httpd_supporttype[VSFIP_HTTPD_SUPPORTTYPECNT - 1].str;
-}
-
-static uint8_t vsfip_httpd_getfiletype(char *filename)
+static char* vsfip_httpd_gettypestr(char *filename)
 {
 	uint8_t i;
 	char *extname = vsfile_getfileext(filename);
-	if (extname == NULL)
-		return VSFIP_HTTPD_TYPE_UNKNOW;
-	for (i = 0; i < VSFIP_HTTPD_SUPPORTTYPECNT; i++)
-	{
-		if (strcmp(extname, vsfip_httpd_supporttype[i].ext) == 0)
-			return vsfip_httpd_supporttype[i].type;
-	}
-	return VSFIP_HTTPD_TYPE_UNKNOW;
+	if (extname)
+		for (i = 0; i < VSFIP_HTTPD_MIMETYPECNT; i++)
+			if (strcmp(extname, vsfip_httpd_mimetype[i].ext) == 0)
+				return vsfip_httpd_mimetype[i].str;
+	return vsfip_httpd_mimetype[VSFIP_HTTPD_MIMETYPECNT - 1].str;
 }
 
-static uint8_t vsfip_httpd_getcontenttype(char *str)
+static uint8_t vsfip_httpd_getmimetype(char *str)
 {
 	uint8_t i;
-	for (i = 0; i < VSFIP_HTTPD_SUPPORTTYPECNT; i++)
-	{
-		if (strcmp(str, vsfip_httpd_supporttype[i].str) == 0)
-			return vsfip_httpd_supporttype[i].type;
-	}
-	return VSFIP_HTTPD_TYPE_UNKNOW;
+	for (i = 0; i < VSFIP_HTTPD_MIMETYPECNT; i++)
+		if (strcmp(str, vsfip_httpd_mimetype[i].str) == 0)
+			return i;
+	return VSFIP_HTTPD_MIMETYPECNT - 1;
 }
 
-char* vsfip_http_getpostvaluebyname(char *src, char *name,
-										uint32_t *valuesize)
+char* vsfip_httpd_getarg(char *src, char *name, uint32_t *valuesize)
 {
 	uint32_t namesize = strlen(name);
 	char *end;
@@ -183,7 +160,7 @@ static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t *service,
 		size -= sizeof(VSFIP_HTTP_HEAD_POST) - 1;
 	}
 	else
-		return VSFERR_FAIL;
+		return VSFERR_NOT_SUPPORT;
 
 	filenameptr = rdptr;
 	//getfilename
@@ -217,7 +194,7 @@ static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfip_httpd_service_t *service =
 							(struct vsfip_httpd_service_t *)pt->user_data;
-	struct vsfip_post_t* post = &service->post;
+	struct vsfip_http_post_t* post = &service->post;
 	struct vsfip_buffer_t* inbuf = service->inbuf;
 	char *rdptr = (char *)inbuf->app.buffer;
 	uint32_t size = inbuf->app.size;
@@ -228,13 +205,10 @@ static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	//accept ignore
 	//content get
 	post->size = 0;
-	post->type = 0;
+	post->type = -1;
 
-	while (1)
+	while (!post->size || (post->type < 0))
 	{
-		if (post->size != 0 && post->type != 0)
-			break;
-
 		if (memcmp(rdptr, "Content-", sizeof("Content-") - 1) == 0)
 		{
 			rdptr += sizeof("Content-") - 1;
@@ -263,7 +237,7 @@ static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				*(nextline - 2) = 0;
 
 				//gettype
-				post->type = vsfip_httpd_getcontenttype(rdptr);
+				post->type = vsfip_httpd_getmimetype(rdptr);
 
 				size -= nextline - rdptr;
 				rdptr = nextline;
@@ -279,7 +253,7 @@ static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 	}
 
-	if (post->type == VSFIP_HTTPD_TYPE_XWWW)
+	if (!post->type)		// type 0 is XWWW
 	{
 		//double /r/n/r/n mean end of info
 		while (memcmp(rdptr, "\r\n", 2) != 0)
@@ -326,7 +300,6 @@ static vsf_err_t vsfip_httpd_build_rsphead200(
 {
 	char *wrptr = (char *)buf->buffer;
 	char numcache[10];
-	uint8_t type;
 
 	//here no check size please make sure buff enough
 
@@ -338,8 +311,7 @@ static vsf_err_t vsfip_httpd_build_rsphead200(
 	strcat(wrptr, numcache);
 	strcat(wrptr, "\r\n");
 	strcat(wrptr, "Content-Type: ");
-	type = vsfip_httpd_getfiletype(service->targetfile->name);
-	strcat(wrptr, vsfip_httpd_gettypestr(type));
+	strcat(wrptr, vsfip_httpd_gettypestr(service->targetfile->name));
 	strcat(wrptr, "\r\n");
 	strcat(wrptr, "\r\n");
 	buf->size = strlen(wrptr);
@@ -434,10 +406,6 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	service->local_pt.sm = pt->sm;
 	service->file_pt.sm = pt->sm;
 
-#ifdef HTTPD_DEBUG
-	service->output_pt.sm = pt->sm;
-#endif
-
 	service->socket_pt.state = 0;
 	vsfsm_pt_entry(pt);
 	err = vsfip_tcp_recv(&service->socket_pt, evt, service->so,
@@ -448,7 +416,7 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if (err < 0) goto exit;
 
 #ifdef HTTPD_DEBUG
-	vsfshell_printf(&service->output_pt, "->HTTP %s %s" VSFSHELL_LINEEND,
+	vsf_debug("->HTTP %s %s" VSFSHELL_LINEEND,
 					service->req == VSFIP_HTTP_GET? "GET" : "POST",
 					service->targetfilename);
 #endif
@@ -472,8 +440,7 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 #ifdef HTTPD_DEBUG
-	vsfshell_printf(&service->output_pt,
-					"<-HTTP %d targetfile: %s" VSFSHELL_LINEEND,
+	vsf_debug("<-HTTP %d targetfile: %s" VSFSHELL_LINEEND,
 					service->rsp, service->targetfile->name);
 #endif
 
@@ -487,7 +454,7 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 		else
 		{
-			//to do deal with post
+			//to deal with post
 			service->local_pt.user_data = service;
 			service->local_pt.state = 0;
 			vsfsm_pt_entry(pt);
@@ -505,7 +472,6 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if (err > 0) return err; else if (err < 0)
 	{
 		service->rsp = VSFIP_HTTP_404_NOTFOUND;
-		//filenotfound
 		service->targetfile = (struct vsfile_t *)&vsfip_http404;
 	}
 	else
@@ -517,11 +483,10 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	service->inbuf = NULL;
 
 #ifdef HTTPD_DEBUG
-	vsfshell_printf(&service->output_pt,
-					"<-HTTP %d sendfile: %s" VSFSHELL_LINEEND,
+	vsf_debug("<-HTTP %d sendfile: %s" VSFSHELL_LINEEND,
 					service->rsp, service->targetfile->name);
 #endif
-	//send targetfile
+
 	service->local_pt.user_data = service;
 	service->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
@@ -529,7 +494,6 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if (err > 0) return err; if (err < 0) goto exit;
 
 exit:
-	//release socket
 	if (service->inbuf != NULL)
 	{
 		vsfip_buffer_release(service->inbuf);
@@ -541,7 +505,6 @@ exit:
 	err = vsfip_tcp_close(&service->socket_pt, evt,service->so);
 	if (err > 0) return err;
 
-	//release socket
 	vsfip_close(service->so);
 	service->so = NULL;
 
@@ -560,11 +523,8 @@ static vsf_err_t vsfip_httpd_attachtoservice(
 		if (httpd->service[i].so == NULL)
 		{
 			service = &httpd->service[i];
+			memset(service, 0, sizeof(struct vsfip_httpd_service_t));
 
-			//clear it mem
-			memset(service , 0, sizeof(struct vsfip_httpd_service_t));
-
-			//set so
 			service->so = acceptso;
 			service->root = httpd->root;
 			service->postroot = httpd->postroot;
@@ -572,12 +532,6 @@ static vsf_err_t vsfip_httpd_attachtoservice(
 			service->pt.thread = vsfip_httpd_service_thread;
 			service->pt.user_data = service;
 			service->cb = &httpd->cb;
-
-#ifdef HTTPD_DEBUG
-			service->output_pt.thread = httpd->output_pt->thread;
-			service->output_pt.user_data = httpd->output_pt->user_data;
-			service->output_pt.state = 0;
-#endif
 			return vsfsm_pt_init(&service->sm, &service->pt);
 		}
 	}
@@ -596,14 +550,13 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	httpd->so->rx_timeout_ms = 0;
 	httpd->so->tx_timeout_ms = VSFIP_HTTP_SERVER_SOCKETTIMEOUT;
 
-	err = vsfip_bind(httpd->so, httpd->sockaddr.sin_port);
-	if (err < 0) goto close;
-
-	err = vsfip_listen(httpd->so,httpd->maxconnection);
-	if (err < 0) goto close;
+	if ((vsfip_bind(httpd->so, httpd->sockaddr.sin_port) < 0) ||
+		(vsfip_listen(httpd->so, httpd->maxconnection) < 0))
+	{
+		goto close;
+	}
 
 	httpd->daemon_pt.sm = pt->sm;
-
 	while (httpd->isactive)
 	{
 		httpd->daemon_pt.state = 0;
@@ -641,19 +594,16 @@ vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 		return VSFERR_FAIL;
 	}
 
-	//get the mem
 	httpd->service = servicemem;
 	httpd->maxconnection = maxconnection;
 	httpd->root = root;
+	httpd->isactive = true;
 
 	httpd->sockaddr.sin_port = port;
 	httpd->sockaddr.sin_addr.size = 4;
 
 	httpd->pt.thread = vsfip_httpd_thread;
 	httpd->pt.user_data = httpd;
-
-	httpd->isactive = true;
-
 	vsfsm_pt_init(&httpd->sm, &httpd->pt);
 	return VSFERR_NONE;
 }
@@ -674,7 +624,7 @@ vsf_err_t vsfip_httpd_modinit(struct vsf_module_t *module,
 	memset(ifs, 0, sizeof(*ifs));
 
 	ifs->start = vsfip_httpd_start;
-	ifs->getpostvaluebyname = vsfip_http_getpostvaluebyname;
+	ifs->getarg = vsfip_httpd_getarg;
 	ifs->http400.file.name = "400";
 	ifs->http400.file.size = sizeof("HTTP/1.0 400 Bad Request\r\n\r\nBad Request");
 	ifs->http400.file.attr = VSFILE_ATTR_READONLY;
@@ -685,15 +635,18 @@ vsf_err_t vsfip_httpd_modinit(struct vsf_module_t *module,
 	ifs->http404.file.attr = VSFILE_ATTR_READONLY;
 	ifs->http404.file.op = (struct vsfile_fsop_t *)&vsfile_memfs_op;
 	ifs->http404.f.buff = "HTTP/1.0 404 Not Found\r\n\r\nNot Found";
-	ifs->supporttype[0] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_MUTIFORM, "multipart/form-data", " "};
-	ifs->supporttype[1] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_XWWW, "application/x-www-form-urlencoded", " "};
-	ifs->supporttype[2] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_HTM, "text/html", "htm"};
-	ifs->supporttype[3] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_HTML, "text/html", "html"};
-	ifs->supporttype[4] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_JPG, "image/jpeg", "jpg"};
-	ifs->supporttype[5] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_TXT, "text/plain", "txt"};
-	ifs->supporttype[6] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_XML, "text/xml", "xml"};
-	ifs->supporttype[7] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_JS, "application/x-javascript", "js"};
-	ifs->supporttype[8] = (struct vsfip_http_contenttype_t){VSFIP_HTTPD_TYPE_UNKNOW, "application/octet-stream", " "};
+	// can not change order of the first 2 types, they are used for post
+	ifs->mimetype[0] = (struct vsfip_http_mimetype_t){"application/x-www-form-urlencoded", " "};
+	ifs->mimetype[1] = (struct vsfip_http_mimetype_t){"multipart/form-data", " "};
+	// random order below
+	ifs->mimetype[2] = (struct vsfip_http_mimetype_t){"text/html", "htm"};
+	ifs->mimetype[3] = (struct vsfip_http_mimetype_t){"text/html", "html"};
+	ifs->mimetype[4] = (struct vsfip_http_mimetype_t){"image/jpeg", "jpg"};
+	ifs->mimetype[5] = (struct vsfip_http_mimetype_t){"image/jpeg", "jpeg"};
+	ifs->mimetype[6] = (struct vsfip_http_mimetype_t){"text/plain", "txt"};
+	ifs->mimetype[7] = (struct vsfip_http_mimetype_t){"text/xml", "xml"};
+	ifs->mimetype[8] = (struct vsfip_http_mimetype_t){"application/x-javascript", "js"};
+	ifs->mimetype[9] = (struct vsfip_http_mimetype_t){"application/octet-stream", " "};
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }

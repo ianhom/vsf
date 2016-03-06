@@ -395,19 +395,19 @@ vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	uint32_t tmpsize;
 	char *user, *pass;
 
-	if (type != VSFIP_HTTPD_TYPE_XWWW)
+	if (type)		// XWWW is type 0
 		goto loginfail;
 
 	//set a str end maybe danger overmem
 	buf[size] = '\0';
 
 	//postdat is xwww type
-	user = vsfip_http_getpostvaluebyname(buf, "user", &tmpsize);
+	user = vsfip_httpd_getarg(buf, "user", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->user, user, tmpsize);
 
-	pass = vsfip_http_getpostvaluebyname(buf, "pass", &tmpsize);
+	pass = vsfip_httpd_getarg(buf, "pass", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->pass, pass, tmpsize);

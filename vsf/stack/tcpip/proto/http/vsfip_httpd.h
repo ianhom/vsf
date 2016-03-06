@@ -32,25 +32,11 @@ enum vsfip_httpd_service_rsp_t
 	VSFIP_HTTP_404_NOTFOUND = 404,
 };
 
-enum vsfip_httpd_post_type
-{
-	VSFIP_HTTPD_TYPE_NONE = 0,
-	VSFIP_HTTPD_TYPE_XWWW,
-	VSFIP_HTTPD_TYPE_MUTIFORM,
-	VSFIP_HTTPD_TYPE_HTML,
-	VSFIP_HTTPD_TYPE_HTM,
-	VSFIP_HTTPD_TYPE_JPG,
-	VSFIP_HTTPD_TYPE_TXT,
-	VSFIP_HTTPD_TYPE_XML,
-	VSFIP_HTTPD_TYPE_JS,
-	VSFIP_HTTPD_TYPE_UNKNOW = 0xFF,
-};
-
-struct vsfip_post_t
+struct vsfip_http_post_t
 {
 	uint32_t size;
 	uint8_t *buf;
-	uint8_t type;
+	int8_t type;
 };
 
 struct vsfip_httpd_posttarget_t
@@ -69,7 +55,7 @@ struct vsfip_httpd_service_t
 	struct vsfsm_pt_t local_pt;
 	struct vsfsm_pt_t file_pt;
 
-	struct vsfip_post_t post;
+	struct vsfip_http_post_t post;
 
 	char *targetfilename;
 	struct vsfile_t *targetfile;
@@ -88,10 +74,6 @@ struct vsfip_httpd_service_t
 
 	uint16_t req;
 	uint16_t rsp;
-
-#ifdef HTTPD_DEBUG
-	struct vsfsm_pt_t output_pt;
-#endif
 };
 
 struct vsfip_httpd_cb_t
@@ -128,10 +110,9 @@ struct vsfip_httpd_t
 #endif
 };
 
-#define VSFIP_HTTPD_SUPPORTTYPECNT			9
-struct vsfip_http_contenttype_t
+#define VSFIP_HTTPD_MIMETYPECNT				10
+struct vsfip_http_mimetype_t
 {
-	uint8_t type;
 	char *str;
 	char *ext;
 };
@@ -143,9 +124,9 @@ struct vsfip_httpd_modifs_t
 {
 	vsf_err_t (*start)(struct vsfip_httpd_t*, struct vsfip_httpd_service_t*,
 						uint32_t, uint16_t, struct vsfile_t*);
-	char* (*getpostvaluebyname)(char*, char*, uint32_t*);
+	char* (*getarg)(char*, char*, uint32_t*);
 
-	struct vsfip_http_contenttype_t supporttype[VSFIP_HTTPD_SUPPORTTYPECNT];
+	struct vsfip_http_mimetype_t mimetype[VSFIP_HTTPD_MIMETYPECNT];
 	struct vsfile_memfile_t http400;
 	struct vsfile_memfile_t http404;
 };
@@ -156,17 +137,19 @@ vsf_err_t vsfip_httpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define VSFIP_HTTPDMOD						\
 	((struct vsfip_httpd_modifs_t *)vsf_module_load(VSFIP_HTTPD_MODNAME, true))
 #define vsfip_httpd_start					VSFIP_HTTPDMOD->start
-#define vsfip_http_getpostvaluebyname		VSFIP_HTTPDMOD->getpostvaluebyname
+#define vsfip_httpd_getarg					VSFIP_HTTPDMOD->getarg
 #define vsfip_http400						VSFIP_HTTPDMOD->http400
 #define vsfip_http404						VSFIP_HTTPDMOD->http404
-#define vsfip_httpd_supporttype				VSFIP_HTTPDMOD->supporttype
+#define vsfip_httpd_mimetype				VSFIP_HTTPDMOD->mimetype
 
 #else
 vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
 			struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,
 			uint16_t port, struct vsfile_t *root);
 
-char* vsfip_http_getpostvaluebyname(char *src, char *name, uint32_t *valuesize);
+// getheader and getarg is used by post handler and CGI handler
+char* vsfip_httpd_getheader(char *src, char *name, uint32_t *valuesize);
+char* vsfip_httpd_getarg(char *src, char *name, uint32_t *valuesize);
 #endif
 
 #endif		// __VSFIP_HTTPD_H_INCLUDED__
