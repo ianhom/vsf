@@ -6,8 +6,9 @@
 #include "stack/usb/common/usb_ch11.h"
 #include "hcd/hcd.h"
 
-#define VSFSM_EVT_URB_COMPLETE	(VSFSM_EVT_USER + 1)
-#define VSFSM_EVT_NEW_DEVICE	(VSFSM_EVT_USER + 2)
+#define VSFSM_EVT_URB_COMPLETE	(VSFSM_EVT_USER_LOCAL + 1)
+#define VSFSM_EVT_NEW_DEVICE	(VSFSM_EVT_USER_LOCAL + 2)
+#define VSFSM_EVT_EP0_CRIT		(VSFSM_EVT_USER_LOCAL + 2)
 
 #define DEFAULT_TIMEOUT			50	// 50ms
 
@@ -29,6 +30,8 @@ struct vsfusbh_device_t
 
 	struct vsfusbh_device_t *parent;
 	struct vsfusbh_device_t *children[USB_MAXCHILDREN];
+
+	struct vsfsm_crit_t ep0_crit;
 
 	uint8_t num_config;
 	uint8_t maxchild;
