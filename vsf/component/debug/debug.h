@@ -22,6 +22,8 @@
 
 #ifdef VSFCFG_DEBUG
 
+#include "component/stream/stream.h"
+
 #define VSFCFG_DEBUG_INFO_PARSE_LEN 		(VSFCFG_DEBUG_INFO_LEN + 100)
 
 #ifdef VSFCFG_STANDALONE_MODULE

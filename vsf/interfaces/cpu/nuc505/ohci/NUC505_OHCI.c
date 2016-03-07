@@ -21,6 +21,7 @@
 
 #include "NUC505_OHCI.h"
 #include "NUC505Series.h"
+#include "core.h"
 
 extern void nuc505_unlock_reg(void);
 extern void nuc505_lock_reg(void);
@@ -69,6 +70,9 @@ ROOTFUNC void USBH_IRQHandler(void)
 
 vsf_err_t nuc505_hcd_init(uint32_t index, vsf_err_t (*ohci_irq)(void *), void *param)
 {
+	uint8_t div;
+	struct nuc505_info_t *info;
+
 	if ((index & 0x3) == 0)
 		return VSFERR_NOT_SUPPORT;
 
@@ -81,7 +85,10 @@ vsf_err_t nuc505_hcd_init(uint32_t index, vsf_err_t (*ohci_irq)(void *), void *p
 	if (port_enable_mask == 0)
 	{
 		// usbh clock 48M
-		CLK->CLKDIV0 = (CLK->CLKDIV0 & ~CLK_CLKDIV0_USBHDIV_Msk) | CLK_CLKDIV0_USBHSEL_Msk | (9 << CLK_CLKDIV0_USBHDIV_Pos);
+		nuc505_interface_get_info(&info);
+		div = info->pll_freq_hz / 48000000;
+		CLK->CLKDIV0 = (CLK->CLKDIV0 & ~CLK_CLKDIV0_USBHDIV_Msk) | 
+				CLK_CLKDIV0_USBHSEL_Msk | ((div - 1) << CLK_CLKDIV0_USBHDIV_Pos);
 		CLK->AHBCLK |= CLK_AHBCLK_USBHCKEN_Msk;
 
 		NVIC_SetPriority(USBH_IRQn,5);
