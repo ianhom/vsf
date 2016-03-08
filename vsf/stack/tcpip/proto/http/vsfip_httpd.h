@@ -20,94 +20,98 @@
 #define __VSFIP_HTTPD_H_INCLUDED__
 
 //#define HTTPD_DEBUG
-enum vsfip_httpd_service_req_t
+enum vsfip_httpd_req_t
 {
 	VSFIP_HTTP_POST,
 	VSFIP_HTTP_GET,
 };
 
-enum vsfip_httpd_service_rsp_t
+enum vsfip_httpd_resp_t
 {
 	VSFIP_HTTP_200_OK = 200,
 	VSFIP_HTTP_404_NOTFOUND = 404,
 };
 
-struct vsfip_http_post_t
+struct vsfip_httpd_service_req_t
 {
-	uint32_t size;
-	uint8_t *buf;
-	int8_t type;
+	struct vsfip_buffer_t *inbuf;
+
+	enum vsfip_httpd_req_t req;
+	char *url;
+	char *arg;
+	char *head;
+	char *body;
+
+	union
+	{
+		struct
+		{
+			uint32_t size;
+			uint8_t *buf;
+			uint8_t type;
+		} post;
+	};
 };
 
-struct vsfip_httpd_posttarget_t
+struct vsfip_httpd_service_resp_t
 {
-	char *name;
-	vsf_err_t (*ondat)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, uint8_t type,
-				char *buf, uint32_t size, char **rspfilename);
-	void *ondatparam;
+	enum vsfip_httpd_resp_t resp;
+	char *target_filename;
+	struct vsfip_buffer_t *outbuf;
+
+	// private
+	struct vsfile_t *targetfile;
+	uint32_t fileoffset;
+	struct vsfip_httpd_urlhandler_t *handler;
 };
 
+struct vsfip_httpd_urlhandler_t;
+struct vsfip_httpd_t;
 struct vsfip_httpd_service_t
 {
 	struct vsfsm_t sm;
 	struct vsfsm_pt_t pt;
-	struct vsfsm_pt_t socket_pt;
-	struct vsfsm_pt_t local_pt;
-	struct vsfsm_pt_t file_pt;
+	struct vsfsm_pt_t caller_pt;
 
-	struct vsfip_http_post_t post;
-
-	char *targetfilename;
-	struct vsfile_t *targetfile;
-	struct vsfile_t *root;
-	struct vsfip_httpd_posttarget_t *posttarget;
-	struct vsfip_httpd_posttarget_t *postroot;
-
-	uint32_t fileoffset;
+	struct vsfip_httpd_service_req_t req;
+	struct vsfip_httpd_service_resp_t resp;
 
 	struct vsfip_socket_t *so;
+	struct vsfip_httpd_t *httpd;
+};
 
-	struct vsfip_buffer_t *inbuf;
-	struct vsfip_buffer_t *outbuf;
-
-	struct vsfip_httpd_cb_t *cb;
-
-	uint16_t req;
-	uint16_t rsp;
+struct vsfip_httpd_urlhandler_t
+{
+	char *url;
+	vsf_err_t (*handle)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+				struct vsfip_httpd_service_t *service);
+	void *param;
 };
 
 struct vsfip_httpd_cb_t
 {
 	vsf_err_t (*onca)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-				char *reqfilename, struct vsfip_ipaddr_t *useripaddr,
-				char **redirectfilename);
-	void *oncaparam;
+						struct vsfip_httpd_service_t *service);
+	void *param;
 };
 
 struct vsfip_httpd_t
 {
-	struct vsfsm_t sm;
-	struct vsfsm_pt_t pt;
-	struct vsfsm_pt_t daemon_pt;
-
 	struct vsfip_httpd_service_t *service;
-	uint32_t maxconnection;
+	uint32_t service_num;
+	struct vsfile_t *root;
+	struct vsfip_httpd_urlhandler_t *urlhandler;
+	struct vsfip_httpd_cb_t cb;
 
+	// private
+	struct vsfip_sockaddr_t sockaddr;
 	struct vsfip_socket_t *so;
 	struct vsfip_socket_t *acceptso;
 
-	struct vsfip_sockaddr_t sockaddr;
-
-	struct vsfile_t *root;
-	struct vsfip_httpd_posttarget_t *postroot;
-
-	struct vsfip_httpd_cb_t cb;
-
 	bool isactive;
-
-#ifdef HTTPD_DEBUG
-	struct vsfsm_pt_t *output_pt;
-#endif
+	struct vsfsm_t sm;
+	struct vsfsm_pt_t pt;
+	struct vsfsm_pt_t daemon_pt;
 };
 
 #define VSFIP_HTTPD_MIMETYPECNT				10
@@ -122,8 +126,15 @@ struct vsfip_http_mimetype_t
 
 struct vsfip_httpd_modifs_t
 {
-	vsf_err_t (*start)(struct vsfip_httpd_t*, struct vsfip_httpd_service_t*,
-						uint32_t, uint16_t, struct vsfile_t*);
+	vsf_err_t (*start)(struct vsfip_httpd_t*, uint16_t);
+
+	vsf_err_t (*header_resp)(struct vsfip_httpd_service_resp_t*,
+								enum vsfip_httpd_resp_t);
+	vsf_err_t (*header_str)(struct vsfip_httpd_service_resp_t*,
+								const char*, const char*);
+	vsf_err_t (*header_u32)(struct vsfip_httpd_service_resp_t*,
+								const char*, uint32_t);
+	vsf_err_t (*header_end)(struct vsfip_httpd_service_resp_t*);
 	char* (*getarg)(char*, char*, uint32_t*);
 
 	struct vsfip_http_mimetype_t mimetype[VSFIP_HTTPD_MIMETYPECNT];
@@ -137,17 +148,27 @@ vsf_err_t vsfip_httpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define VSFIP_HTTPDMOD						\
 	((struct vsfip_httpd_modifs_t *)vsf_module_load(VSFIP_HTTPD_MODNAME, true))
 #define vsfip_httpd_start					VSFIP_HTTPDMOD->start
+#define vsfip_httpd_header_resp				VSFIP_HTTPDMOD->header_resp
+#define vsfip_httpd_header_str				VSFIP_HTTPDMOD->header_str
+#define vsfip_httpd_header_u32				VSFIP_HTTPDMOD->header_u32
+#define vsfip_httpd_header_end				VSFIP_HTTPDMOD->header_end
 #define vsfip_httpd_getarg					VSFIP_HTTPDMOD->getarg
 #define vsfip_http400						VSFIP_HTTPDMOD->http400
 #define vsfip_http404						VSFIP_HTTPDMOD->http404
 #define vsfip_httpd_mimetype				VSFIP_HTTPDMOD->mimetype
 
 #else
-vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
-			struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,
-			uint16_t port, struct vsfile_t *root);
+vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd, uint16_t port);
 
-// getheader and getarg is used by post handler and CGI handler
+// used by urlhandler
+vsf_err_t vsfip_httpd_header_resp(struct vsfip_httpd_service_resp_t *resp,
+								enum vsfip_httpd_resp_t r);
+vsf_err_t vsfip_httpd_header_str(struct vsfip_httpd_service_resp_t *resp,
+								const char *field, const char *value);
+vsf_err_t vsfip_httpd_header_u32(struct vsfip_httpd_service_resp_t *resp,
+								const char *field, uint32_t value);
+vsf_err_t vsfip_httpd_header_end(struct vsfip_httpd_service_resp_t *resp);
+
 char* vsfip_httpd_getheader(char *src, char *name, uint32_t *valuesize);
 char* vsfip_httpd_getarg(char *src, char *name, uint32_t *valuesize);
 #endif

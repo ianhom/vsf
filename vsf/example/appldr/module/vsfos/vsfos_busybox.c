@@ -604,9 +604,75 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfshell_handler_param_t *param =
 						(struct vsfshell_handler_param_t *)pt->user_data;
 	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_httpd_t
+	{
+		struct vsfip_httpd_t *httpd;
+		uint16_t port;
+		struct vsfile_t *root;
+		struct vsfsm_pt_t local_pt;
+	} *lparam = (struct vsfos_busybox_httpd_t *)ctx->user_buff;
+	vsf_err_t err;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
+
+	if (param->argc != 4)
+	{
+		vsfshell_printf(outpt,
+						"format: %s SERVICE_NUM PORT ROOT"VSFSHELL_LINEEND,
+							param->argv[0]);
+		goto end;
+	}
+
+	lparam->httpd = vsf_bufmgr_malloc(sizeof(struct vsfip_httpd_t));
+	if (!lparam->httpd)
+		goto end;
+	memset(lparam->httpd, 0, sizeof(struct vsfip_httpd_t));
+	lparam->httpd->service_num = atoi(param->argv[1]);
+	if (!lparam->httpd->service_num)
+	{
+		vsfshell_printf(outpt, "fail to allocate httpd"VSFSHELL_LINEEND);
+		goto end_free;
+	}
+	lparam->httpd->service = vsf_bufmgr_malloc(
+			lparam->httpd->service_num * sizeof(struct vsfip_httpd_service_t));
+	if (!lparam->httpd->service)
+	{
+		vsfshell_printf(outpt, "fail to allocate %d service(s)"VSFSHELL_LINEEND,
+							lparam->httpd->service_num);
+		goto end_free;
+	}
+
+	lparam->port = atoi(param->argv[2]);
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_getfile(&lparam->local_pt, evt, ctx->curfile, param->argv[3],
+							&lparam->httpd->root);
+	if (err > 0) return err; else if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to open root %s"VSFSHELL_LINEEND,
+							param->argv[3]);
+		goto end_free;
+	}
+
+	vsfshell_printf(outpt, "start httpd on port %d, root: %s"VSFSHELL_LINEEND,
+							lparam->port, param->argv[3]);
+	vsfip_httpd_start(lparam->httpd, lparam->port);
+	goto end;
+
+end_free:
+	if (lparam->httpd->root != NULL)
+	{
+		lparam->local_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfile_close(&lparam->local_pt, evt, lparam->httpd->root);
+		if (err > 0) return err;
+	}
+	if (lparam->httpd->service != NULL)
+		vsf_bufmgr_free(lparam->httpd->service);
+	if (lparam->httpd != NULL)
+		vsf_bufmgr_free(lparam->httpd);
+end:
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;

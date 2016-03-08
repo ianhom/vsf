@@ -19,6 +19,10 @@
 #include "vsf.h"
 
 #undef vsfip_httpd_start
+#undef vsfip_httpd_header_resp
+#undef vsfip_httpd_header_str
+#undef vsfip_httpd_header_u32
+#undef vsfip_httpd_header_end
 #undef vsfip_httpd_getarg
 
 #ifdef HTTPD_DEBUG	
@@ -69,30 +73,28 @@ static const struct vsfile_memfile_t vsfip_http404 =
 };
 #endif
 
-static char* vsfip_httpd_getnextline(char *buf, uint32_t size)
+static char* vsfip_httpd_getnextline(char *buf)
 {
-	char* bufend = buf + size - 1;
-	while (buf < bufend)
+	buf = strstr(buf, "\r\n");
+	if (buf)
 	{
-		if (*buf == '\r')
-		{
-			buf++;
-			if (*buf == '\n')
-				return buf + 1;
-		}
-		buf++;
+		buf += 2;
+		if (!*buf)
+			buf = NULL;
 	}
-	return NULL;
+	return buf;
 }
 
 static char* vsfip_httpd_gettypestr(char *filename)
 {
-	uint8_t i;
 	char *extname = vsfile_getfileext(filename);
 	if (extname)
+	{
+		uint8_t i;
 		for (i = 0; i < VSFIP_HTTPD_MIMETYPECNT; i++)
 			if (strcmp(extname, vsfip_httpd_mimetype[i].ext) == 0)
 				return vsfip_httpd_mimetype[i].str;
+	}
 	return vsfip_httpd_mimetype[VSFIP_HTTPD_MIMETYPECNT - 1].str;
 }
 
@@ -117,16 +119,13 @@ char* vsfip_httpd_getarg(char *src, char *name, uint32_t *valuesize)
 			return NULL;
 		if (memcmp(src, name, end - src) == 0)
 		{
-			//jump =
 			end++;
-			//getvalue
 			src = strchr(src, '&');
 			*valuesize = (src == NULL) ? strlen(end) : src - end;
 			return end;
 		}
 		else
 		{
-			//getvalue
 			src = strchr(src, '&');
 			if (src == NULL)
 				return NULL;
@@ -135,262 +134,155 @@ char* vsfip_httpd_getarg(char *src, char *name, uint32_t *valuesize)
 	}
 }
 
-static vsf_err_t vsfip_httpd_prase_req(struct vsfip_httpd_service_t *service,
+static char vsfip_httpd_hex(char c)
+{
+	if ((c >= '0') && (c <= '9')) return c - '0';
+	if ((c >= 'A') && (c <= 'F')) return c - 'A' + 10;
+	if ((c >= 'a') && (c <= 'f')) return c - 'a' + 10;
+	return 0;
+}
+
+static vsf_err_t vsfip_httpd_parse_req(struct vsfip_httpd_service_t *service,
 										struct vsf_buffer_t *buf)
 {
-	char *rdptr = (char *)buf->buffer;
-	uint32_t size = buf->size;
-	char *filenameptr;
+	char *rdptr = (char *)buf->buffer, *strtmp;
 
+	memset(&service->req, 0, sizeof(service->req));
 	if (!memcmp(rdptr, VSFIP_HTTP_HEAD_GET, sizeof(VSFIP_HTTP_HEAD_GET) - 1))
 	{
-		//Get a GET Requirst
-		service->req = VSFIP_HTTP_GET;
-		//move rdptr to destfile
- 		rdptr += sizeof(VSFIP_HTTP_HEAD_GET) - 1;
-		size -= sizeof(VSFIP_HTTP_HEAD_GET) - 1;
+		// Get a GET Requirst
+		service->req.req = VSFIP_HTTP_GET;
+		// move rdptr to destfile
+		rdptr += sizeof(VSFIP_HTTP_HEAD_GET) - 1;
 	}
 	else
 	if (!memcmp(rdptr, VSFIP_HTTP_HEAD_POST, sizeof(VSFIP_HTTP_HEAD_POST) - 1))
 	{
-		//Get a POST Requirst
-		service->req = VSFIP_HTTP_POST;
-		//move rdptr to destfile
- 		rdptr += sizeof(VSFIP_HTTP_HEAD_POST) - 1;
-		size -= sizeof(VSFIP_HTTP_HEAD_POST) - 1;
+		// Get a POST Requirst
+		service->req.req = VSFIP_HTTP_POST;
+		// move rdptr to destfile
+		rdptr += sizeof(VSFIP_HTTP_HEAD_POST) - 1;
 	}
 	else
 		return VSFERR_NOT_SUPPORT;
 
-	filenameptr = rdptr;
-	//getfilename
-	while (*rdptr != ' ' && *rdptr != '\r' && *rdptr != '\n')
+	strtmp = service->req.url = rdptr;
+	while (!isspace(*rdptr))
 	{
-		if (size <= 0)
-			return VSFERR_FAIL;
-		rdptr++;
-		size--;
-	}
-
-	//set end of string
-	*rdptr = 0;
-
-	//ignore http version
-	rdptr = vsfip_httpd_getnextline(rdptr, size);
-	if (rdptr == NULL)
-		buf->size = 0;
-	else
-	{
-		buf->size -= buf->buffer - (uint8_t *)rdptr;
-		buf->buffer = (uint8_t *)rdptr;
-	}
-
-	service->targetfilename = strcmp((char *)filenameptr, "/") ?
-					filenameptr + 1 : VSFIP_HTTP_HOMEPAGE;
-	return VSFERR_NONE;
-}
-
-static vsf_err_t vsfip_httpd_processpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
-{
-	struct vsfip_httpd_service_t *service =
-							(struct vsfip_httpd_service_t *)pt->user_data;
-	struct vsfip_http_post_t* post = &service->post;
-	struct vsfip_buffer_t* inbuf = service->inbuf;
-	char *rdptr = (char *)inbuf->app.buffer;
-	uint32_t size = inbuf->app.size;
-	vsf_err_t err;
-	vsfsm_pt_begin(pt);
-	//host ignore
-	//UA ignore
-	//accept ignore
-	//content get
-	post->size = 0;
-	post->type = -1;
-
-	while (!post->size || (post->type < 0))
-	{
-		if (memcmp(rdptr, "Content-", sizeof("Content-") - 1) == 0)
+		if (*rdptr == '?')
 		{
-			rdptr += sizeof("Content-") - 1;
-			size -= sizeof("Content-") - 1;
-			if (memcmp(rdptr, "Length: ", sizeof("Length: ") - 1) == 0)
+			*strtmp = '\0';
+			strtmp = service->req.arg = ++rdptr;
+		}
+		else if (*rdptr == '%')
+		{
+			rdptr++;
+			if ((rdptr[0] != '\0') && (rdptr[1] != '\0'))
 			{
-				char *nextline = vsfip_httpd_getnextline(rdptr, size);
-				rdptr += sizeof("Length: ") - 1;
-				size -= sizeof("Length: ") - 1;
-
-				//setendof str
-				*(nextline - 2) = 0;
-				//getlength
-				post->size = atoi(rdptr);
-
-				size -= nextline - rdptr;
-				rdptr = nextline;
+				*strtmp++ = (vsfip_httpd_hex(rdptr[0]) << 4) +
+								vsfip_httpd_hex(rdptr[1]);
+				rdptr += 2;
 			}
-			else if (memcmp(rdptr, "Type: ", sizeof("Type: ") - 1) == 0)
+			else
 			{
-				char *nextline = vsfip_httpd_getnextline(rdptr, size);
-				rdptr += sizeof("Type: ") - 1;
-				size -= sizeof("Type: ") - 1;
-
-				//setendof str
-				*(nextline - 2) = 0;
-
-				//gettype
-				post->type = vsfip_httpd_getmimetype(rdptr);
-
-				size -= nextline - rdptr;
-				rdptr = nextline;
+				return VSFERR_FAIL;
 			}
 		}
 		else
 		{
-			char *nextline = vsfip_httpd_getnextline(rdptr, size);
-			if (nextline == NULL)
-				goto errend;
-			size -= nextline - rdptr;
-			rdptr = nextline;
+			*strtmp++ = *rdptr++;
 		}
 	}
+	*rdptr = '\0';
 
-	if (!post->type)		// type 0 is XWWW
+	rdptr = vsfip_httpd_getnextline(rdptr);
+	if (rdptr != NULL)
 	{
-		//double /r/n/r/n mean end of info
-		while (memcmp(rdptr, "\r\n", 2) != 0)
+		service->req.head = rdptr;
+		service->req.body = strstr(rdptr, "\r\n\r\n");
+		service->req.body += 4;
+	}
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsfip_httpd_parse_post(struct vsfip_httpd_service_req_t *req)
+{
+	char *rdptr = req->head;
+
+	req->post.size = 0;
+	req->post.type = 0xFF;
+	while (rdptr && (!req->post.size || (0xFF == req->post.type)))
+	{
+		if (memcmp(rdptr, "Content-", sizeof("Content-") - 1) == 0)
 		{
-			char *nextline = vsfip_httpd_getnextline(rdptr, size);
-			if (nextline == NULL)
-				goto errend;
-			size -= nextline - rdptr;
-			rdptr = nextline;
+			rdptr += sizeof("Content-") - 1;
+			if (memcmp(rdptr, "Length: ", sizeof("Length: ") - 1) == 0)
+			{
+				rdptr += sizeof("Length: ") - 1;
+				req->post.size = atoi(rdptr);
+			}
+			else if (memcmp(rdptr, "Type: ", sizeof("Type: ") - 1) == 0)
+			{
+				rdptr += sizeof("Type: ") - 1;
+				req->post.type = vsfip_httpd_getmimetype(rdptr);
+			}
 		}
-
-		//send post info to dat byoffset 0
-		post->buf = (uint8_t *)vsfip_httpd_getnextline(rdptr, size);
-		service->file_pt.user_data = service->posttarget->ondatparam;
-		service->file_pt.state = 0;
-		vsfsm_pt_entry(pt);
-		err = service->posttarget->ondat(&service->file_pt, evt, post->type,
-					(char *)post->buf, post->size, &service->targetfilename);
-		if (err > 0) return err; else if (err < 0) goto errend;
-
-		//Todo if post morethan onepkg
+		rdptr = vsfip_httpd_getnextline(rdptr);
 	}
-
-	//set resp file
-	if (service->targetfilename == NULL)
-		service->targetfile = (struct vsfile_t *)&vsfip_http400;
-
-	vsfip_buffer_release(service->inbuf);
-	service->inbuf = NULL;
-	return VSFERR_NONE;
-
-errend:
-	if (service->inbuf != NULL)
-	{
-		vsfip_buffer_release(service->inbuf);
-		service->inbuf = NULL;
-	}
-	vsfsm_pt_end(pt);
-	return VSFERR_FAIL;
+	return !req->post.size || (0xFF == req->post.type) ?
+				VSFERR_FAIL : VSFERR_NONE;
 }
 
-static vsf_err_t vsfip_httpd_build_rsphead200(
-			struct vsfip_httpd_service_t *service, struct vsf_buffer_t *buf)
+vsf_err_t vsfip_httpd_header_resp(struct vsfip_httpd_service_resp_t *resp,
+								enum vsfip_httpd_resp_t r)
 {
-	char *wrptr = (char *)buf->buffer;
-	char numcache[10];
+	char *str;
 
-	//here no check size please make sure buff enough
+	resp->resp = r;
+	resp->outbuf = VSFIP_TCPBUF_GET(VSFIP_CFG_TCP_MSS);
+	if (!resp->outbuf) return VSFERR_FAIL;
 
-	strcpy(wrptr, "HTTP/1.1 200 OK\r\n");
-	strcat(wrptr, "Server: vsfip/1.0\r\n");
-//	itoa(service->targetfile->size, numcache, 10);
-	snprintf(numcache, dimof(numcache), "%lld", service->targetfile->size);
-	strcat(wrptr, "Content-Length: ");
-	strcat(wrptr, numcache);
-	strcat(wrptr, "\r\n");
-	strcat(wrptr, "Content-Type: ");
-	strcat(wrptr, vsfip_httpd_gettypestr(service->targetfile->name));
-	strcat(wrptr, "\r\n");
-	strcat(wrptr, "\r\n");
-	buf->size = strlen(wrptr);
+	str = (char *)resp->outbuf->app.buffer;
+	sprintf(str, "HTTP/1.1 %d OK\r\nServer: vsfip/1.0\r\n", (int)r);
 	return VSFERR_NONE;
 }
 
-static vsf_err_t vsfip_httpd_getposttarget(
-			struct vsfip_httpd_service_t *service, char *targetname)
+vsf_err_t vsfip_httpd_header_str(struct vsfip_httpd_service_resp_t *resp,
+								const char *field, const char *value)
 {
-	struct vsfip_httpd_posttarget_t *cur = service->postroot;
-	while (cur != NULL && cur->name != NULL)
+	char *str = (char *)resp->outbuf->app.buffer;
+	sprintf(str, "%s: %s\r\n", field, value);
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsfip_httpd_header_u32(struct vsfip_httpd_service_resp_t *resp,
+								const char *field, uint32_t value)
+{
+	char *str = (char *)resp->outbuf->app.buffer;
+	sprintf(str, "%s: %d\r\n", field, value);
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsfip_httpd_header_end(struct vsfip_httpd_service_resp_t *resp)
+{
+	char *str = (char *)resp->outbuf->app.buffer;
+	strcat(str, "\r\n");
+	resp->outbuf->app.size = strlen((const char *)resp->outbuf->app.buffer);
+	return VSFERR_NONE;
+}
+
+static struct vsfip_httpd_urlhandler_t* vsfip_httpd_get_urlhandler(
+			struct vsfip_httpd_urlhandler_t *handler, char *url)
+{
+	while ((handler != NULL) && (handler->url != NULL))
 	{
-		if (strcmp(cur->name, targetname) == 0)
+		if (strcmp(handler->url, url) == 0)
 		{
-			service->posttarget = cur;
-			return VSFERR_NONE;
+			return handler;
 		}
-		cur++;
+		handler++;
 	}
-	service->posttarget = NULL;
-	return VSFERR_FAIL;
-}
-
-static vsf_err_t
-vsfip_httpd_sendtargetfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
-{
-	struct vsfip_httpd_service_t *service =
-							(struct vsfip_httpd_service_t *)pt->user_data;
-	vsf_err_t err;
-
-	vsfsm_pt_begin(pt);
-
-	if (service->targetfile == NULL)
-		return VSFERR_NONE;
-
-	service->fileoffset = 0;
-
-	//send httprsp head
-	if (service->rsp == VSFIP_HTTP_200_OK)
-	{
-		service->outbuf = VSFIP_TCPBUF_GET(VSFIP_CFG_TCP_MSS);
-		if (service->outbuf == NULL)
-			return VSFERR_FAIL;
-
-		err = vsfip_httpd_build_rsphead200(service, &service->outbuf->app);
-		if (err < 0) goto exitfree; else goto httpsend;
-	}
-
-	do
-	{
-		service->outbuf = VSFIP_TCPBUF_GET(VSFIP_CFG_TCP_MSS);
-		if (service->outbuf == NULL)
-			return VSFERR_FAIL;
-
-		//due to file map must set it when read write
-		service->file_pt.user_data = service->targetfile;
-		service->file_pt.state = 0;
-		vsfsm_pt_entry(pt);
-		err = vsfile_read(&service->file_pt, evt, service->targetfile,
-				service->fileoffset, VSFIP_CFG_TCP_MSS,
-				service->outbuf->app.buffer, &service->outbuf->app.size);
-		if (err > 0) return err; else if (err < 0) goto exitfree;
-
-		service->fileoffset += service->outbuf->app.size;
-
-httpsend:
-		service->socket_pt.state = 0;
-		vsfsm_pt_entry(pt);
-		err = vsfip_tcp_send(&service->socket_pt, evt, service->so,
-				&service->so->remote_sockaddr, service->outbuf, false);
-		if (err > 0) return err; else if (err < 0) goto exitnofree;
-	} while (service->fileoffset < service->targetfile->size);
-
-	vsfsm_pt_end(pt);
-	return VSFERR_NONE;
-exitfree:
-	vsfip_buffer_release(service->outbuf);
-exitnofree:
-	return VSFERR_FAIL;
+	return NULL;
 }
 
 static vsf_err_t
@@ -398,111 +290,175 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfip_httpd_service_t *service =
 							(struct vsfip_httpd_service_t *)pt->user_data;
+	struct vsfip_httpd_t *httpd = service->httpd;
+	struct vsfip_httpd_service_req_t *req = &service->req;
+	struct vsfip_httpd_service_resp_t *resp = &service->resp;
 	vsf_err_t err = VSFERR_NONE;
 
 	vsfsm_pt_begin(pt);
 
-	service->socket_pt.sm = pt->sm;
-	service->local_pt.sm = pt->sm;
-	service->file_pt.sm = pt->sm;
+	service->caller_pt.sm = pt->sm;
 
-	service->socket_pt.state = 0;
+	service->caller_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_recv(&service->socket_pt, evt, service->so,
-			&service->so->remote_sockaddr, &service->inbuf);
+	err = vsfip_tcp_recv(&service->caller_pt, evt, service->so,
+							&service->so->remote_sockaddr, &req->inbuf);
 	if (err > 0) return err; else if (err < 0) goto exit;
 
-	err = vsfip_httpd_prase_req(service, &service->inbuf->app);
-	if (err < 0) goto exit;
+	resp->outbuf = NULL;
+	resp->target_filename = NULL;
+
+	req->inbuf->app.buffer[req->inbuf->app.size] = 0;
+	err = vsfip_httpd_parse_req(service, &req->inbuf->app);
+	if (err < 0)
+	{
+		resp->targetfile = (struct vsfile_t *)&vsfip_http400;
+		goto reply;
+	}
 
 #ifdef HTTPD_DEBUG
 	vsf_debug("->HTTP %s %s" VSFSHELL_LINEEND,
-					service->req == VSFIP_HTTP_GET? "GET" : "POST",
+					service->req == VSFIP_HTTP_GET ? "GET" : "POST",
 					service->targetfilename);
 #endif
-	if (service->cb->onca != NULL)
-	{
-		char *redirectfilename;
-		service->local_pt.user_data = service->cb->oncaparam;
-		service->local_pt.state = 0;
-		vsfsm_pt_entry(pt);
-		redirectfilename = NULL;
-		err = service->cb->onca(&service->local_pt, evt,
-				service->targetfilename, &service->so->remote_sockaddr.sin_addr,
-				&redirectfilename);
-		if (err > 0) return err; else if (err < 0) goto exit;
 
-		if (redirectfilename != NULL)
-		{
-			service->targetfilename = redirectfilename;
-			service->req = VSFIP_HTTP_GET;
-		}
+	if (httpd->cb.onca != NULL)
+	{
+		service->caller_pt.user_data = httpd->cb.param;
+		service->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = httpd->cb.onca(&service->caller_pt, evt, service);
+		if (err > 0) return err; else if (err < 0) goto exit;
 	}
 
-#ifdef HTTPD_DEBUG
-	vsf_debug("<-HTTP %d targetfile: %s" VSFSHELL_LINEEND,
-					service->rsp, service->targetfile->name);
-#endif
-
-	if (service->req == VSFIP_HTTP_POST)
+	switch (req->req)
 	{
-		err = vsfip_httpd_getposttarget(service, service->targetfilename);
-		if (err < 0)
+	case VSFIP_HTTP_POST:
+		if (vsfip_httpd_parse_post(req))
 		{
-			//filenotfound
-			service->targetfilename = "http400";
+			resp->targetfile = (struct vsfile_t *)&vsfip_http400;
+			goto reply;
+		}
+		break;
+	}
+
+	resp->handler = vsfip_httpd_get_urlhandler(httpd->urlhandler, req->url);
+	if (resp->handler != NULL)
+	{
+		service->caller_pt.user_data = resp->handler->param;
+		service->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = resp->handler->handle(&service->caller_pt, evt, service);
+		if (err > 0) return err; else if (err < 0) goto exit;
+	}
+
+reply:
+	// send response, can sen target_file(with outbuf) or outbuf only
+	if (resp->target_filename != NULL)
+	{
+		service->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfile_getfile(&service->caller_pt, evt, httpd->root,
+								resp->target_filename, &resp->targetfile);
+		if (err > 0) return err; else if (err < 0)
+		{
+			resp->resp = VSFIP_HTTP_404_NOTFOUND;
+			resp->targetfile = (struct vsfile_t *)&vsfip_http404;
 		}
 		else
 		{
-			//to deal with post
-			service->local_pt.user_data = service;
-			service->local_pt.state = 0;
-			vsfsm_pt_entry(pt);
-			err = vsfip_httpd_processpost(&service->local_pt, evt);
-			if (err > 0) return err; else if (err < 0) goto exit;
+			resp->resp = VSFIP_HTTP_200_OK;
 		}
 	}
 
-	//scan for rspfile
-	service->file_pt.user_data = service->root;
-	service->file_pt.state = 0;
-	vsfsm_pt_entry(pt);
-	err = vsfile_getfile(&service->file_pt, evt, service->root,
-						service->targetfilename, &service->targetfile);
-	if (err > 0) return err; else if (err < 0)
+	if (resp->targetfile != NULL)
 	{
-		service->rsp = VSFIP_HTTP_404_NOTFOUND;
-		service->targetfile = (struct vsfile_t *)&vsfip_http404;
-	}
-	else
-	{
-		service->rsp = VSFIP_HTTP_200_OK;
-	}
-
-	vsfip_buffer_release(service->inbuf);
-	service->inbuf = NULL;
-
 #ifdef HTTPD_DEBUG
-	vsf_debug("<-HTTP %d sendfile: %s" VSFSHELL_LINEEND,
+		vsf_debug("<-HTTP %d targetfile: %s" VSFSHELL_LINEEND,
 					service->rsp, service->targetfile->name);
 #endif
 
-	service->local_pt.user_data = service;
-	service->local_pt.state = 0;
-	vsfsm_pt_entry(pt);
-	err = vsfip_httpd_sendtargetfile(&service->local_pt, evt);
-	if (err > 0) return err; if (err < 0) goto exit;
+		if (!resp->outbuf)
+		{
+			// response header not set, set to 200 OK
+			if (vsfip_httpd_header_resp(resp, VSFIP_HTTP_200_OK))
+				goto exit;
+			vsfip_httpd_header_u32(resp, "Content-Length",
+								(uint32_t)resp->targetfile->size);
+			vsfip_httpd_header_str(resp, "Content-Type",
+								vsfip_httpd_gettypestr(resp->targetfile->name));
+			vsfip_httpd_header_end(resp);
+		}
 
-exit:
-	if (service->inbuf != NULL)
+		resp->fileoffset = 0;
+		while (resp->fileoffset < resp->targetfile->size)
+		{
+			if (!resp->outbuf)
+			{
+				resp->outbuf = VSFIP_TCPBUF_GET(VSFIP_CFG_TCP_MSS);
+				if (!resp->outbuf)
+					goto exit;
+				resp->outbuf->app.size = 0;
+			}
+
+			service->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			{
+				uint32_t cursize = resp->outbuf->app.size;
+				uint32_t remain = VSFIP_CFG_TCP_MSS - cursize;
+				uint8_t *dest = &resp->outbuf->app.buffer[cursize];
+				uint32_t rsize;
+
+				err = vsfile_read(&service->caller_pt, evt,
+					resp->targetfile, resp->fileoffset, remain, dest, &rsize);
+				if (err > 0) return err; else if (err < 0)
+				{
+					goto exit;
+				}
+				resp->outbuf->app.size += rsize;
+				resp->fileoffset += rsize;
+			}
+
+			service->caller_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsfip_tcp_send(&service->caller_pt, evt, service->so,
+					&service->so->remote_sockaddr, resp->outbuf, false);
+			if (err > 0) return err;
+			resp->outbuf = NULL;
+			if (err < 0) goto exit;
+		}
+
+		service->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfile_close(&service->caller_pt, evt, resp->targetfile);
+		if (err > 0) return err; else if (err < 0) goto exit;
+	}
+	else if (resp->outbuf != NULL)
 	{
-		vsfip_buffer_release(service->inbuf);
-		service->inbuf = NULL;
+		service->caller_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		err = vsfip_tcp_send(&service->caller_pt, evt, service->so,
+				&service->so->remote_sockaddr, resp->outbuf, false);
+		if (err > 0) return err;
+		resp->outbuf = NULL;
+		if (err < 0) goto exit;
 	}
 
-	service->socket_pt.state = 0;
+exit:
+	if (resp->outbuf != NULL)
+	{
+		vsfip_buffer_release(resp->outbuf);
+		resp->outbuf = NULL;
+	}
+	if (req->inbuf != NULL)
+	{
+		vsfip_buffer_release(req->inbuf);
+		req->inbuf = NULL;
+	}
+
+	service->caller_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_close(&service->socket_pt, evt,service->so);
+	err = vsfip_tcp_close(&service->caller_pt, evt,service->so);
 	if (err > 0) return err;
 
 	vsfip_close(service->so);
@@ -512,13 +468,13 @@ exit:
 	return VSFERR_FAIL;
 }
 
-static vsf_err_t vsfip_httpd_attachtoservice(
+static vsf_err_t vsfip_httpd_attach2service(
 			struct vsfip_httpd_t *httpd, struct vsfip_socket_t *acceptso)
 {
 	struct vsfip_httpd_service_t *service;
 	uint8_t i;
 
-	for (i = 0; i < httpd->maxconnection; i++)
+	for (i = 0; i < httpd->service_num; i++)
 	{
 		if (httpd->service[i].so == NULL)
 		{
@@ -526,12 +482,10 @@ static vsf_err_t vsfip_httpd_attachtoservice(
 			memset(service, 0, sizeof(struct vsfip_httpd_service_t));
 
 			service->so = acceptso;
-			service->root = httpd->root;
-			service->postroot = httpd->postroot;
+			service->httpd = httpd;
 
 			service->pt.thread = vsfip_httpd_service_thread;
 			service->pt.user_data = service;
-			service->cb = &httpd->cb;
 			return vsfsm_pt_init(&service->sm, &service->pt);
 		}
 	}
@@ -551,7 +505,7 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	httpd->so->tx_timeout_ms = VSFIP_HTTP_SERVER_SOCKETTIMEOUT;
 
 	if ((vsfip_bind(httpd->so, httpd->sockaddr.sin_port) < 0) ||
-		(vsfip_listen(httpd->so, httpd->maxconnection) < 0))
+		(vsfip_listen(httpd->so, httpd->service_num) < 0))
 	{
 		goto close;
 	}
@@ -564,7 +518,7 @@ static vsf_err_t vsfip_httpd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		err = vsfip_tcp_accept(&httpd->daemon_pt, evt, httpd->so, &acceptso);
 		if (err > 0) return err; else if (err < 0) httpd->isactive = false; else
 		{
-			err = vsfip_httpd_attachtoservice(httpd, acceptso);
+			err = vsfip_httpd_attach2service(httpd, acceptso);
 			if (err != VSFERR_NONE)
 			{
 				httpd->acceptso = acceptso;
@@ -585,21 +539,15 @@ close:
 	return VSFERR_NONE;
 }
 
-vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd,
-			struct vsfip_httpd_service_t *servicemem, uint32_t maxconnection,
-			uint16_t port, struct vsfile_t *root)
+vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd, uint16_t port)
 {
-	if ((NULL == servicemem) || (NULL == httpd))
+	if (NULL == httpd)
 	{
 		return VSFERR_FAIL;
 	}
 
-	httpd->service = servicemem;
-	httpd->maxconnection = maxconnection;
-	httpd->root = root;
-	httpd->isactive = true;
-
 	httpd->sockaddr.sin_port = port;
+	httpd->isactive = true;
 	httpd->sockaddr.sin_addr.size = 4;
 
 	httpd->pt.thread = vsfip_httpd_thread;
