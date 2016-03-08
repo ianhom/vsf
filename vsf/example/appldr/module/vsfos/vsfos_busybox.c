@@ -616,10 +616,10 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
-	if (param->argc != 4)
+	if (param->argc != 5)
 	{
 		vsfshell_printf(outpt,
-						"format: %s SERVICE_NUM PORT ROOT"VSFSHELL_LINEEND,
+						"format: %s SERVICE_NUM PORT ROOT HOME"VSFSHELL_LINEEND,
 							param->argv[0]);
 		goto end;
 	}
@@ -642,6 +642,14 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 							lparam->httpd->service_num);
 		goto end_free;
 	}
+	lparam->httpd->homepage = vsf_bufmgr_malloc(strlen(param->argv[4]) + 1);
+	if (!lparam->httpd->homepage)
+	{
+		vsfshell_printf(outpt, "fail to allocate homepage: %s"VSFSHELL_LINEEND,
+							param->argv[4]);
+		goto end_free;
+	}
+	strcpy(lparam->httpd->homepage, param->argv[4]);
 
 	lparam->port = atoi(param->argv[2]);
 	lparam->local_pt.state = 0;
@@ -668,10 +676,14 @@ end_free:
 		err = vsfile_close(&lparam->local_pt, evt, lparam->httpd->root);
 		if (err > 0) return err;
 	}
-	if (lparam->httpd->service != NULL)
-		vsf_bufmgr_free(lparam->httpd->service);
 	if (lparam->httpd != NULL)
+	{
+		if (lparam->httpd->service != NULL)
+			vsf_bufmgr_free(lparam->httpd->service);
+		if (lparam->httpd->homepage != NULL)
+			vsf_bufmgr_free(lparam->httpd->homepage);
 		vsf_bufmgr_free(lparam->httpd);
+	}
 end:
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);

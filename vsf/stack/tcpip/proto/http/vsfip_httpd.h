@@ -100,6 +100,7 @@ struct vsfip_httpd_t
 	struct vsfip_httpd_service_t *service;
 	uint32_t service_num;
 	struct vsfile_t *root;
+	char *homepage;
 	struct vsfip_httpd_urlhandler_t *urlhandler;
 	struct vsfip_httpd_cb_t cb;
 

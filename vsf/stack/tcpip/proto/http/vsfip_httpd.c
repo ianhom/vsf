@@ -31,8 +31,6 @@
 
 #define VSFIP_HTTP_SERVER_SOCKETTIMEOUT					4000
 
-#define VSFIP_HTTP_HOMEPAGE								"index.htm"
-
 static const char VSFIP_HTTP_HEAD_GET[] =				"GET ";
 static const char VSFIP_HTTP_HEAD_POST[] =				"POST ";
 
@@ -195,7 +193,7 @@ static vsf_err_t vsfip_httpd_parse_req(struct vsfip_httpd_service_t *service,
 	*rdptr = '\0';
 	if (!strcmp(service->req.url, "/"))
 	{
-		service->req.url = "index.htm";
+		service->req.url = service->httpd->homepage;
 	}
 
 	rdptr = vsfip_httpd_getnextline(++rdptr);
@@ -387,9 +385,9 @@ reply:
 					service->rsp, service->targetfile->name);
 #endif
 
-		if (!resp->outbuf)
+		// for 200 OK response, we can set the header
+		if (!resp->outbuf && (VSFIP_HTTP_200_OK == resp->resp))
 		{
-			// response header not set, set to 200 OK
 			if (vsfip_httpd_header_resp(resp, VSFIP_HTTP_200_OK))
 				goto exit;
 			vsfip_httpd_header_u32(resp, "Content-Length",
