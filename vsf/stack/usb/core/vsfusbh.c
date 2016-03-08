@@ -234,6 +234,8 @@ vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 	uint8_t rejected = 0;
 #endif
 
+	vsfsm_crit_init(&dev->ep0_crit, VSFSM_EVT_EP0_CRIT);
+
 	for (i = 0; i < dev->actconfig->bNumInterfaces; i++)
 	{
 		if (dev->actconfig->interface[i].driver == NULL)
@@ -1082,7 +1084,7 @@ vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (probe_urb->transfer_buffer == NULL)
 			goto get_config_fail;
 		probe_urb->transfer_length = 9;
-		err = vsfusbh_get_descriptor(usbh, usbh->probe_urb, USB_DT_CONFIG,
+		err = vsfusbh_get_descriptor(usbh, probe_urb, USB_DT_CONFIG,
 				dev->temp_u8);
 		if (err != VSFERR_NONE)
 			goto get_config_fail;
@@ -1098,7 +1100,7 @@ vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (probe_urb->transfer_buffer == NULL)
 			goto get_config_fail;
 		probe_urb->transfer_length = len;
-		err = vsfusbh_get_descriptor(usbh, usbh->probe_urb, USB_DT_CONFIG,
+		err = vsfusbh_get_descriptor(usbh, probe_urb, USB_DT_CONFIG,
 				dev->temp_u8);
 		if (err != VSFERR_NONE)
 			goto get_config_fail;

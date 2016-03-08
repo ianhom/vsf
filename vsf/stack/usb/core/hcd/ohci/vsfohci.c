@@ -145,6 +145,7 @@ static vsf_err_t ed_schedule(struct ohci_t *ohci, struct urb_priv_t *urb_priv)
 	struct ed_t *ed = urb_priv->ed;
 	ed->hwNextED = 0;
 
+	vsf_enter_critical();
 	switch (ed->type)
 	{
 	case PIPE_CONTROL:
@@ -184,6 +185,7 @@ static vsf_err_t ed_schedule(struct ohci_t *ohci, struct urb_priv_t *urb_priv)
 		break;
 	}
 	urb_priv->state |= URB_PRIV_EDLINK;
+	vsf_leave_critical();
 
 	return VSFERR_NONE;
 }
