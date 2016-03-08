@@ -200,7 +200,8 @@ static vsf_err_t vsfip_httpd_parse_req(struct vsfip_httpd_service_t *service,
 	{
 		service->req.head = rdptr;
 		service->req.body = strstr(rdptr, "\r\n\r\n");
-		service->req.body += 4;
+		if (service->req.body != NULL)
+			service->req.body += 4;
 	}
 	return VSFERR_NONE;
 }
