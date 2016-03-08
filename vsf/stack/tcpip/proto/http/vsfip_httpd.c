@@ -147,7 +147,6 @@ static vsf_err_t vsfip_httpd_parse_req(struct vsfip_httpd_service_t *service,
 {
 	char *rdptr = (char *)buf->buffer, *strtmp;
 
-	memset(&service->req, 0, sizeof(service->req));
 	if (!memcmp(rdptr, VSFIP_HTTP_HEAD_GET, sizeof(VSFIP_HTTP_HEAD_GET) - 1))
 	{
 		// Get a GET Requirst
@@ -194,8 +193,12 @@ static vsf_err_t vsfip_httpd_parse_req(struct vsfip_httpd_service_t *service,
 		}
 	}
 	*rdptr = '\0';
+	if (!strcmp(service->req.url, "/"))
+	{
+		service->req.url = "index.htm";
+	}
 
-	rdptr = vsfip_httpd_getnextline(rdptr);
+	rdptr = vsfip_httpd_getnextline(++rdptr);
 	if (rdptr != NULL)
 	{
 		service->req.head = rdptr;
@@ -252,6 +255,7 @@ vsf_err_t vsfip_httpd_header_str(struct vsfip_httpd_service_resp_t *resp,
 								const char *field, const char *value)
 {
 	char *str = (char *)resp->outbuf->app.buffer;
+	str += strlen(str);
 	sprintf(str, "%s: %s\r\n", field, value);
 	return VSFERR_NONE;
 }
@@ -260,6 +264,7 @@ vsf_err_t vsfip_httpd_header_u32(struct vsfip_httpd_service_resp_t *resp,
 								const char *field, uint32_t value)
 {
 	char *str = (char *)resp->outbuf->app.buffer;
+	str += strlen(str);
 	sprintf(str, "%s: %d\r\n", field, value);
 	return VSFERR_NONE;
 }
@@ -298,8 +303,8 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_begin(pt);
 
+	memset(req, 0, sizeof(*req));
 	service->caller_pt.sm = pt->sm;
-
 	service->caller_pt.state = 0;
 	vsfsm_pt_entry(pt);
 	err = vsfip_tcp_recv(&service->caller_pt, evt, service->so,
@@ -334,6 +339,9 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	switch (req->req)
 	{
+	case VSFIP_HTTP_GET:
+		resp->target_filename = req->url;
+		break;
 	case VSFIP_HTTP_POST:
 		if (vsfip_httpd_parse_post(req))
 		{
@@ -355,7 +363,7 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 reply:
 	// send response, can sen target_file(with outbuf) or outbuf only
-	if (resp->target_filename != NULL)
+	if ((resp->target_filename != NULL) && !resp->targetfile)
 	{
 		service->caller_pt.state = 0;
 		vsfsm_pt_entry(pt);
