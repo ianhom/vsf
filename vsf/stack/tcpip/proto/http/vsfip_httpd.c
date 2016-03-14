@@ -305,13 +305,13 @@ vsfip_httpd_service_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	service->caller_pt.sm = pt->sm;
 	service->caller_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_recv(&service->caller_pt, evt, service->so,
-							&service->so->remote_sockaddr, &req->inbuf);
+	err = vsfip_tcp_recv(&service->caller_pt, evt, service->so, &req->inbuf);
 	if (err > 0) return err; else if (err < 0) goto exit;
 
 	resp->outbuf = NULL;
 	resp->target_filename = NULL;
 
+	// TODO: there is potential BUG if '\0' is out of range
 	req->inbuf->app.buffer[req->inbuf->app.size] = 0;
 	err = vsfip_httpd_parse_req(service, &req->inbuf->app);
 	if (err < 0)
@@ -429,7 +429,7 @@ reply:
 			service->caller_pt.state = 0;
 			vsfsm_pt_entry(pt);
 			err = vsfip_tcp_send(&service->caller_pt, evt, service->so,
-					&service->so->remote_sockaddr, resp->outbuf, false);
+					resp->outbuf, false);
 			if (err > 0) return err;
 			resp->outbuf = NULL;
 			if (err < 0) goto exit;
@@ -445,7 +445,7 @@ reply:
 		service->caller_pt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfip_tcp_send(&service->caller_pt, evt, service->so,
-				&service->so->remote_sockaddr, resp->outbuf, false);
+				 resp->outbuf, false);
 		if (err > 0) return err;
 		resp->outbuf = NULL;
 		if (err < 0) goto exit;
