@@ -25,7 +25,7 @@
 // Note: shell also depend on APPCFG_BUFMGR_SIZE
 //#define APPCFG_BUFMGR_SIZE				(4 * 1024)
 
-#define APPCFG_VSFIP_BUFFER_NUM			4
+#define APPCFG_VSFIP_BUFFER_NUM			8
 #define APPCFG_VSFIP_SOCKET_NUM			8
 #define APPCFG_VSFIP_TCPPCB_NUM			8
 
@@ -269,6 +269,7 @@ struct vsfapp_t
 	.vsfip.telnetd.stream_rx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.rxbuff,
 	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
 
+	.vsfip.httpd.httpd.homepage				= "/index.htm",
 	.vsfip.httpd.httpd.service_num			= dimof(app.vsfip.httpd.service),
 	.vsfip.httpd.httpd.service				= app.vsfip.httpd.service,
 	.vsfip.httpd.httpd.urlhandler			= (struct vsfip_httpd_urlhandler_t *)vsfip_httpd_urlhandler,
@@ -384,44 +385,45 @@ static const struct vsfile_memop_t app_vsfile_memop =
 vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfip_httpd_service_t *service)
 {
-/*	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
+	struct vsfip_httpd_service_req_t *req = &service->req;
+	struct vsfip_httpd_service_resp_t *resp = &service->resp;
+	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)service->httpd->cb.param;
 	uint32_t tmpsize;
 	char *user, *pass;
 
-	if (type)		// XWWW is type 0
+	if (req->post.type != VSFIP_HTTPD_MIMETYPE_XWWW)		// XWWW is type 0
 		goto loginfail;
 
-	//set a str end maybe danger overmem
-	buf[size] = '\0';
+
 
 	//postdat is xwww type
-	user = vsfip_httpd_getarg(buf, "user", &tmpsize);
+	user = vsfip_httpd_getarg(req->body, "user", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->user, user, tmpsize);
 
-	pass = vsfip_httpd_getarg(buf, "pass", &tmpsize);
+	pass = vsfip_httpd_getarg(req->body, "pass", &tmpsize);
 	if (user == NULL)
 		goto loginfail;
 	memcpy(param->pass, pass, tmpsize);
 
-	*rspfilename = "loginsuccess.htm";
+	resp->target_filename = "/loginsuccess.htm";
 	param->islogin = true;
 	param->rsp = true;
 	return VSFERR_NONE;
 
 loginfail:
-	*rspfilename = "loginfail.htm";
+	resp->target_filename = "/loginfail.htm";
 
 	param->rsp = false;
-*/	return VSFERR_NONE;
+
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_httpd_service_t *service)
 {
 	struct vsfip_httpd_service_req_t *req = &service->req;
-	struct vsfip_httpd_service_resp_t *resp = &service->resp;
 	struct vsfip_sockaddr_t *remote = &service->so->remote_sockaddr;
 	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
 
@@ -436,17 +438,17 @@ vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	memcpy(&param->userip, &remote->sin_addr, sizeof(struct vsfip_ipaddr_t));
 
 	//access to login is vaild
-	if (strcmp(req->url, "login") == 0)
+	if (strcmp(req->url, "/login") == 0)
 		return VSFERR_NONE;
 
-	resp->target_filename = "login.htm";
+	req->url = "/login.htm";
 	return VSFERR_NONE;
 }
 
 const struct vsfip_httpd_urlhandler_t vsfip_httpd_urlhandler[2] = 
 {
 	{
-		.url = "login",
+		.url = "/login",
 		.handle = loginpost,
 		.param = &app.vsfip.httpd.ca
 	},

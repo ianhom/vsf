@@ -116,6 +116,9 @@ struct vsfip_httpd_t
 };
 
 #define VSFIP_HTTPD_MIMETYPECNT				10
+#define VSFIP_HTTPD_MIMETYPE_XWWW			0
+#define VSFIP_HTTPD_MIMETYPE_MUTIFORM		1
+
 struct vsfip_http_mimetype_t
 {
 	char *str;
