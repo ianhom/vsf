@@ -40,7 +40,7 @@ struct vsfusbd_RNDIS_param_t
 	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
 
 	bool host;
-	struct vsfip_addr_t mac;
+	struct vsfip_macaddr_t mac;
 
 	// private
 	struct vsfip_netif_t netif;
