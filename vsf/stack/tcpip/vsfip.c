@@ -1847,7 +1847,7 @@ vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
-			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf)
+			struct vsfip_buffer_t *buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	vsf_err_t err = VSFERR_NONE;
@@ -1871,7 +1871,7 @@ vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 		return VSFERR_NOT_READY;
 	}
 
-	buf->netif = vsfip_ip_route(&sockaddr->sin_addr);
+	buf->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
 	if (NULL == buf->netif)
 	{
 		return VSFERR_FAIL;
@@ -1892,8 +1892,8 @@ cleanup:
 }
 
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t *buf, bool flush)
+			struct vsfip_socket_t *socket, struct vsfip_buffer_t *buf,
+			bool flush)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	vsf_err_t err = VSFERR_NONE;
@@ -1901,7 +1901,7 @@ vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	vsfsm_pt_begin(pt);
 	while (1)
 	{
-		err = vsfip_tcp_async_send(socket, sockaddr, buf);
+		err = vsfip_tcp_async_send(socket, buf);
 		if (err < 0) goto cleanup; else if (!err) break; else
 		{
 			pcb->tx_sm = pt->sm;
@@ -1950,7 +1950,7 @@ cleanup:
 }
 
 vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket,
-			struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf)
+			struct vsfip_buffer_t **buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 	struct vsfq_node_t *node;
@@ -1970,13 +1970,12 @@ vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket,
 }
 
 vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-			struct vsfip_buffer_t **buf)
+			struct vsfip_socket_t *socket, struct vsfip_buffer_t **buf)
 {
 	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
 
 	vsfsm_pt_begin(pt);
-	if (vsfip_tcp_async_recv(socket, sockaddr, buf))
+	if (vsfip_tcp_async_recv(socket, buf))
 	{
 		pcb->rx_timeout_ms = socket->rx_timeout_ms;
 
@@ -1991,7 +1990,7 @@ vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			return VSFERR_NOT_READY;
 		}
 
-		return vsfip_tcp_async_recv(socket, sockaddr, buf) ?
+		return vsfip_tcp_async_recv(socket, buf) ?
 						VSFERR_FAIL : VSFERR_NONE;
 	}
 

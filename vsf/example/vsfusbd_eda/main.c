@@ -69,6 +69,8 @@ static struct vsfsm_state_t* app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt
 static void app_pendsv_activate(struct vsfsm_evtq_t *q);
 #endif
 
+void app_rndis_on_connect(void *param);
+
 struct vsfapp_t
 {
 	// hw
@@ -97,6 +99,7 @@ struct vsfapp_t
 		struct
 		{
 			struct vsfusbd_RNDIS_param_t param;
+			struct vsfip_dhcpd_t dhcpd;
 		} rndis;
 		struct
 		{
@@ -205,9 +208,10 @@ struct vsfapp_t
 	.usbd.rndis.param.CDCACM.CDC.ep_notify	= 1,
 	.usbd.rndis.param.CDCACM.CDC.ep_out		= 2,
 	.usbd.rndis.param.CDCACM.CDC.ep_in		= 2,
-	.usbd.rndis.param.host					= true,
 	.usbd.rndis.param.mac.size				= 6,
 	.usbd.rndis.param.mac.addr.s_addr64		= 0x0605040302E0,
+	.usbd.rndis.param.cb.param				= &app,
+	.usbd.rndis.param.cb.on_connect			= app_rndis_on_connect,
 	.usbd.cdc.param.CDC.ep_notify			= 3,
 	.usbd.cdc.param.CDC.ep_out				= 4,
 	.usbd.cdc.param.CDC.ep_in				= 4,
@@ -447,6 +451,13 @@ const struct vsfip_httpd_urlhandler_t vsfip_httpd_urlhandler[2] =
 		.param = &app.vsfip.httpd.ca
 	},
 };
+
+// rndis on_connect
+void app_rndis_on_connect(void *param)
+{
+	struct vsfapp_t *app = (struct vsfapp_t *)param;
+	vsfip_dhcpd_start(&app->usbd.rndis.param.netif, &app->usbd.rndis.dhcpd);
+}
 
 static struct vsfsm_state_t *
 app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)

@@ -340,16 +340,13 @@ struct vsfip_modifs_t
 				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
 	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
 				struct vsfip_socket_t*, struct vsfip_socket_t**);
-	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t*);
+	vsf_err_t (*tcp_async_send)(struct vsfip_socket_t*, struct vsfip_buffer_t*);
 	vsf_err_t (*tcp_send)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
-				struct vsfip_buffer_t*, bool);
+				struct vsfip_socket_t*, struct vsfip_buffer_t*, bool);
 	vsf_err_t (*tcp_async_recv)(struct vsfip_socket_t*,
-				struct vsfip_sockaddr_t*, struct vsfip_buffer_t**);
-	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
-				struct vsfip_socket_t*, struct vsfip_sockaddr_t*,
 				struct vsfip_buffer_t**);
+	vsf_err_t (*tcp_recv)(struct vsfsm_pt_t*, vsfsm_evt_t,
+				struct vsfip_socket_t*, struct vsfip_buffer_t**);
 	vsf_err_t (*tcp_close)(struct vsfsm_pt_t*, vsfsm_evt_t,
 				struct vsfip_socket_t*);
 
@@ -447,15 +444,13 @@ vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_socket_t **acceptsocket);
 vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
-		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t *buf);
+		struct vsfip_buffer_t *buf);
 vsf_err_t vsfip_tcp_send(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
-		struct vsfip_buffer_t *buf, bool flush);
+		struct vsfip_socket_t *socket, struct vsfip_buffer_t *buf, bool flush);
 vsf_err_t vsfip_tcp_async_recv(struct vsfip_socket_t *socket,
-		struct vsfip_sockaddr_t *sockaddr, struct vsfip_buffer_t **buf);
-vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr,
 		struct vsfip_buffer_t **buf);
+vsf_err_t vsfip_tcp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+		struct vsfip_socket_t *socket, struct vsfip_buffer_t **buf);
 vsf_err_t vsfip_tcp_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_socket_t *socket);
 

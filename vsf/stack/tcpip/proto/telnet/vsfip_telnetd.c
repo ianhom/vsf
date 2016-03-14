@@ -71,7 +71,7 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		session->caller_txpt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfip_tcp_send(&session->caller_txpt, evt, session->so,
-						&session->so->remote_sockaddr, session->outbuf, false);
+						session->outbuf, false);
 		if (err > 0) return err; else if (err < 0)
 		{
 			session->disconnect = true;
@@ -113,7 +113,7 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		session->caller_rxpt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfip_tcp_recv(&session->caller_rxpt, evt, session->so,
-								&session->so->remote_sockaddr, &session->inbuf);
+								&session->inbuf);
 		if (err > 0) return err; else if (err < 0)
 		{
 			session->disconnect = true;

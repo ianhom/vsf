@@ -118,6 +118,15 @@ static void vsfos_vsfile_free_vfs(struct vsfile_vfsfile_t *vfsfile)
 	VSFPOOL_FREE(&ifs->vfsfile_pool, vfsfile);
 }
 
+// rndis
+void vsfos_rndis_on_connect(void *param)
+{
+	struct vsfos_rndis_t *rndis = (struct vsfos_rndis_t *)param;
+
+	vsfsm_sem_init(&rndis->dhcpc.update_sem, 0, VSFSM_EVT_USER);
+	vsfip_dhcpc_start(&rndis->param.netif, &rndis->dhcpc);
+}
+
 // vsfos
 static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
@@ -346,10 +355,11 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->usbd.rndis.param.CDCACM.CDC.ep_in = 2;
 	ifs->usbd.rndis.param.mac.size = 6;
 	ifs->usbd.rndis.param.mac.addr.s_addr64 = 0x0605040302E0;
-	ifs->usbd.rndis.param.host = false;
 	ifs->usbd.rndis.param.netif.macaddr.size = 6;
 	ifs->usbd.rndis.param.netif.macaddr.addr.s_addr64 = 0x0E0D0C0B0AE0;
-	if (ifs->usbd.rndis.param.host)
+	ifs->usbd.rndis.param.cb.param = &ifs->usbd.rndis;
+	ifs->usbd.rndis.param.cb.on_connect = vsfos_rndis_on_connect;
+	if (0)
 	{
 		ifs->usbd.rndis.param.netif.ipaddr.size = 4;
 		ifs->usbd.rndis.param.netif.ipaddr.addr.s_addr = 0x01202020;

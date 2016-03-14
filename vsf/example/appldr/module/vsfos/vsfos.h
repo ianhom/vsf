@@ -65,9 +65,10 @@ struct vsfos_modifs_t
 
 	struct
 	{
-		struct
+		struct vsfos_rndis_t
 		{
 			struct vsfusbd_RNDIS_param_t param;
+			struct vsfip_dhcpc_t dhcpc;
 		} rndis;
 		struct
 		{

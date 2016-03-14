@@ -206,8 +206,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 
 	httpc->local_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = vsfip_tcp_send(&httpc->local_pt, evt, httpc->so, NULL,
-							httpc->buf, true);
+	err = vsfip_tcp_send(&httpc->local_pt, evt, httpc->so, httpc->buf, true);
 	if (err > 0) return err; else if (err < 0)
 	{
 #ifdef HTTPC_DEBUG
@@ -228,8 +227,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	{
 		httpc->local_pt.state = 0;
 		vsfsm_pt_entry(pt);
-		err = vsfip_tcp_recv(&httpc->local_pt, evt, httpc->so, NULL,
-							&httpc->buf);
+		err = vsfip_tcp_recv(&httpc->local_pt, evt, httpc->so, &httpc->buf);
 		if (err > 0) return err; else if (err < 0)
 		{
 #ifdef HTTPC_DEBUG

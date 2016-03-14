@@ -322,23 +322,10 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 					if (!vsfip_netif_add(&pt, 0, &rndis_param->netif))
 					{
 						rndis_param->netif_inited = true;
-#if VSFUSBD_RNDIS_CFG_HOST_EN
-						if (rndis_param->host)
+						if (rndis_param->cb.on_connect != NULL)
 						{
-							struct vsfip_dhcpd_t *d = &rndis_param->dhcpd;
-
-							vsfip_dhcpd_start(&rndis_param->netif, d);
+							rndis_param->cb.on_connect(rndis_param->cb.param);
 						}
-#endif
-#if VSFUSBD_RNDIS_CFG_SLAVE_EN
-						if (!rndis_param->host)
-						{
-							struct vsfip_dhcpc_t *c = &rndis_param->dhcpc;
-
-							vsfsm_sem_init(&c->update_sem, 0, VSFSM_EVT_USER);
-							vsfip_dhcpc_start(&rndis_param->netif, c);
-						}
-#endif
 					}
 				}
 				break;
