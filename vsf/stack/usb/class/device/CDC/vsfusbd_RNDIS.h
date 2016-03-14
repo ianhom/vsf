@@ -37,23 +37,17 @@
 struct vsfusbd_RNDIS_param_t
 {
 	struct vsfusbd_CDCACM_param_t CDCACM;
-	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
-
-	bool host;
 	struct vsfip_macaddr_t mac;
+	struct
+	{
+		void *param;
+		void (*on_connect)(void *param);
+	} cb;
 
 	// private
+	uint8_t encapsulated_buf[4 * VSFUSBD_RNDIS_CFG_OIDNUM + 32];
 	struct vsfip_netif_t netif;
 	struct vsfip_netdrv_t netdrv;
-	union
-	{
-#if VSFUSBD_RNDIS_CFG_HOST_EN
-		struct vsfip_dhcpd_t dhcpd;
-#endif
-#if VSFUSBD_RNDIS_CFG_SLAVE_EN
-		struct vsfip_dhcpc_t dhcpc;
-#endif
-	};
 	bool netif_inited;
 	struct vsf_bufstream_t tx_bufstream;
 	struct vsf_bufstream_t rx_bufstream;
