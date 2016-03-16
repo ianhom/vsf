@@ -156,6 +156,7 @@ struct vsf_t
 {
 	uint32_t ver;
 	struct interfaces_info_t const *ifs;
+	void* (*getif)(char *ifname);
 
 	struct
 	{
@@ -394,68 +395,77 @@ struct vsf_t
 #define vsf								(*(struct vsf_t *)VSFCFG_API_ADDR)
 #define api_ver							vsf.ver
 #define core_interfaces					(*vsf.ifs)
+#define vafhal_getif					vsf.getif
 
 // interfaces constants
-#define GPIO_INFLOAT					core_interfaces.gpio.constants.INFLOAT
-#define GPIO_INPU						core_interfaces.gpio.constants.INPU
-#define GPIO_INPD						core_interfaces.gpio.constants.INPD
-#define GPIO_OUTPP						core_interfaces.gpio.constants.OUTPP
-#define GPIO_OUTOD						core_interfaces.gpio.constants.OUTOD
-#define vsfhal_gpio_init				core_interfaces.gpio.init
-#define vsfhal_gpio_fini				core_interfaces.gpio.fini
-#define vsfhal_gpio_config_pin			core_interfaces.gpio.config_pin
-#define vsfhal_gpio_config				core_interfaces.gpio.config
-#define vsfhal_gpio_in					core_interfaces.gpio.in
-#define vsfhal_gpio_out					core_interfaces.gpio.out
-#define vsfhal_gpio_set					core_interfaces.gpio.set
-#define vsfhal_gpio_clear				core_interfaces.gpio.clear
-#define vsfhal_gpio_get					core_interfaces.gpio.get
+#define vsfhal_gpio_if					((struct interface_gpio_t *)vafhal_getif("gpio"))
+#define GPIO_INFLOAT					vsfhal_gpio_if->constants.INFLOAT
+#define GPIO_INPU						vsfhal_gpio_if->constants.INPU
+#define GPIO_INPD						vsfhal_gpio_if->constants.INPD
+#define GPIO_OUTPP						vsfhal_gpio_if->constants.OUTPP
+#define GPIO_OUTOD						vsfhal_gpio_if->constants.OUTOD
+#define vsfhal_gpio_init				vsfhal_gpio_if->init
+#define vsfhal_gpio_fini				vsfhal_gpio_if->fini
+#define vsfhal_gpio_config_pin			vsfhal_gpio_if->config_pin
+#define vsfhal_gpio_config				vsfhal_gpio_if->config
+#define vsfhal_gpio_in					vsfhal_gpio_if->in
+#define vsfhal_gpio_out					vsfhal_gpio_if->out
+#define vsfhal_gpio_set					vsfhal_gpio_if->set
+#define vsfhal_gpio_clear				vsfhal_gpio_if->clear
+#define vsfhal_gpio_get					vsfhal_gpio_if->get
 
-#define vsfhal_core_init				core_interfaces.core.init
-#define vsfhal_core_sleep				core_interfaces.core.sleep
-#define vsfhal_core_pendsv_config		core_interfaces.core.pendsv_config
-#define vsfhal_core_pendsv_trigger		core_interfaces.core.pendsv_trigger
+#define vsfhal_core_if					((struct interface_core_t *)vafhal_getif("core"))
+#define vsfhal_core_init				vsfhal_core_if->init
+#define vsfhal_core_sleep				vsfhal_core_if->sleep
+#define vsfhal_core_pendsv_config		vsfhal_core_if->pendsv_config
+#define vsfhal_core_pendsv_trigger		vsfhal_core_if->pendsv_trigger
 
-#define vsfhal_tickclk_init				core_interfaces.tickclk.init
-#define vsfhal_tickclk_fini				core_interfaces.tickclk.fini
-#define vsfhal_tickclk_start			core_interfaces.tickclk.start
-#define vsfhal_tickclk_stop				core_interfaces.tickclk.stop
-#define vsfhal_tickclk_get_count		core_interfaces.tickclk.get_count
-#define vsfhal_tickclk_set_callback		core_interfaces.tickclk.set_callback
+#define vsfhal_tickclk_if				((struct interface_tickclk_t *)vafhal_getif("tickclk"))
+#define vsfhal_tickclk_init				vsfhal_tickclk_if->init
+#define vsfhal_tickclk_fini				vsfhal_tickclk_if->fini
+#define vsfhal_tickclk_start			vsfhal_tickclk_if->start
+#define vsfhal_tickclk_stop				vsfhal_tickclk_if->stop
+#define vsfhal_tickclk_get_count		vsfhal_tickclk_if->get_count
+#define vsfhal_tickclk_set_callback		vsfhal_tickclk_if->set_callback
 
-#define SPI_MASTER						core_interfaces.spi.constants.MASTER
-#define SPI_SLAVE						core_interfaces.spi.constants.SLAVE
-#define SPI_MODE0						core_interfaces.spi.constants.MODE0
-#define SPI_MODE1						core_interfaces.spi.constants.MODE1
-#define SPI_MODE2						core_interfaces.spi.constants.MODE2
-#define SPI_MODE3						core_interfaces.spi.constants.MODE3
-#define SPI_MSB_FIRST					core_interfaces.spi.constants.MSB_FIRST
-#define SPI_LSB_FIRST					core_interfaces.spi.constants.LSB_FIRST
-#define vsfhal_spi_init					core_interfaces.spi.init
-#define vsfhal_spi_fini					core_interfaces.spi.fini
-#define vsfhal_spi_get_ability			core_interfaces.spi.get_ability
-#define vsfhal_spi_enable				core_interfaces.spi.enable
-#define vsfhal_spi_disable				core_interfaces.spi.disable
-#define vsfhal_spi_config				core_interfaces.spi.config
-#define vsfhal_spi_config_callback		core_interfaces.spi.config_callback
-#define vsfhal_spi_select				core_interfaces.spi.select
-#define vsfhal_spi_deselect				core_interfaces.spi.deselect
-#define vsfhal_spi_start				core_interfaces.spi.start
-#define vsfhal_spi_stop					core_interfaces.spi.stop
+#define vsfhal_spi_if					((struct interface_spi_t *)vafhal_getif("spi"))
+#define SPI_MASTER						vsfhal_spi_if->constants.MASTER
+#define SPI_SLAVE						vsfhal_spi_if->constants.SLAVE
+#define SPI_MODE0						vsfhal_spi_if->constants.MODE0
+#define SPI_MODE1						vsfhal_spi_if->constants.MODE1
+#define SPI_MODE2						vsfhal_spi_if->constants.MODE2
+#define SPI_MODE3						vsfhal_spi_if->constants.MODE3
+#define SPI_MSB_FIRST					vsfhal_spi_if->constants.MSB_FIRST
+#define SPI_LSB_FIRST					vsfhal_spi_if->constants.LSB_FIRST
+#define vsfhal_spi_init					vsfhal_spi_if->init
+#define vsfhal_spi_fini					vsfhal_spi_if->fini
+#define vsfhal_spi_get_ability			vsfhal_spi_if->get_ability
+#define vsfhal_spi_enable				vsfhal_spi_if->enable
+#define vsfhal_spi_disable				vsfhal_spi_if->disable
+#define vsfhal_spi_config				vsfhal_spi_if->config
+#define vsfhal_spi_config_callback		vsfhal_spi_if->config_callback
+#define vsfhal_spi_select				vsfhal_spi_if->select
+#define vsfhal_spi_deselect				vsfhal_spi_if->deselect
+#define vsfhal_spi_start				vsfhal_spi_if->start
+#define vsfhal_spi_stop					vsfhal_spi_if->stop
 
-#define EINT_ONFALL						core_interfaces.eint.constants.ONFALL
-#define EINT_ONRISE						core_interfaces.eint.constants.ONRISE
-#define EINT_ONLOW						core_interfaces.eint.constants.ONLOW
-#define EINT_ONHIGH						core_interfaces.eint.constants.ONHIGH
-#define vsfhal_eint_init				core_interfaces.eint.init
-#define vsfhal_eint_fini				core_interfaces.eint.fini
-#define vsfhal_eint_config				core_interfaces.eint.config
-#define vsfhal_eint_enable				core_interfaces.eint.enable
-#define vsfhal_eint_disable				core_interfaces.eint.disable
+#define vsfhal_eint_if					((struct interface_eint_t *)vafhal_getif("eint"))
+#define EINT_ONFALL						vsfhal_eint_if->constants.ONFALL
+#define EINT_ONRISE						vsfhal_eint_if->constants.ONRISE
+#define EINT_ONLOW						vsfhal_eint_if->constants.ONLOW
+#define EINT_ONHIGH						vsfhal_eint_if->constants.ONHIGH
+#define vsfhal_eint_init				vsfhal_eint_if->init
+#define vsfhal_eint_fini				vsfhal_eint_if->fini
+#define vsfhal_eint_config				vsfhal_eint_if->config
+#define vsfhal_eint_enable				vsfhal_eint_if->enable
+#define vsfhal_eint_disable				vsfhal_eint_if->disable
 
-#define vsfhal_hcd_init					core_interfaces.hcd.init
-#define vsfhal_hcd_fini					core_interfaces.hcd.fini
-#define vsfhal_hcd_regbase				core_interfaces.hcd.regbase
+#define vsfhal_usbd_if					((struct interface_usbd_t *)vafhal_getif("usbd"))
+
+#define vsfhal_hcd_if					((struct interface_hcd_t *)vafhal_getif("hcd"))
+#define vsfhal_hcd_init					vsfhal_hcd_if->init
+#define vsfhal_hcd_fini					vsfhal_hcd_if->fini
+#define vsfhal_hcd_regbase				vsfhal_hcd_if->regbase
 // more interfaces related MACROs here
 
 // libc

@@ -188,7 +188,7 @@ static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfshell_init(&ifs->shell);
 	vsfos_busybox_init(&ifs->shell);
 
-	if (ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
+	if ((ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT) && (vsfhal_gpio_if != NULL))
 	{
 		uint8_t port = ifs->hwcfg->usbd.pullup.port;
 		uint8_t pin = ifs->hwcfg->usbd.pullup.pin;
@@ -200,7 +200,7 @@ static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	vsfsm_pt_delay(pt, 200);
 
-	if (ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT)
+	if ((ifs->hwcfg->usbd.pullup.port != IFS_DUMMY_PORT) && (vsfhal_gpio_if != NULL))
 	{
 		uint8_t port = ifs->hwcfg->usbd.pullup.port;
 		uint8_t pin = ifs->hwcfg->usbd.pullup.pin;
@@ -417,7 +417,7 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->usbd.device.config = ifs->usbd.config;
 	ifs->usbd.device.desc_filter = ifs->usbd.desc;
 	ifs->usbd.device.device_class_iface = 0;
-	ifs->usbd.device.drv = (struct interface_usbd_t *)&core_interfaces.usbd;
+	ifs->usbd.device.drv = vsfhal_usbd_if;
 	ifs->usbd.device.int_priority = 0x01;
 
 	// init telnetd

@@ -403,7 +403,7 @@ vsfsm_ljmp_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		if (evt == VSFSM_EVT_INIT)
 		{
 			// implement set_stack as a func is risky, may break the stack
-			core_interfaces.core.set_stack((uint32_t)ljmp->stack);
+			vsfhal_core_set_stack((uint32_t)ljmp->stack);
 			ljmp->thread(ljmp);
 		}
 		else

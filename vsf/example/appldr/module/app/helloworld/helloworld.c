@@ -16,29 +16,38 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#include "vsf.h"
+#include "../../vsfos/vsfos.h"
 
-// define the address of the api table
-#define VSFCFG_API_ADDR				(SYS_MAIN_ADDR + 0x200)
+static vsf_err_t app_helloworld(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfshell_handler_param_t *param =
+						(struct vsfshell_handler_param_t *)pt->user_data;
+	struct vsfsm_pt_t *outpt = &param->output_pt;
 
-//#define VSFCFG_DEBUG
-//#define VSFCFG_DEBUG_INFO_LEN		(1024)
+	vsfsm_pt_begin(pt);
+	vsfshell_printf(outpt, "helloworld"VSFSHELL_LINEEND);
+	vsfshell_handler_exit(param);
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
 
-#define VSFCFG_BUFFER
-#define VSFCFG_LIST
-#define VSFCFG_STREAM
-#define VSFCFG_MAL
-#define VSFCFG_SCSI
-#define VSFCFG_FILE
+void app_helloworld_modexit(struct vsf_module_t *module)
+{
+	vsf_bufmgr_free(module->ifs);
+	module->ifs = NULL;
+}
 
-// include VSFCFG_STANDALONE_MODULE to compile the project as a module
-//#define VSFCFG_STANDALONE_MODULE
+vsf_err_t app_helloworld_modinit(struct vsf_module_t *module,
+								struct app_hwcfg_t const *cfg)
+{
+	struct vsfshell_handler_t *handlers;
+	handlers = vsf_bufmgr_malloc(2 * sizeof(struct vsfshell_handler_t));
+	if (!handlers) return VSFERR_FAIL;
+	memset(handlers, 0, sizeof(*handlers));
 
-// include VSFCFG_MODULE to enable module support
-#define VSFCFG_MODULE
-
-// define VSFCFG_FUNC_XXXX to include corresponding func
-#define VSFCFG_FUNC_USBD
-#define VSFCFG_FUNC_USBH
-#define VSFCFG_FUNC_SHELL
-#define VSFCFG_FUNC_TCPIP
-#define VSFCFG_FUNC_BCMWIFI
+	handlers[0] = (struct vsfshell_handler_t){"helloworld", app_helloworld};
+	vsfshell_register_handlers(&vsfos->shell, handlers);
+	module->ifs = handlers;
+	return VSFERR_NONE;
+}

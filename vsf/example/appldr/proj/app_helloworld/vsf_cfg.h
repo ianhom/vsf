@@ -18,10 +18,10 @@
  ***************************************************************************/
 
 // define the address of the api table
-#define VSFCFG_API_ADDR				(SYS_MAIN_ADDR + 0x200)
+#define VSFCFG_API_ADDR				0x00000200
 
-//#define VSFCFG_DEBUG
-//#define VSFCFG_DEBUG_INFO_LEN		(1024)
+#define VSFCFG_DEBUG
+#define VSFCFG_DEBUG_INFO_LEN		(1024)
 
 #define VSFCFG_BUFFER
 #define VSFCFG_LIST
@@ -31,7 +31,7 @@
 #define VSFCFG_FILE
 
 // include VSFCFG_STANDALONE_MODULE to compile the project as a module
-//#define VSFCFG_STANDALONE_MODULE
+#define VSFCFG_STANDALONE_MODULE
 
 // include VSFCFG_MODULE to enable module support
 #define VSFCFG_MODULE

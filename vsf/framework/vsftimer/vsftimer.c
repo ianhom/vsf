@@ -63,7 +63,7 @@ static struct vsftimer_t *vsftimer_allocate(void)
 
 void vsftimer_enqueue(struct vsftimer_t *timer)
 {
-	timer->node.addr = timer->interval + core_interfaces.tickclk.get_count();
+	timer->node.addr = timer->interval + vsfhal_tickclk_get_count();
 	vsftimer_dequeue(timer);
 	vsfq_enqueue(&vsftimer.timerlist, &timer->node);
 }
@@ -76,7 +76,7 @@ void vsftimer_dequeue(struct vsftimer_t *timer)
 static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
-	uint32_t cur_tick = core_interfaces.tickclk.get_count();
+	uint32_t cur_tick = vsfhal_tickclk_get_count();
 	struct vsftimer_t *timer;
 
 	switch (evt)
