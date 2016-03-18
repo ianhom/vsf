@@ -29,12 +29,12 @@ struct vsfusbd_CDC_param_t
 	uint8_t ep_notify;
 	uint8_t ep_out;
 	uint8_t ep_in;
-	
+
 	// stream_tx is used for data stream send to USB host
 	struct vsf_stream_t *stream_tx;
 	// stream_rx is used for data stream receive from USB host
 	struct vsf_stream_t *stream_rx;
-	
+
 	struct
 	{
 		vsf_err_t (*send_encapsulated_command)(
@@ -44,11 +44,11 @@ struct vsfusbd_CDC_param_t
 		void (*on_rx_finish)(void *param);
 #endif
 	} callback;
-	
+
 	// no need to initialize below if encapsulate command/response is not used
 	struct vsf_buffer_t encapsulated_command;
 	struct vsf_buffer_t encapsulated_response;
-	
+
 	// no need to initialize below by user
 	struct vsfusbd_device_t *device;
 #ifdef VSFUSBD_CDCCFG_TRANSACT
@@ -71,7 +71,7 @@ struct vsfusbd_CDC_modifs_t
 	void (*connect)(struct vsfusbd_CDC_param_t*);
 };
 
-void vsfusbd_CDC_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_CDC_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_CDC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_CDCMOD						\

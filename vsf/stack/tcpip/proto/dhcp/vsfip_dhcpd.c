@@ -206,10 +206,11 @@ cleanup:
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_dhcpd_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_dhcpd_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_dhcpd_modinit(struct vsf_module_t *module,

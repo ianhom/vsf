@@ -27,7 +27,7 @@ uint32_t crc_calc(struct crc_t *crc, void *buff, uint32_t num)
 	uint8_t *buff8 = (uint8_t *)buff;
 	uint16_t *buff16 = (uint16_t *)buff;
 	uint32_t *buff32 = (uint32_t *)buff;
-	
+
 	while (num--)
 	{
 		switch (crc->bitlen)
@@ -60,10 +60,11 @@ uint32_t crc_calc(struct crc_t *crc, void *buff, uint32_t num)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void crc_modexit(struct vsf_module_t *module)
+vsf_err_t crc_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t crc_modinit(struct vsf_module_t *module,

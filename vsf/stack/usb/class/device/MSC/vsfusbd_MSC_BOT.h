@@ -80,7 +80,7 @@ struct vsfusbd_MSC_modifs_t
 	struct vsfusbd_class_protocol_t protocol;
 };
 
-void vsfusbd_MSC_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_MSC_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_MSC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_MSCMOD						\

@@ -216,7 +216,7 @@ struct vsfusbh_modifs_t
 	vsf_err_t (*get_extra_descriptor)(uint8_t*, uint16_t, uint8_t, void**);
 };
 
-void vsfusbh_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBHMOD						\

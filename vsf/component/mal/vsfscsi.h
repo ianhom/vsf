@@ -182,7 +182,7 @@ struct vsfscsi_modifs_t
 	} mal2scsi;
 };
 
-void vsfscsi_modexit(struct vsf_module_t*);
+vsf_err_t vsfscsi_modexit(struct vsf_module_t*);
 vsf_err_t vsfscsi_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFSCSI_MOD						\

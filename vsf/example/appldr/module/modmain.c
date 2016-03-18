@@ -25,9 +25,9 @@ int main(void)
 	return 0;
 }
 
-ROOTFUNC void module_exit(struct vsf_module_t *module)
+ROOTFUNC vsf_err_t module_exit(struct vsf_module_t *module)
 {
-	MODULE_EXIT(module);
+	return MODULE_EXIT(module);
 }
 
 ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,

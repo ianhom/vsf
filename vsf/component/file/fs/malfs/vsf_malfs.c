@@ -99,10 +99,11 @@ vsf_err_t vsf_malfs_write(struct vsf_malfs_t *malfs, uint32_t sector,
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsf_malfs_modexit(struct vsf_module_t *module)
+vsf_err_t vsf_malfs_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsf_malfs_modinit(struct vsf_module_t *module,

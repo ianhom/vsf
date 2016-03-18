@@ -25,7 +25,7 @@
 struct vsfusbd_CDCACM_param_t
 {
 	struct vsfusbd_CDC_param_t CDC;
-	
+
 	struct
 	{
 		vsf_err_t (*set_line_coding)(struct usb_CDCACM_line_coding_t *line_coding);
@@ -33,9 +33,9 @@ struct vsfusbd_CDCACM_param_t
 		vsf_err_t (*get_control_line)(uint8_t *control_line);
 		vsf_err_t (*send_break)(void);
 	} callback;
-	
+
 	struct usb_CDCACM_line_coding_t line_coding;
-	
+
 	// no need to initialize below by user
 	uint8_t control_line;
 	uint8_t line_coding_buffer[7];
@@ -50,7 +50,7 @@ struct vsfusbd_CDCACM_modifs_t
 	struct vsfusbd_class_protocol_t data_protocol;
 };
 
-void vsfusbd_CDCACM_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_CDCACM_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_CDCACM_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_CDCACMMOD					\

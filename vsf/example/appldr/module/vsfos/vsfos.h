@@ -127,7 +127,7 @@ struct vsfos_modifs_t
 	struct vsfsm_pt_t caller_pt;
 };
 
-void vsfos_modexit(struct vsf_module_t*);
+vsf_err_t vsfos_modexit(struct vsf_module_t*);
 vsf_err_t vsfos_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFOS_MOD								\

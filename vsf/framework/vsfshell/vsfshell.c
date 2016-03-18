@@ -26,28 +26,28 @@
 static void vsfshell_streamrx_on_in(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
-	
+
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMRX_ONIN);
 }
 
 static void vsfshell_streamtx_on_out(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
-	
+
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMTX_ONOUT);
 }
 
 static void vsfshell_streamrx_on_txconn(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
-	
+
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMRX_ONCONN);
 }
 
 static void vsfshell_streamtx_on_rxconn(void *p)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)p;
-	
+
 	vsfsm_post_evt_pending(&shell->sm, VSFSHELL_EVT_STREAMTX_ONCONN);
 }
 
@@ -62,7 +62,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	va_list ap;
 	char *printf_buff;
 	uint32_t printf_size;
-	
+
 	vsfsm_pt_begin(pt);
 	// get lock here
 	if (vsfsm_crit_enter(&shell->output_crit, pt->sm))
@@ -70,14 +70,14 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		vsfsm_pt_wfe(pt, VSFSHELL_EVT_OUTPUT_CRIT_AVAIL);
 	}
 	shell->output_sm = pt->sm;
-	
+
 	if (shell->output_interrupted && (pt->sm == &shell->sm))
 	{
 		// is vsfshell_input_thread is interrupted
 		// 		and current pt is vsfshell_input_thread
 		// then output the VSFSHELL_PROMPT and the original commandline
 		shell->output_interrupted = false;
-		
+
 		size_avail = stream_get_free_size(shell->stream_tx);
 		while (size_avail < strlen(VSFSHELL_PROMPT))
 		{
@@ -88,7 +88,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		buffer.size = strlen(VSFSHELL_PROMPT);
 		stream_write(shell->stream_tx, &buffer);
 		shell->prompted = true;
-		
+
 		shell->tbuffer.buffer.buffer[shell->tbuffer.position] = '\0';
 		shell->printf_pos = (char *)shell->tbuffer.buffer.buffer;
 		str_len = strlen(shell->printf_pos);
@@ -101,7 +101,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				size_avail = stream_get_free_size(shell->stream_tx);
 				str_len = strlen(shell->printf_pos);
 			}
-			
+
 			if (size_avail)
 			{
 				buffer.buffer = (uint8_t *)shell->printf_pos;
@@ -112,7 +112,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			}
 		}
 	}
-	
+
 	va_start(ap, format);
 	printf_size = sizeof(shell->printf_buff);
 	printf_buff = shell->printf_buff;
@@ -138,7 +138,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	str_len = vsnprintf(printf_buff, printf_size, format, ap);
 	va_end(ap);
 	shell->printf_pos = shell->printf_buff;
-	
+
 	while (str_len > 0)
 	{
 		size_avail = stream_get_free_size(shell->stream_tx);
@@ -148,7 +148,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			size_avail = stream_get_free_size(shell->stream_tx);
 			str_len = strlen(shell->printf_pos);
 		}
-		
+
 		if (size_avail)
 		{
 			buffer.buffer = (uint8_t *)shell->printf_pos;
@@ -161,7 +161,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	shell->output_sm = NULL;
 	vsfsm_crit_leave(&shell->output_crit);
 	vsfsm_pt_end(pt);
-	
+
 	return VSFERR_NONE;
 }
 
@@ -171,7 +171,7 @@ vsfshell_parse_cmd(char *cmd, struct vsfshell_handler_param_t *param)
 	uint8_t cmd_len, argv_num;
 	uint16_t i;
 	char *argv_tmp;
-	
+
 	memset(param->argv, 0, sizeof(param->argv));
 	cmd_len = strlen(cmd);
 	argv_num = 0;
@@ -186,12 +186,12 @@ vsfshell_parse_cmd(char *cmd, struct vsfshell_handler_param_t *param)
 		{
 			break;
 		}
-		
+
 		if (('\'' == cmd[i]) || ('"' == cmd[i]))
 		{
 			uint8_t j;
 			char divider = cmd[i];
-			
+
 			j = i + 1;
 			argv_tmp = &cmd[j];
 			while (cmd[j] != divider)
@@ -212,14 +212,14 @@ vsfshell_parse_cmd(char *cmd, struct vsfshell_handler_param_t *param)
 				i++;
 			}
 		}
-		
+
 		cmd[i++] = '\0';
 		if (argv_num >= param->argc)
 		{
 			// can not accept more argv
 			break;
 		}
-		
+
 		// allocate buffer for argv_tmp
 		param->argv[argv_num] = vsf_bufmgr_malloc(strlen(argv_tmp) + 1);
 		if (NULL == param->argv[argv_num])
@@ -237,7 +237,7 @@ static struct vsfshell_handler_t *
 vsfshell_search_handler(struct vsfshell_t *shell, char *name)
 {
 	struct vsfshell_handler_t *handler = shell->handlers;
-	
+
 	while (handler != NULL)
 	{
 		if (!strcmp(handler->name, name))
@@ -246,7 +246,7 @@ vsfshell_search_handler(struct vsfshell_t *shell, char *name)
 		}
 		handler = handler->next;
 	}
-	
+
 	return handler;
 }
 
@@ -270,7 +270,7 @@ vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 	struct vsfshell_handler_param_t *param =
 		(struct vsfshell_handler_param_t *)vsf_bufmgr_malloc(sizeof(*param));
 	struct vsfshell_handler_t *handler;
-	
+
 	if (NULL == param)
 	{
 		return VSFERR_NOT_ENOUGH_RESOURCES;
@@ -280,26 +280,26 @@ vsfshell_new_handler_thread(struct vsfshell_t *shell, char *cmd)
 	param->output_pt.sm = &param->sm;
 	param->output_pt.thread = (vsfsm_pt_thread_t)vsfshell_output_thread;
 	param->output_pt.user_data = shell;
-	
+
 	// parse command line
 	param->argc = dimof(param->argv);
 	if (vsfshell_parse_cmd(cmd, param))
 	{
 		goto exit_free_argv;
 	}
-	
+
 	// search handler
 	handler =  vsfshell_search_handler(shell, param->argv[0]);
 	if (NULL == handler)
 	{
 		goto exit_free_argv;
 	}
-	
+
 	param->context = handler->context;
 	param->pt.thread = handler->thread;
 	param->pt.user_data = param;
 	param->pt.sm = &param->sm;
-	
+
 	shell->input_sm = &param->sm;
 	vsfsm_pt_init(&param->sm, &param->pt);
 	return VSFERR_NONE;
@@ -313,7 +313,7 @@ void vsfshell_free_handler_thread(struct vsfshell_t *shell, struct vsfsm_t *sm)
 	if (sm != NULL)
 	{
 		struct vsfsm_pt_t *pt = (struct vsfsm_pt_t *)sm->user_data;
-		
+
 		if (pt != NULL)
 		{
 			struct vsfshell_handler_param_t *param =
@@ -335,7 +335,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfsm_pt_t *output_pt = &shell->output_pt;
 	char *cmd = (char *)shell->tbuffer.buffer.buffer;
 	struct vsf_buffer_t buffer;
-	
+
 	vsfsm_pt_begin(pt);
 	vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMTX_ONCONN);
 	vsfshell_printf(output_pt,
@@ -354,7 +354,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			{
 				break;
 			}
-			
+
 			if (shell->echo)
 			{
 				if ('\r' == shell->ch)
@@ -380,7 +380,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 					vsfshell_printf(output_pt, "%c", shell->ch);
 				}
 			}
-			
+
 			if ('\r' == shell->ch)
 			{
 				if (shell->tbuffer.position > 0)
@@ -422,7 +422,7 @@ static struct vsfsm_state_t *
 vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	struct vsfshell_t *shell = (struct vsfshell_t *)sm->user_data;
-	
+
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
@@ -432,14 +432,14 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		shell->tbuffer.buffer.size = sizeof(shell->cmd_buff);
 		shell->tbuffer.position = 0;
 		vsfsm_crit_init(&shell->output_crit, VSFSHELL_EVT_OUTPUT_CRIT_AVAIL);
-		
+
 		shell->stream_rx->callback_rx.param = shell;
 		shell->stream_rx->callback_rx.on_inout = vsfshell_streamrx_on_in;
 		shell->stream_rx->callback_rx.on_connect = vsfshell_streamrx_on_txconn;
 		shell->stream_tx->callback_tx.param = shell;
 		shell->stream_tx->callback_tx.on_inout = vsfshell_streamtx_on_out;
 		shell->stream_tx->callback_tx.on_connect = vsfshell_streamtx_on_rxconn;
-		
+
 		// shell->output_pt is only called by shell->input_pt
 		shell->output_pt.thread = (vsfsm_pt_thread_t)vsfshell_output_thread;
 		shell->output_pt.sm = sm;
@@ -452,7 +452,7 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		shell->input_pt.thread(&shell->input_pt, VSFSM_EVT_INIT);
 		// default input sm is shell itself
 		shell->input_sm = &shell->sm;
-		
+
 		stream_connect_rx(shell->stream_rx);
 		stream_connect_tx(shell->stream_tx);
 		break;
@@ -481,7 +481,7 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 		break;
 	}
-	
+
 	return NULL;
 }
 
@@ -500,16 +500,17 @@ void vsfshell_register_handlers(struct vsfshell_t *shell,
 	{
 		handlers->next = shell->handlers;
 		shell->handlers = handlers;
-		
+
 		handlers++;
 	}
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfshell_modexit(struct vsf_module_t *module)
+vsf_err_t vsfshell_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfshell_modinit(struct vsf_module_t *module,

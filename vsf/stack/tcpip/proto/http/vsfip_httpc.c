@@ -150,7 +150,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 #ifdef HTTPC_DEBUG
 		vsfshell_printf(&httpc->debug_pt,
 						"->DNS %s" VSFSHELL_LINEEND, httpc->host);
-#endif	
+#endif
 		httpc->local_pt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfip_gethostbyname(&httpc->local_pt, evt, httpc->host,
@@ -401,10 +401,11 @@ static vsf_err_t vsfip_httpc_on_recv_buffer(struct vsfsm_pt_t *pt,
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_httpc_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_httpc_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_httpc_modinit(struct vsf_module_t *module,

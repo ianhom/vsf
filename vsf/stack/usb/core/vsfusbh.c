@@ -1309,10 +1309,11 @@ vsf_err_t vsfusbh_get_extra_descriptor(uint8_t *buf, uint16_t size,
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfusbh_modexit(struct vsf_module_t *module)
+vsf_err_t vsfusbh_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbh_modinit(struct vsf_module_t *module,

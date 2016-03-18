@@ -132,7 +132,6 @@ PACKED_HEAD struct PACKED_MID fatfs_dentry_t
 		{
 			union
 			{
-				
 				PACKED_HEAD struct PACKED_MID
 				{
 					uint8_t Type;
@@ -725,7 +724,7 @@ static vsf_err_t vsffat_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	fat->remain_size = size;
 	fat->cur_sector = vsffat_clus2sec(fat, fat->cur_cluster);
 	fat->cur_sector += (offset & (clustersize - 1)) >> fat->sectorsize_bits;
-	fat->cur_offset = offset & ~((1 << fat->sectorsize_bits) - 1); 
+	fat->cur_offset = offset & ~((1 << fat->sectorsize_bits) - 1);
 	while (fat->remain_size)
 	{
 		if (fat->cur_offset != offset)
@@ -818,10 +817,11 @@ static vsf_err_t vsffat_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsffat_modexit(struct vsf_module_t *module)
+vsf_err_t vsffat_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsffat_modinit(struct vsf_module_t *module,

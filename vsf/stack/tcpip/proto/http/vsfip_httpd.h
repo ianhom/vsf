@@ -143,7 +143,7 @@ struct vsfip_httpd_modifs_t
 	struct vsfile_memfile_t http404;
 };
 
-void vsfip_httpd_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_httpd_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_httpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_HTTPDMOD						\

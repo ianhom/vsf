@@ -378,10 +378,11 @@ vsf_err_t vsf_malstream_write(struct vsf_malstream_t *malstream, uint64_t addr,
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfmal_modexit(struct vsf_module_t *module)
+vsf_err_t vsfmal_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfmal_modinit(struct vsf_module_t *module,

@@ -63,7 +63,7 @@ struct vsfip_httpc_modifs_t
 	vsf_err_t (*get)(struct vsfsm_pt_t*, vsfsm_evt_t, char*, void*);
 };
 
-void vsfip_httpc_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_httpc_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_httpc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_HTTPCMOD						\

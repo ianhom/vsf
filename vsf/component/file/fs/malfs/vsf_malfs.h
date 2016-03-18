@@ -50,7 +50,7 @@ struct vsf_malfs_modifs_t
 	vsf_err_t (*write)(struct vsf_malfs_t*, uint32_t, uint8_t*, uint32_t);
 };
 
-void vsf_malfs_modexit(struct vsf_module_t*);
+vsf_err_t vsf_malfs_modexit(struct vsf_module_t*);
 vsf_err_t vsf_malfs_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSF_MALFS_MOD						\

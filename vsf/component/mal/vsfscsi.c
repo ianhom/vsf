@@ -405,10 +405,11 @@ static vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfscsi_modexit(struct vsf_module_t *module)
+vsf_err_t vsfscsi_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfscsi_modinit(struct vsf_module_t *module,

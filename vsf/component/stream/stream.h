@@ -130,7 +130,7 @@ struct vsfstream_modifs_t
 	} bufstream;
 };
 
-void vsfstream_modexit(struct vsf_module_t*);
+vsf_err_t vsfstream_modexit(struct vsf_module_t*);
 vsf_err_t vsfstream_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFSTREAM_MOD						\

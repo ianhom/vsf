@@ -398,10 +398,11 @@ vsf_err_t vsfusbh_uvc_set(void *dev_data, struct vsfusbh_uvc_param_t *param)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfusbh_ucv_modexit(struct vsf_module_t *module)
+vsf_err_t vsfusbh_ucv_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbh_uvc_modinit(struct vsf_module_t *module,

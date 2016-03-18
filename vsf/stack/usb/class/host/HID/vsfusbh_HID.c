@@ -449,7 +449,7 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 				{
 					event.type |= HID_VALUE_TYPE_REL;
 				}
-				
+
 				//usbh_hid_event(&event);
 			}
 		}
@@ -465,7 +465,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfusbh_urb_t *inturb = hid->inturb;
 
 	vsfsm_pt_begin(pt);
-	
+
 	ctrlurb->sm = &hid->sm;
 	inturb->sm = &hid->sm;
 
@@ -497,13 +497,13 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_crit_leave(&hid->dev->ep0_crit);
 	vsf_bufmgr_free(ctrlurb->transfer_buffer);
 	ctrlurb->transfer_buffer = NULL;
-	
+
 	// unknown set report
 	if (hid->hid_report.need_setreport_flag)
 	{
 		// TODO
 	}
-	
+
 	// submit urb
 	inturb->pipe = usb_rcvintpipe(inturb->vsfdev, hid->intf_desc->ep_desc->bEndpointAddress & 0x7f);
 	inturb->interval = 2;
@@ -511,14 +511,14 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	inturb->transfer_buffer = hid->hid_report.cur_value;
 	if (inturb->transfer_buffer == NULL)
 		return VSFERR_FAIL;
-	
+
 	err = vsfusbh_submit_urb(hid->usbh, inturb);
 	if (err != VSFERR_NONE)
 		return VSFERR_FAIL;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (inturb->status != URB_OK)
 		return VSFERR_FAIL;
-	
+
 	// poll
 	while(1)
 	{
@@ -527,7 +527,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			return VSFERR_FAIL;
 
 		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-		
+
 		if (inturb->status == URB_OK)
 		{
 			usbh_hid_process_input(&hid->hid_report);
@@ -535,7 +535,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 					hid->hid_report.input_bitlen >> 3);
 		}
 	}
-	
+
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
@@ -630,20 +630,20 @@ static void *vsfusbh_hid_probe(struct vsfusbh_t *usbh, struct vsfusbh_device_t *
 	return hid;
 }
 
-static void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh, 
+static void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_hid_t *hid = priv;
 	if (hid == NULL)
 		return;
-	
+
 	vsfsm_fini(&hid->sm);
-	
+
 	if (hid->ctrlurb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &hid->ctrlurb);
 	if (hid->inturb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &hid->inturb);
-	
+
 	usbh_hid_free_report(&hid->hid_report);
 
 	vsf_bufmgr_free(hid);
@@ -659,10 +659,11 @@ static const struct vsfusbh_device_id_t vsfusbh_hid_id_table[] =
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfusbh_hid_modexit(struct vsf_module_t *module)
+vsf_err_t vsfusbh_hid_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t *module,

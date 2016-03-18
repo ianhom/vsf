@@ -327,10 +327,11 @@ close:
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_dnsc_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_dnsc_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_dnsc_modinit(struct vsf_module_t *module,

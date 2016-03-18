@@ -36,7 +36,7 @@ PACKED_HEAD struct PACKED_MID usbh_hid_event_t
 	int32_t cur_value;
 	uint32_t type;
 }; PACKED_TAIL
-	 
+
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 #define HID_ITEM_SIZE(x)			((((x)&0x03) == 3)?4:(x)&0x03)
 
@@ -126,7 +126,7 @@ struct hid_report_t
 
 	uint8_t need_setreport_flag;
 	uint8_t need_ignore;
-	
+
 	uint16_t generic_usage;
 };
 
@@ -155,7 +155,7 @@ struct vsfusbh_hid_modifs_t
 	struct vsfusbh_class_drv_t drv;
 };
 
-void vsfusbh_hid_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_hid_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_HIDCMOD						\

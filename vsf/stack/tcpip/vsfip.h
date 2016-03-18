@@ -377,7 +377,7 @@ struct vsfip_modifs_t
 	} netif;
 };
 
-void vsfip_modexit(struct vsf_module_t *module);
+vsf_err_t vsfip_modexit(struct vsf_module_t *module);
 vsf_err_t vsfip_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_MOD							\

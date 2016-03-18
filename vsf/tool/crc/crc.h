@@ -40,7 +40,7 @@ struct crc_modifs_t
 	uint32_t (*calc)(struct crc_t *crc, void *buff, uint32_t num);
 };
 
-void crc_modexit(struct vsf_module_t*);
+vsf_err_t crc_modexit(struct vsf_module_t*);
 vsf_err_t crc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define CRC_MOD								\

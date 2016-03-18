@@ -103,7 +103,7 @@ struct vsffat_modifs_t
 	bool (*is_LFN)(char*);
 };
 
-void vsffat_modexit(struct vsf_module_t*);
+vsf_err_t vsffat_modexit(struct vsf_module_t*);
 vsf_err_t vsffat_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFFAT_MOD							\

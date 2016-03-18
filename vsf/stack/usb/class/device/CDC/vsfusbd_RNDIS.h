@@ -79,7 +79,7 @@ struct vsfusbd_RNDIS_modifs_t
 	struct vsfip_netdrv_op_t netdrv_op;
 };
 
-void vsfusbd_RNDIS_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_RNDIS_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_RNDIS_modinit(struct vsf_module_t*,
 										struct app_hwcfg_t const*);
 

@@ -67,7 +67,7 @@ struct vsfip_telnetd_modifs_t
 	vsf_err_t (*start)(struct vsfip_telnetd_t*);
 };
 
-void vsfip_telnetd_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_telnetd_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_telnetd_modinit(struct vsf_module_t*,
 										struct app_hwcfg_t const*);
 

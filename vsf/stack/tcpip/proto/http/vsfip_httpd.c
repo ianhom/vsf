@@ -25,9 +25,9 @@
 #undef vsfip_httpd_header_end
 #undef vsfip_httpd_getarg
 
-#ifdef HTTPD_DEBUG	
+#ifdef HTTPD_DEBUG
 #include "framework/vsfshell/vsfshell.h"
-#endif	
+#endif
 
 #define VSFIP_HTTP_SERVER_SOCKETTIMEOUT					4000
 
@@ -564,10 +564,11 @@ vsf_err_t vsfip_httpd_start(struct vsfip_httpd_t *httpd, uint16_t port)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_httpd_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_httpd_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_httpd_modinit(struct vsf_module_t *module,

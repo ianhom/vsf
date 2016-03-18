@@ -193,7 +193,7 @@ struct vsfusbd_modifs_t
 				struct vsf_buffer_t*);
 };
 
-void vsfusbd_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbd_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBD_MOD							\

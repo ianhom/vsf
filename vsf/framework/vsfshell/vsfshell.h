@@ -26,7 +26,7 @@ enum vsfshell_EVT_t
 	VSFSHELL_EVT_STREAMTX_ONOUT = VSFSM_EVT_USER_LOCAL + 1,
 	VSFSHELL_EVT_STREAMRX_ONCONN = VSFSM_EVT_USER_LOCAL + 2,
 	VSFSHELL_EVT_STREAMTX_ONCONN = VSFSM_EVT_USER_LOCAL + 3,
-	
+
 	VSFSHELL_EVT_OUTPUT_CRIT_AVAIL = VSFSM_EVT_USER_LOCAL_INSTANT + 0,
 	VSFSHELL_EVT_USER = VSFSM_EVT_USER_LOCAL_INSTANT + 1,
 };
@@ -50,9 +50,9 @@ struct vsfshell_t
 	bool echo;
 	struct vsf_stream_t *stream_tx;
 	struct vsf_stream_t *stream_rx;
-	
+
 	struct vsfsm_t sm;
-	
+
 	// private
 	char cmd_buff[128];
 	char printf_buff[256];
@@ -73,7 +73,7 @@ struct vsfshell_handler_param_t
 {
 	uint8_t argc;
 	char *argv[16];
-	
+
 	// private
 	struct vsfshell_t *shell;
 	void *context;
@@ -129,7 +129,7 @@ struct vsfshell_modifs_t
 	void (*free_handler_thread)(struct vsfshell_t*, struct vsfsm_t*);
 };
 
-void vsfshell_modexit(struct vsf_module_t*);
+vsf_err_t vsfshell_modexit(struct vsf_module_t*);
 vsf_err_t vsfshell_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFSHELL_MOD						\

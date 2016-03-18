@@ -39,7 +39,7 @@ struct vsfdbg_modifs_t
 	uint32_t (*debug)(const char*, ...);
 };
 
-void vsfdbg_modexit(struct vsf_module_t*);
+vsf_err_t vsfdbg_modexit(struct vsf_module_t*);
 vsf_err_t vsfdbg_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFDBG_MOD							\

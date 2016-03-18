@@ -86,10 +86,11 @@ void debug_fini(void)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfdbg_modexit(struct vsf_module_t *module)
+vsf_err_t vsfdbg_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfdbg_modinit(struct vsf_module_t *module,

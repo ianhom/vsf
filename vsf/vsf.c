@@ -75,13 +75,13 @@ struct vsf_module_t* vsf_module_get(char *name)
 void vsf_module_unload(char *name)
 {
 	struct vsf_module_t *module = vsf_module_get(name);
-	void (*mod_exit)(struct vsf_module_t *);
+	vsf_err_t (*mod_exit)(struct vsf_module_t *);
 
 	if ((module != NULL) && (module->code_buff != NULL))
 	{
 		if (module->flash->exit)
 		{
-			mod_exit = (void (*)(struct vsf_module_t *))
+			mod_exit = (vsf_err_t (*)(struct vsf_module_t *))
 							(module->code_buff + module->flash->exit);
 			mod_exit(module);
 		}

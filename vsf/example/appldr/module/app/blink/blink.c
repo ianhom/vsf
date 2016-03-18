@@ -73,10 +73,11 @@ end:
 	return VSFERR_NONE;
 }
 
-void app_blink_modexit(struct vsf_module_t *module)
+vsf_err_t app_blink_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t app_blink_modinit(struct vsf_module_t *module,

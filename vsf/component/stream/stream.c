@@ -324,10 +324,11 @@ buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfstream_modexit(struct vsf_module_t *module)
+vsf_err_t vsfstream_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfstream_modinit(struct vsf_module_t *module,

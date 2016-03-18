@@ -32,10 +32,11 @@ static vsf_err_t app_helloworld(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 }
 
-void app_helloworld_modexit(struct vsf_module_t *module)
+vsf_err_t app_helloworld_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t app_helloworld_modinit(struct vsf_module_t *module,

@@ -2132,10 +2132,11 @@ vsf_err_t vsfip_ip4_pton(struct vsfip_ipaddr_t *domainip, char *domain)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 #undef vsfip_eth_header

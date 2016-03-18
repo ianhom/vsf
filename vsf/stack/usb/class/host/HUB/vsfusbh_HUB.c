@@ -546,10 +546,11 @@ static const struct vsfusbh_device_id_t vsfusbh_hub_id_table[] =
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfusbh_hub_modexit(struct vsf_module_t *module)
+vsf_err_t vsfusbh_hub_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbh_hub_modinit(struct vsf_module_t *module,

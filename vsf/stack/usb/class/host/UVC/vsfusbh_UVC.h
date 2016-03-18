@@ -61,7 +61,7 @@ struct vsfusbh_uvc_modifs_t
 						struct vsfusbh_uvc_payload_t*);
 };
 
-void vsfusbh_uvc_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_uvc_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_uvc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_UVCMOD						\

@@ -58,7 +58,7 @@ struct vsfip_dnsc_modifs_t
 										struct vsfip_ipaddr_t*);
 };
 
-void vsfip_dnsc_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_dnsc_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_dnsc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_DNSCMOD						\

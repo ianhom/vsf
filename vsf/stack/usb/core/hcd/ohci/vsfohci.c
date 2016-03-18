@@ -875,7 +875,7 @@ static vsf_err_t vsfohci_free_urb(void *param, struct vsfusbh_urb_t **vsfurbp)
 		urb_priv->state &= ~URB_PRIV_WAIT_COMPLETE;
 		urb_priv->state |= URB_PRIV_WAIT_DELETE;
 
-		if ((urb_priv->state & (URB_PRIV_EDLINK | URB_PRIV_TDALLOC)) == 
+		if ((urb_priv->state & (URB_PRIV_EDLINK | URB_PRIV_TDALLOC)) ==
 				(URB_PRIV_EDLINK | URB_PRIV_TDALLOC))
 		{
 			start_ed_unlink(ohci, urb_priv);
@@ -1206,10 +1206,11 @@ error:
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfohci_modexit(struct vsf_module_t *module)
+vsf_err_t vsfohci_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfohci_modinit(struct vsf_module_t *module,

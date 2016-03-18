@@ -130,10 +130,11 @@ static vsf_err_t vsfusbd_CDCACMControl_request_process(struct vsfusbd_device_t *
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfusbd_CDCACM_modexit(struct vsf_module_t *module)
+vsf_err_t vsfusbd_CDCACM_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfusbd_CDCACM_modinit(struct vsf_module_t *module,

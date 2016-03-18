@@ -28,7 +28,7 @@ struct vsfusbh_hub_modifs_t
 	struct vsfusbh_class_drv_t drv;
 };
 
-void vsfusbh_hub_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_hub_modexit(struct vsf_module_t*);
 vsf_err_t vsfusbh_hub_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFUSBH_HUBCMOD						\

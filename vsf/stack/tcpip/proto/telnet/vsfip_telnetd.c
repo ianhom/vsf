@@ -234,10 +234,11 @@ vsf_err_t vsfip_telnetd_start(struct vsfip_telnetd_t *telnetd)
 }
 
 #ifdef VSFCFG_STANDALONE_MODULE
-void vsfip_telnetd_modexit(struct vsf_module_t *module)
+vsf_err_t vsfip_telnetd_modexit(struct vsf_module_t *module)
 {
 	vsf_bufmgr_free(module->ifs);
 	module->ifs = NULL;
+	return VSFERR_NONE;
 }
 
 vsf_err_t vsfip_telnetd_modinit(struct vsf_module_t *module,

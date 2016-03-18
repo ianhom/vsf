@@ -41,7 +41,7 @@ struct vsfip_dhcpd_modifs_t
 	vsf_err_t (*start)(struct vsfip_netif_t*, struct vsfip_dhcpd_t*);
 };
 
-void vsfip_dhcpd_modexit(struct vsf_module_t*);
+vsf_err_t vsfip_dhcpd_modexit(struct vsf_module_t*);
 vsf_err_t vsfip_dhcpd_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #define VSFIP_DHCPDMOD						\
