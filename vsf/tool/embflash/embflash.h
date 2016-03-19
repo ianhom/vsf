@@ -20,13 +20,39 @@
 #ifndef __EMBFLASH_H_INCLUDED__
 #define __EMBFLASH_H_INCLUDED__
 
-struct embflash_param_t
+struct embflash_mal_t
 {
+	struct vsfmal_t mal;
 	uint8_t index;
+
 	// private
-	bool erased;
+	vsf_err_t err;
+	uint32_t cursize;
+	uint32_t pagesize;
+	struct vsfsm_t *notifier;
+	struct vsfsm_pt_t pt;
 };
 
-extern struct mal_driver_t embflash_drv;
+#ifdef VSFCFG_STANDALONE_MODULE
+#define EMBFLASH_MODNAME					"vsf.tool.embflash"
+
+struct embflash_modifs_t
+{
+	struct
+	{
+		struct vsfmal_drv_t drv;
+	} mal;
+};
+
+vsf_err_t embflash_modexit(struct vsf_module_t*);
+vsf_err_t embflash_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+
+#define EMBFLASH_MOD						\
+	((struct embflash_modifs_t *)vsf_module_load(EMBFLASH_MODNAME, true))
+#define embflash_mal_drv					EMBFLASH_MOD->mal.drv
+
+#else
+extern struct vsfmal_drv_t embflash_mal_drv;
+#endif
 
 #endif	// __EMBFLASH_H_INCLUDED__

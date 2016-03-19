@@ -81,6 +81,7 @@ struct vsf_module_t
 
 // some tools
 #include "tool/crc/crc.h"
+#include "tool/embflash/embflash.h"
 
 #define VSF_API_VERSION						0x00000001
 

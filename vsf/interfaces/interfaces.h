@@ -93,19 +93,13 @@ struct interface_flash_t
 	vsf_err_t (*lock)(uint8_t index);
 	vsf_err_t (*unlock)(uint8_t index);
 
-	vsf_err_t (*getcapacity)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
+	vsf_err_t (*capacity)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
+	uint32_t (*blocksize)(uint8_t index, uint32_t addr, uint32_t size, int op);
+	vsf_err_t (*config_cb)(uint8_t index, void *param, void (*onread)(void*, vsf_err_t), void (*onwritten)(void*, vsf_err_t), void (*onerased)(void*, vsf_err_t), void (*onprotected)(void*, vsf_err_t));
 
-	vsf_err_t (*read)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-	vsf_err_t (*read_isready)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-	vsf_err_t (*write)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-	vsf_err_t (*write_isready)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-
-	vsf_err_t (*readpage)(uint8_t index, uint32_t offset, uint8_t *buff);
-	vsf_err_t (*readpage_isready)(uint8_t index, uint32_t offset, uint8_t *buff);
-	vsf_err_t (*erasepage)(uint8_t index, uint32_t offset);
-	vsf_err_t (*erasepage_isready)(uint8_t index, uint32_t offset);
-	vsf_err_t (*writepage)(uint8_t index, uint32_t offset, uint8_t *buff);
-	vsf_err_t (*writepage_isready)(uint8_t index, uint32_t offset, uint8_t *buff);
+	vsf_err_t (*erase)(uint8_t index, uint32_t addr);
+	vsf_err_t (*read)(uint8_t index, uint32_t addr, uint8_t *buff);
+	vsf_err_t (*write)(uint8_t index, uint32_t addr, uint8_t *buff);
 
 	bool (*isprotected)(uint8_t index);
 	vsf_err_t (*protect)(uint8_t index);
@@ -115,17 +109,12 @@ struct interface_flash_t
 #define CORE_FLASH_FINI(m)				__CONNECT(m, _flash_fini)
 #define CORE_FLASH_LOCK(m)				__CONNECT(m, _flash_lock)
 #define CORE_FLASH_UNLOCK(m)			__CONNECT(m, _flash_unlock)
-#define CORE_FLASH_GETCAPACITY(m)		__CONNECT(m, _flash_getcapacity)
+#define CORE_FLASH_CAPACITY(m)			__CONNECT(m, _flash_capacity)
+#define CORE_FLASH_BLOCKSIZE(m)			__CONNECT(m, _flash_blocksize)
+#define CORE_FLASH_CONFIG_CB(m)			__CONNECT(m, _flash_config_cb)
+#define CORE_FLASH_ERASE(m)				__CONNECT(m, _flash_erase)
 #define CORE_FLASH_READ(m)				__CONNECT(m, _flash_read)
-#define CORE_FLASH_READ_ISREADY(m)		__CONNECT(m, _flash_read_isready)
 #define CORE_FLASH_WRITE(m)				__CONNECT(m, _flash_write)
-#define CORE_FLASH_WRITE_ISREADY(m)		__CONNECT(m, _flash_write_isready)
-#define CORE_FLASH_READPAGE(m)			__CONNECT(m, _flash_readpage)
-#define CORE_FLASH_READPAGE_ISREADY(m)	__CONNECT(m, _flash_readpage_isready)
-#define CORE_FLASH_ERASEPAGE(m)			__CONNECT(m, _flash_erasepage)
-#define CORE_FLASH_ERASEPAGE_ISREADY(m)	__CONNECT(m, _flash_erasepage_isready)
-#define CORE_FLASH_WRITEPAGE(m)			__CONNECT(m, _flash_writepage)
-#define CORE_FLASH_WRITEPAGE_ISREADY(m)	__CONNECT(m, _flash_writepage_isready)
 #define CORE_FLASH_ISPROTECTED(m)		__CONNECT(m, _flash_isprotected)
 #define CORE_FLASH_PROTECT(m)			__CONNECT(m, _flash_protect)
 
@@ -133,19 +122,27 @@ vsf_err_t CORE_FLASH_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_LOCK(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_UNLOCK(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_FLASH_GETCAPACITY(__TARGET_CHIP__)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
-vsf_err_t CORE_FLASH_READ(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-vsf_err_t CORE_FLASH_READ_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-vsf_err_t CORE_FLASH_WRITE(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-vsf_err_t CORE_FLASH_WRITE_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff, uint32_t size);
-vsf_err_t CORE_FLASH_READPAGE(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff);
-vsf_err_t CORE_FLASH_READPAGE_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff);
-vsf_err_t CORE_FLASH_ERASEPAGE(__TARGET_CHIP__)(uint8_t index, uint32_t offset);
-vsf_err_t CORE_FLASH_ERASEPAGE_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t offset);
-vsf_err_t CORE_FLASH_WRITEPAGE(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff);
-vsf_err_t CORE_FLASH_WRITEPAGE_ISREADY(__TARGET_CHIP__)(uint8_t index, uint32_t offset, uint8_t *buff);
+vsf_err_t CORE_FLASH_CAPACITY(__TARGET_CHIP__)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
+uint32_t CORE_FLASH_BLOCKSIZE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint32_t size, int op);
+vsf_err_t CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, void *param, void (*onread)(void*, vsf_err_t), void (*onwritten)(void*, vsf_err_t), void (*onerased)(void*, vsf_err_t), void (*onprotected)(void*, vsf_err_t));
+vsf_err_t CORE_FLASH_ERASE(__TARGET_CHIP__)(uint8_t index, uint32_t addr);
+vsf_err_t CORE_FLASH_READ(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
+vsf_err_t CORE_FLASH_WRITE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
 vsf_err_t CORE_FLASH_PROTECT(__TARGET_CHIP__)(uint8_t index);
 bool CORE_FLASH_ISPROTECTED(__TARGET_CHIP__)(uint8_t index);
+
+#define vsfhal_flash_init				CORE_FLASH_INIT(__TARGET_CHIP__)
+#define vsfhal_flash_fini				CORE_FLASH_FINI(__TARGET_CHIP__)
+#define vsfhal_flash_lock				CORE_FLASH_LOCK(__TARGET_CHIP__)
+#define vsfhal_flash_unlock				CORE_FLASH_UNLOCK(__TARGET_CHIP__)
+#define vsfhal_flash_capacity			CORE_FLASH_CAPACITY(__TARGET_CHIP__)
+#define vsfhal_flash_blocksize			CORE_FLASH_BLOCKSIZE(__TARGET_CHIP__)
+#define vsfhal_flash_config_cb			CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)
+#define vsfhal_flash_erase				CORE_FLASH_ERASE(__TARGET_CHIP__)
+#define vsfhal_flash_read				CORE_FLASH_READ(__TARGET_CHIP__)
+#define vsfhal_flash_write				CORE_FLASH_WRITE(__TARGET_CHIP__)
+#define vsfhal_flash_isprotected		CORE_FLASH_ISPROTECTED(__TARGET_CHIP__)
+#define vsfhal_flash_protect			CORE_FLASH_PROTECT(__TARGET_CHIP__)
 
 #endif
 
