@@ -26,6 +26,13 @@ static uint32_t embflash_maldrv_blocksize(struct vsfmal_t *mal, uint64_t addr,
 								(uint32_t)addr, size, (int)op);
 }
 
+static void embflash_maldrv_oncb(void *param, vsf_err_t err)
+{
+	struct embflash_mal_t *embflash = (struct embflash_mal_t *)param;
+	embflash->err = err;
+	vsfsm_post_evt_pending(embflash->notifier, VSFSM_EVT_USER);
+}
+
 static vsf_err_t embflash_maldrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct embflash_mal_t *embflash = (struct embflash_mal_t *)pt->user_data;
@@ -40,20 +47,14 @@ static vsf_err_t embflash_maldrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	embflash->mal.cap.block_size = pagesize;
 	embflash->mal.cap.block_num = pagenum;
-	return VSFERR_NONE;
+	return vsfhal_flash_config_cb(embflash->index, embflash->int_priority,
+									embflash, embflash_maldrv_oncb);
 }
 
 static vsf_err_t embflash_maldrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct embflash_mal_t *embflash = (struct embflash_mal_t *)pt->user_data;
 	return vsfhal_flash_fini(embflash->index);
-}
-
-static void embflash_maldrv_oncb(void *param, vsf_err_t err)
-{
-	struct embflash_mal_t *embflash = (struct embflash_mal_t *)param;
-	embflash->err = err;
-	vsfsm_post_evt_pending(embflash->notifier, VSFSM_EVT_USER);
 }
 
 static vsf_err_t embflash_maldrv_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -67,11 +68,6 @@ static vsf_err_t embflash_maldrv_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
-	{
-		return VSFERR_FAIL;
-	}
-
 	while (embflash->cursize < size)
 	{
 		embflash->pagesize = vsfhal_flash_blocksize(embflash->index, pos,
@@ -106,11 +102,6 @@ static vsf_err_t embflash_maldrv_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
-	{
-		return VSFERR_FAIL;
-	}
-
 	while (embflash->cursize < size)
 	{
 		embflash->pagesize = vsfhal_flash_blocksize(embflash->index, pos,
@@ -138,11 +129,6 @@ static vsf_err_t embflash_maldrv_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
-	{
-		return VSFERR_FAIL;
-	}
-
 	while (embflash->cursize < size)
 	{
 		embflash->pagesize = vsfhal_flash_blocksize(embflash->index, pos,

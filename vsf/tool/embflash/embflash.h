@@ -24,6 +24,7 @@ struct embflash_mal_t
 {
 	struct vsfmal_t mal;
 	uint8_t index;
+	uint32_t int_priority;
 
 	// private
 	vsf_err_t err;
