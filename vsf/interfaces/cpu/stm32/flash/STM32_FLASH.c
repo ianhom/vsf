@@ -86,14 +86,16 @@ uint32_t stm32_flash_blocksize(uint8_t index, uint32_t addr, uint32_t size,
 	return !op ? pagesize : 2;
 }
 
-vsf_err_t stm32_flash_config_cb(uint8_t index, void *param,
-									void (*onfinish)(void*, vsf_err_t))
+vsf_err_t stm32_flash_config_cb(uint8_t index, uint32_t int_priority,
+								void *param, void (*onfinish)(void*, vsf_err_t))
 {
 	if (stm32_flash_checkidx(index))
 		return VSFERR_NOT_SUPPORT;
 
 	stm32_flash[index].cb.param = param;
 	stm32_flash[index].cb.onfinish = onfinish;
+	NVIC->IP[FLASH_IRQn] = int_priority;
+	NVIC->ISER[FLASH_IRQn >> 0x05] = 1UL << (FLASH_IRQn & 0x1F);
 	return VSFERR_NONE;
 }
 

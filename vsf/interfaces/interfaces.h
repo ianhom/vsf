@@ -95,7 +95,7 @@ struct interface_flash_t
 	vsf_err_t (*capacity)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
 	uint32_t (*baseaddr)(uint8_t index);
 	uint32_t (*blocksize)(uint8_t index, uint32_t addr, uint32_t size, int op);
-	vsf_err_t (*config_cb)(uint8_t index, void *param, void (*onfinish)(void*, vsf_err_t));
+	vsf_err_t (*config_cb)(uint8_t index, uint32_t int_priority, void *param, void (*onfinish)(void*, vsf_err_t));
 
 	vsf_err_t (*erase)(uint8_t index, uint32_t addr);
 	vsf_err_t (*read)(uint8_t index, uint32_t addr, uint8_t *buff);
@@ -119,7 +119,7 @@ vsf_err_t CORE_FLASH_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_CAPACITY(__TARGET_CHIP__)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
 uint32_t CORE_FLASH_BASEADDR(__TARGET_CHIP__)(uint8_t index);
 uint32_t CORE_FLASH_BLOCKSIZE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint32_t size, int op);
-vsf_err_t CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, void *param, void (*onfinish)(void*, vsf_err_t));
+vsf_err_t CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *param, void (*onfinish)(void*, vsf_err_t));
 vsf_err_t CORE_FLASH_ERASE(__TARGET_CHIP__)(uint8_t index, uint32_t addr);
 vsf_err_t CORE_FLASH_READ(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
 vsf_err_t CORE_FLASH_WRITE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
@@ -595,7 +595,7 @@ struct interface_eint_t
 #endif
 	vsf_err_t (*init)(uint32_t index);
 	vsf_err_t (*fini)(uint32_t index);
-	vsf_err_t (*config)(uint32_t index, uint32_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
+	vsf_err_t (*config)(uint32_t index, uint32_t type, uint32_t int_priority, void *param, void (*callback)(void *param));
 	vsf_err_t (*enable)(uint32_t index);
 	vsf_err_t (*disable)(uint32_t index);
 };
@@ -608,7 +608,7 @@ struct interface_eint_t
 
 vsf_err_t CORE_EINT_INIT(__TARGET_CHIP__)(uint32_t index);
 vsf_err_t CORE_EINT_FINI(__TARGET_CHIP__)(uint32_t index);
-vsf_err_t CORE_EINT_CONFIG(__TARGET_CHIP__)(uint32_t index, uint32_t type, uint32_t int_priority, void (*callback)(void *param), void *param);
+vsf_err_t CORE_EINT_CONFIG(__TARGET_CHIP__)(uint32_t index, uint32_t type, uint32_t int_priority, void *param, void (*callback)(void *param));
 vsf_err_t CORE_EINT_ENABLE(__TARGET_CHIP__)(uint32_t index);
 vsf_err_t CORE_EINT_DISABLE(__TARGET_CHIP__)(uint32_t index);
 

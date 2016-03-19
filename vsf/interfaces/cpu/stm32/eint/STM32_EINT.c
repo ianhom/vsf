@@ -66,7 +66,7 @@ vsf_err_t stm32_eint_fini(uint32_t index)
 }
 
 vsf_err_t stm32_eint_config(uint32_t index, uint32_t type,
-			uint32_t int_priority, void (*callback)(void *param), void *param)
+			uint32_t int_priority, void *param, void (*callback)(void *param))
 {
 	uint8_t eint_idx = index & 0x0F;
 	uint32_t mask = 1 << eint_idx;
