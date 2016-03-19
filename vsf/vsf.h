@@ -399,6 +399,24 @@ struct vsf_t
 #define vafhal_getif					vsf.getif
 
 // interfaces constants
+#define vsfhal_core_if					((struct interface_core_t *)vafhal_getif("core"))
+#define vsfhal_core_init				vsfhal_core_if->init
+#define vsfhal_core_sleep				vsfhal_core_if->sleep
+#define vsfhal_core_pendsv_config		vsfhal_core_if->pendsv_config
+#define vsfhal_core_pendsv_trigger		vsfhal_core_if->pendsv_trigger
+
+#define vsfhal_flash_if					((struct interface_flash_t *)vafhal_getif("flash"))
+#define vsfhal_flash_direct_read		*vsfhal_flash_if->direct_read
+#define vsfhal_flash_init				vsfhal_flash_if->init
+#define vsfhal_flash_fini				vsfhal_flash_if->fini
+#define vsfhal_flash_capacity			vsfhal_flash_if->capacity
+#define vsfhal_flash_baseaddr			vsfhal_flash_if->baseaddr
+#define vsfhal_flash_blocksize			vsfhal_flash_if->blocksize
+#define vsfhal_flash_config_cb			vsfhal_flash_if->config_cb
+#define vsfhal_flash_erase				vsfhal_flash_if->erase
+#define vsfhal_flash_read				vsfhal_flash_if->read
+#define vsfhal_flash_write				vsfhal_flash_if->write
+
 #define vsfhal_gpio_if					((struct interface_gpio_t *)vafhal_getif("gpio"))
 #define GPIO_INFLOAT					vsfhal_gpio_if->constants.INFLOAT
 #define GPIO_INPU						vsfhal_gpio_if->constants.INPU
@@ -415,19 +433,13 @@ struct vsf_t
 #define vsfhal_gpio_clear				vsfhal_gpio_if->clear
 #define vsfhal_gpio_get					vsfhal_gpio_if->get
 
-#define vsfhal_core_if					((struct interface_core_t *)vafhal_getif("core"))
-#define vsfhal_core_init				vsfhal_core_if->init
-#define vsfhal_core_sleep				vsfhal_core_if->sleep
-#define vsfhal_core_pendsv_config		vsfhal_core_if->pendsv_config
-#define vsfhal_core_pendsv_trigger		vsfhal_core_if->pendsv_trigger
-
 #define vsfhal_tickclk_if				((struct interface_tickclk_t *)vafhal_getif("tickclk"))
 #define vsfhal_tickclk_init				vsfhal_tickclk_if->init
 #define vsfhal_tickclk_fini				vsfhal_tickclk_if->fini
 #define vsfhal_tickclk_start			vsfhal_tickclk_if->start
 #define vsfhal_tickclk_stop				vsfhal_tickclk_if->stop
 #define vsfhal_tickclk_get_count		vsfhal_tickclk_if->get_count
-#define vsfhal_tickclk_set_callback		vsfhal_tickclk_if->set_callback
+#define vsfhal_tickclk_config_cb		vsfhal_tickclk_if->config_cb
 
 #define vsfhal_spi_if					((struct interface_spi_t *)vafhal_getif("spi"))
 #define SPI_MASTER						vsfhal_spi_if->constants.MASTER
@@ -444,7 +456,7 @@ struct vsf_t
 #define vsfhal_spi_enable				vsfhal_spi_if->enable
 #define vsfhal_spi_disable				vsfhal_spi_if->disable
 #define vsfhal_spi_config				vsfhal_spi_if->config
-#define vsfhal_spi_config_callback		vsfhal_spi_if->config_callback
+#define vsfhal_spi_config_cb			vsfhal_spi_if->config_cb
 #define vsfhal_spi_select				vsfhal_spi_if->select
 #define vsfhal_spi_deselect				vsfhal_spi_if->deselect
 #define vsfhal_spi_start				vsfhal_spi_if->start

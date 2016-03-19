@@ -472,7 +472,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 #if defined(APPCFG_VSFTIMER_NUM) && (APPCFG_VSFTIMER_NUM > 0)
 		VSFPOOL_INIT(&app.vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 		vsftimer_init((struct vsftimer_mem_op_t *)&vsftimer_memop);
-		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
+		vsfhal_tickclk_config_cb(app_tickclk_callback_int, NULL);
 #endif
 
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)

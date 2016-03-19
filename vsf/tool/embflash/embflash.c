@@ -67,9 +67,7 @@ static vsf_err_t embflash_maldrv_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_unlock(embflash->index) ||
-		vsfhal_flash_config_cb(embflash->index, embflash, NULL, NULL,
-								embflash_maldrv_oncb, NULL))
+	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
 	{
 		return VSFERR_FAIL;
 	}
@@ -86,7 +84,6 @@ static vsf_err_t embflash_maldrv_erase(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		embflash->cursize += embflash->pagesize;
 	}
 
-	vsfhal_flash_lock(embflash->index);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 }
@@ -99,11 +96,17 @@ static vsf_err_t embflash_maldrv_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfsm_pt_begin(pt);
 
+	if (vsfhal_flash_direct_read)
+	{
+		uint32_t base = vsfhal_flash_baseaddr(embflash->index);
+		memcpy(buff, (uint8_t *)base + addr, size);
+		return VSFERR_NONE;
+	}
+
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb,
-								NULL, NULL, NULL))
+	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
 	{
 		return VSFERR_FAIL;
 	}
@@ -135,9 +138,7 @@ static vsf_err_t embflash_maldrv_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	pos = (uint32_t)addr;
 	embflash->cursize = 0;
 	embflash->notifier = pt->sm;
-	if (vsfhal_flash_unlock(embflash->index) ||
-		vsfhal_flash_config_cb(embflash->index, embflash, NULL,
-								embflash_maldrv_oncb, NULL, NULL))
+	if (vsfhal_flash_config_cb(embflash->index, embflash, embflash_maldrv_oncb))
 	{
 		return VSFERR_FAIL;
 	}
@@ -154,7 +155,6 @@ static vsf_err_t embflash_maldrv_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		embflash->cursize += embflash->pagesize;
 	}
 
-	vsfhal_flash_lock(embflash->index);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 }

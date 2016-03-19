@@ -87,62 +87,55 @@ uint32_t CORE_UID_GET(__TARGET_CHIP__)(uint8_t *buffer, uint32_t size);
 
 struct interface_flash_t
 {
+	const bool *direct_read;
+
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 
-	vsf_err_t (*lock)(uint8_t index);
-	vsf_err_t (*unlock)(uint8_t index);
-
 	vsf_err_t (*capacity)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
+	uint32_t (*baseaddr)(uint8_t index);
 	uint32_t (*blocksize)(uint8_t index, uint32_t addr, uint32_t size, int op);
-	vsf_err_t (*config_cb)(uint8_t index, void *param, void (*onread)(void*, vsf_err_t), void (*onwritten)(void*, vsf_err_t), void (*onerased)(void*, vsf_err_t), void (*onprotected)(void*, vsf_err_t));
+	vsf_err_t (*config_cb)(uint8_t index, void *param, void (*onfinish)(void*, vsf_err_t));
 
 	vsf_err_t (*erase)(uint8_t index, uint32_t addr);
 	vsf_err_t (*read)(uint8_t index, uint32_t addr, uint8_t *buff);
 	vsf_err_t (*write)(uint8_t index, uint32_t addr, uint8_t *buff);
-
-	bool (*isprotected)(uint8_t index);
-	vsf_err_t (*protect)(uint8_t index);
 };
 
+#define CORE_FLASH_DIRECT_READ(m)		__CONNECT(m, _flash_direct_read)
 #define CORE_FLASH_INIT(m)				__CONNECT(m, _flash_init)
 #define CORE_FLASH_FINI(m)				__CONNECT(m, _flash_fini)
-#define CORE_FLASH_LOCK(m)				__CONNECT(m, _flash_lock)
-#define CORE_FLASH_UNLOCK(m)			__CONNECT(m, _flash_unlock)
 #define CORE_FLASH_CAPACITY(m)			__CONNECT(m, _flash_capacity)
+#define CORE_FLASH_BASEADDR(m)			__CONNECT(m, _flash_baseaddr)
 #define CORE_FLASH_BLOCKSIZE(m)			__CONNECT(m, _flash_blocksize)
 #define CORE_FLASH_CONFIG_CB(m)			__CONNECT(m, _flash_config_cb)
 #define CORE_FLASH_ERASE(m)				__CONNECT(m, _flash_erase)
 #define CORE_FLASH_READ(m)				__CONNECT(m, _flash_read)
 #define CORE_FLASH_WRITE(m)				__CONNECT(m, _flash_write)
-#define CORE_FLASH_ISPROTECTED(m)		__CONNECT(m, _flash_isprotected)
-#define CORE_FLASH_PROTECT(m)			__CONNECT(m, _flash_protect)
 
+extern const bool CORE_FLASH_DIRECT_READ(__TARGET_CHIP__);
 vsf_err_t CORE_FLASH_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_FINI(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_FLASH_LOCK(__TARGET_CHIP__)(uint8_t index);
-vsf_err_t CORE_FLASH_UNLOCK(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_FLASH_CAPACITY(__TARGET_CHIP__)(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
+uint32_t CORE_FLASH_BASEADDR(__TARGET_CHIP__)(uint8_t index);
 uint32_t CORE_FLASH_BLOCKSIZE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint32_t size, int op);
-vsf_err_t CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, void *param, void (*onread)(void*, vsf_err_t), void (*onwritten)(void*, vsf_err_t), void (*onerased)(void*, vsf_err_t), void (*onprotected)(void*, vsf_err_t));
+vsf_err_t CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, void *param, void (*onfinish)(void*, vsf_err_t));
 vsf_err_t CORE_FLASH_ERASE(__TARGET_CHIP__)(uint8_t index, uint32_t addr);
 vsf_err_t CORE_FLASH_READ(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
 vsf_err_t CORE_FLASH_WRITE(__TARGET_CHIP__)(uint8_t index, uint32_t addr, uint8_t *buff);
-vsf_err_t CORE_FLASH_PROTECT(__TARGET_CHIP__)(uint8_t index);
-bool CORE_FLASH_ISPROTECTED(__TARGET_CHIP__)(uint8_t index);
 
+#ifndef VSFCFG_STANDALONE_MODULE
+#define vsfhal_flash_direct_read		CORE_FLASH_DIRECT_READ(__TARGET_CHIP__)
 #define vsfhal_flash_init				CORE_FLASH_INIT(__TARGET_CHIP__)
 #define vsfhal_flash_fini				CORE_FLASH_FINI(__TARGET_CHIP__)
-#define vsfhal_flash_lock				CORE_FLASH_LOCK(__TARGET_CHIP__)
-#define vsfhal_flash_unlock				CORE_FLASH_UNLOCK(__TARGET_CHIP__)
 #define vsfhal_flash_capacity			CORE_FLASH_CAPACITY(__TARGET_CHIP__)
+#define vsfhal_flash_baseaddr			CORE_FLASH_BASEADDR(__TARGET_CHIP__)
 #define vsfhal_flash_blocksize			CORE_FLASH_BLOCKSIZE(__TARGET_CHIP__)
 #define vsfhal_flash_config_cb			CORE_FLASH_CONFIG_CB(__TARGET_CHIP__)
 #define vsfhal_flash_erase				CORE_FLASH_ERASE(__TARGET_CHIP__)
 #define vsfhal_flash_read				CORE_FLASH_READ(__TARGET_CHIP__)
 #define vsfhal_flash_write				CORE_FLASH_WRITE(__TARGET_CHIP__)
-#define vsfhal_flash_isprotected		CORE_FLASH_ISPROTECTED(__TARGET_CHIP__)
-#define vsfhal_flash_protect			CORE_FLASH_PROTECT(__TARGET_CHIP__)
+#endif
 
 #endif
 
@@ -196,7 +189,7 @@ struct interface_usart_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t baudrate, uint32_t mode);
-	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
+	vsf_err_t (*config_cb)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 	uint16_t (*tx_bytes)(uint8_t index, uint8_t *data, uint16_t size);
 	uint16_t (*tx_get_free_size)(uint8_t index);
 	uint16_t (*rx_bytes)(uint8_t index, uint8_t *data, uint16_t size);
@@ -206,7 +199,7 @@ struct interface_usart_t
 #define CORE_USART_INIT(m)				__CONNECT(m, _usart_init)
 #define CORE_USART_FINI(m)				__CONNECT(m, _usart_fini)
 #define CORE_USART_CONFIG(m)			__CONNECT(m, _usart_config)
-#define CORE_USART_CONFIG_CALLBACK(m)	__CONNECT(m, _usart_config_callback)
+#define CORE_USART_CONFIG_CB(m)			__CONNECT(m, _usart_config_cb)
 #define CORE_USART_TX_BYTES(m)			__CONNECT(m, _usart_tx_bytes)
 #define CORE_USART_TX_GET_FREE_SIZE(m)	__CONNECT(m, _usart_tx_get_free_size)
 #define CORE_USART_RX_BYTES(m)			__CONNECT(m, _usart_rx_bytes)
@@ -215,7 +208,7 @@ struct interface_usart_t
 vsf_err_t CORE_USART_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_USART_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t baudrate, uint32_t mode);
-vsf_err_t CORE_USART_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
+vsf_err_t CORE_USART_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t));
 uint16_t CORE_USART_TX_BYTES(__TARGET_CHIP__)(uint8_t index, uint8_t *data, uint16_t size);
 uint16_t CORE_USART_TX_GET_FREE_SIZE(__TARGET_CHIP__)(uint8_t index);
 uint16_t CORE_USART_RX_BYTES(__TARGET_CHIP__)(uint8_t index, uint8_t *data, uint16_t size);
@@ -232,7 +225,7 @@ uint16_t CORE_USART_RX_GET_DATA_SIZE(__TARGET_CHIP__)(uint8_t index);
 #define vsfhal_usart_init				CORE_USART_INIT(__TARGET_CHIP__)
 #define vsfhal_usart_fini				CORE_USART_FINI(__TARGET_CHIP__)
 #define vsfhal_usart_config				CORE_USART_CONFIG(__TARGET_CHIP__)
-#define vsfhal_usart_config_callback	CORE_USART_CONFIG_CALLBACK(__TARGET_CHIP__)
+#define vsfhal_usart_config_cb			CORE_USART_CONFIG_CB(__TARGET_CHIP__)
 #define vsfhal_usart_tx_bytes			CORE_USART_TX_BYTES(__TARGET_CHIP__)
 #define vsfhal_usart_tx_get_free_size	CORE_USART_TX_GET_FREE_SIZE(__TARGET_CHIP__)
 #define vsfhal_usart_rx_bytes			CORE_USART_RX_BYTES(__TARGET_CHIP__)
@@ -277,7 +270,7 @@ struct interface_spi_t
 	vsf_err_t (*enable)(uint8_t index);
 	vsf_err_t (*disable)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint32_t kHz, uint32_t mode);
-	vsf_err_t (*config_callback)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
+	vsf_err_t (*config_cb)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
 
 	vsf_err_t (*select)(uint8_t index, uint8_t cs);
 	vsf_err_t (*deselect)(uint8_t index, uint8_t cs);
@@ -292,7 +285,7 @@ struct interface_spi_t
 #define CORE_SPI_ENABLE(m)				__CONNECT(m, _spi_enable)
 #define CORE_SPI_DISABLE(m)				__CONNECT(m, _spi_disable)
 #define CORE_SPI_CONFIG(m)				__CONNECT(m, _spi_config)
-#define CORE_SPI_CONFIG_CALLBACK(m)		__CONNECT(m, _spi_config_callback)
+#define CORE_SPI_CONFIG_CB(m)			__CONNECT(m, _spi_config_cb)
 #define CORE_SPI_SELECT(m)				__CONNECT(m, _spi_select)
 #define CORE_SPI_DESELECT(m)			__CONNECT(m, _spi_deselect)
 #define CORE_SPI_START(m)				__CONNECT(m, _spi_start)
@@ -304,7 +297,7 @@ vsf_err_t CORE_SPI_GET_ABILITY(__TARGET_CHIP__)(uint8_t index, struct spi_abilit
 vsf_err_t CORE_SPI_ENABLE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SPI_DISABLE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_SPI_CONFIG(__TARGET_CHIP__)(uint8_t index, uint32_t kHz, uint32_t mode);
-vsf_err_t CORE_SPI_CONFIG_CALLBACK(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
+vsf_err_t CORE_SPI_CONFIG_CB(__TARGET_CHIP__)(uint8_t index, uint32_t int_priority, void *p, void (*onready)(void *));
 vsf_err_t CORE_SPI_SELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
 vsf_err_t CORE_SPI_DESELECT(__TARGET_CHIP__)(uint8_t index, uint8_t cs);
 vsf_err_t CORE_SPI_START(__TARGET_CHIP__)(uint8_t index, uint8_t *out, uint8_t *in, uint32_t len);
@@ -326,7 +319,7 @@ uint32_t CORE_SPI_STOP(__TARGET_CHIP__)(uint8_t index);
 #define vsfhal_spi_enable				CORE_SPI_ENABLE(__TARGET_CHIP__)
 #define vsfhal_spi_disable				CORE_SPI_DISABLE(__TARGET_CHIP__)
 #define vsfhal_spi_config				CORE_SPI_CONFIG(__TARGET_CHIP__)
-#define vsfhal_spi_config_callback		CORE_SPI_CONFIG_CALLBACK(__TARGET_CHIP__)
+#define vsfhal_spi_config_cb			CORE_SPI_CONFIG_CB(__TARGET_CHIP__)
 #define vsfhal_spi_select				CORE_SPI_SELECT(__TARGET_CHIP__)
 #define vsfhal_spi_deselect				CORE_SPI_DESELECT(__TARGET_CHIP__)
 #define vsfhal_spi_start				CORE_SPI_START(__TARGET_CHIP__)
@@ -455,7 +448,7 @@ struct interface_tickclk_t
 	vsf_err_t (*start)(void);
 	vsf_err_t (*stop)(void);
 	uint32_t (*get_count)(void);
-	vsf_err_t (*set_callback)(void (*callback)(void *param), void *param);
+	vsf_err_t (*config_cb)(void (*)(void*), void*);
 };
 
 #define CORE_TICKCLK_INIT(m)			__CONNECT(m, _tickclk_init)
@@ -463,14 +456,14 @@ struct interface_tickclk_t
 #define CORE_TICKCLK_START(m)			__CONNECT(m, _tickclk_start)
 #define CORE_TICKCLK_STOP(m)			__CONNECT(m, _tickclk_stop)
 #define CORE_TICKCLK_GET_COUNT(m)		__CONNECT(m, _tickclk_get_count)
-#define CORE_TICKCLK_SET_CALLBACK(m)	__CONNECT(m, _tickclk_set_callback)
+#define CORE_TICKCLK_CONFIG_CB(m)		__CONNECT(m, _tickclk_config_cb)
 
 vsf_err_t CORE_TICKCLK_INIT(__TARGET_CHIP__)(void);
 vsf_err_t CORE_TICKCLK_FINI(__TARGET_CHIP__)(void);
 vsf_err_t CORE_TICKCLK_START(__TARGET_CHIP__)(void);
 vsf_err_t CORE_TICKCLK_STOP(__TARGET_CHIP__)(void);
 uint32_t CORE_TICKCLK_GET_COUNT(__TARGET_CHIP__)(void);
-vsf_err_t CORE_TICKCLK_SET_CALLBACK(__TARGET_CHIP__)(void (*callback)(void *param), void *param);
+vsf_err_t CORE_TICKCLK_CONFIG_CB(__TARGET_CHIP__)(void (*)(void*), void*);
 
 #ifndef VSFCFG_STANDALONE_MODULE
 #define vsfhal_tickclk_init				CORE_TICKCLK_INIT(__TARGET_CHIP__)
@@ -478,7 +471,7 @@ vsf_err_t CORE_TICKCLK_SET_CALLBACK(__TARGET_CHIP__)(void (*callback)(void *para
 #define vsfhal_tickclk_start			CORE_TICKCLK_START(__TARGET_CHIP__)
 #define vsfhal_tickclk_stop				CORE_TICKCLK_STOP(__TARGET_CHIP__)
 #define vsfhal_tickclk_get_count		CORE_TICKCLK_GET_COUNT(__TARGET_CHIP__)
-#define vsfhal_tickclk_set_callback		CORE_TICKCLK_SET_CALLBACK(__TARGET_CHIP__)
+#define vsfhal_tickclk_config_cb		CORE_TICKCLK_CONFIG_CB(__TARGET_CHIP__)
 #endif
 
 #if IFS_IIC_EN
@@ -966,7 +959,6 @@ struct interface_usbd_t
 	vsf_err_t (*init)(uint32_t int_priority);
 	vsf_err_t (*fini)(void);
 	vsf_err_t (*reset)(void);
-	vsf_err_t (*poll)(void);
 
 	vsf_err_t (*connect)(void);
 	vsf_err_t (*disconnect)(void);
@@ -1149,16 +1141,8 @@ void* CORE_HCD_REGBASE(__TARGET_CHIP__)(uint32_t index);
 
 #endif
 
-struct interfaces_comm_t
-{
-	vsf_err_t (*init)(void);
-	vsf_err_t (*fini)(void);
-};
-
 struct interfaces_info_t
 {
-	struct interfaces_comm_t *comm;
-
 	struct interface_core_t core;
 #if IFS_UNIQUEID_EN
 	struct interface_uid_t uid;
@@ -1209,7 +1193,6 @@ struct interfaces_info_t
 	struct interface_sdio_t sdio;
 #endif
 	struct interface_tickclk_t tickclk;
-	vsf_err_t (*peripheral_commit)(void);
 };
 
 extern const struct interfaces_info_t core_interfaces, *interfaces;

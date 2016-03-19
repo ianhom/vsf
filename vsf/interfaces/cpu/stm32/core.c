@@ -281,7 +281,7 @@ uint32_t stm32_uid_get(uint8_t *buffer, uint32_t size)
 #define CM3_SYSTICK_CLKSOURCE			(1 << 2)
 #define CM3_SYSTICK_COUNTFLAG			(1 << 16)
 
-static void (*stm32_tickclk_callback)(void *param) = NULL;
+static void (*stm32_tickclk_cb)(void *param) = NULL;
 static void *stm32_tickclk_param = NULL;
 static uint32_t stm32_tickcnt = 0;
 vsf_err_t stm32_tickclk_start(void)
@@ -316,18 +316,18 @@ uint32_t stm32_tickclk_get_count(void)
 ROOTFUNC void SysTick_Handler(void)
 {
 	stm32_tickcnt++;
-	if (stm32_tickclk_callback != NULL)
+	if (stm32_tickclk_cb != NULL)
 	{
-		stm32_tickclk_callback(stm32_tickclk_param);
+		stm32_tickclk_cb(stm32_tickclk_param);
 	}
 }
 
-vsf_err_t stm32_tickclk_set_callback(void (*callback)(void*), void *param)
+vsf_err_t stm32_tickclk_config_cb(void (*callback)(void*), void *param)
 {
 	uint32_t tmp = SysTick->CTRL;
 	
 	SysTick->CTRL &= ~CM3_SYSTICK_INT;
-	stm32_tickclk_callback = callback;
+	stm32_tickclk_cb = callback;
 	stm32_tickclk_param = param;
 	SysTick->CTRL = tmp;
 	return VSFERR_NONE;

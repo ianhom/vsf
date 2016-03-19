@@ -315,7 +315,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 		VSFPOOL_INIT(&app.vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
 		vsftimer_init(&vsftimer_memop);
-		vsfhal_tickclk_set_callback(app_tickclk_callback_int, NULL);
+		vsfhal_tickclk_config_cb(app_tickclk_callback_int, NULL);
 
 		vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 
