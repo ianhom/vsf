@@ -100,7 +100,7 @@ static uint8_t vsfip_httpd_getmimetype(char *str)
 {
 	uint8_t i;
 	for (i = 0; i < VSFIP_HTTPD_MIMETYPECNT; i++)
-		if (strcmp(str, vsfip_httpd_mimetype[i].str) == 0)
+		if (strncmp(str, vsfip_httpd_mimetype[i].str, strlen(vsfip_httpd_mimetype[i].str)) == 0)
 			return i;
 	return VSFIP_HTTPD_MIMETYPECNT - 1;
 }
@@ -363,6 +363,8 @@ reply:
 	// send response, can sen target_file(with outbuf) or outbuf only
 	if ((resp->target_filename != NULL) && !resp->targetfile)
 	{
+		// jump / in "/index.htm"
+		resp->target_filename += 1;
 		service->caller_pt.state = 0;
 		vsfsm_pt_entry(pt);
 		err = vsfile_getfile(&service->caller_pt, evt, httpd->root,
