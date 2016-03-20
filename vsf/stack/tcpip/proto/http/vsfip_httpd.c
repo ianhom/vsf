@@ -25,10 +25,6 @@
 #undef vsfip_httpd_header_end
 #undef vsfip_httpd_getarg
 
-#ifdef HTTPD_DEBUG
-#include "framework/vsfshell/vsfshell.h"
-#endif
-
 #define VSFIP_HTTP_SERVER_SOCKETTIMEOUT					4000
 
 static const char VSFIP_HTTP_HEAD_GET[] =				"GET ";

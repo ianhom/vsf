@@ -20,10 +20,6 @@
 
 #undef vsfip_httpc_get
 
-#ifdef HTTPC_DEBUG
-#include "framework/vsfshell/vsfshell.h"
-#endif
-
 #define VSFIP_HTTPC_AGENT				"VSFIP"
 #define VSFIP_HTTPC_SOCKET_TIMEOUT		4000
 
@@ -136,11 +132,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 
 	vsfsm_pt_begin(pt);
 
-#ifdef HTTPC_DEBUG
-	httpc->debug_pt.sm = pt->sm;
-#endif
 	httpc->local_pt.sm = pt->sm;
-
 	err = vsfip_httpc_prasewww(httpc, wwwaddr);
 	if (err) return err;
 
@@ -148,8 +140,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	if (err != VSFERR_NONE)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt,
-						"->DNS %s" VSFSHELL_LINEEND, httpc->host);
+		vsf_debug("->DNS %s" VSFSHELL_LINEEND, httpc->host);
 #endif
 		httpc->local_pt.state = 0;
 		vsfsm_pt_entry(pt);
@@ -158,8 +149,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 		if (err > 0) return err; else if (err < 0) return err;
 	}
 #ifdef HTTPC_DEBUG
-	vsfshell_printf(&httpc->debug_pt,
-						"<-DNS GET %d.%d.%d.%d" VSFSHELL_LINEEND,
+	vsf_debug("<-DNS GET %d.%d.%d.%d" VSFSHELL_LINEEND,
 						httpc->hostip.sin_addr.addr.s_addr_buf[0],
 						httpc->hostip.sin_addr.addr.s_addr_buf[1],
 						httpc->hostip.sin_addr.addr.s_addr_buf[2],
@@ -180,7 +170,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	if (err > 0) return err; else if (err < 0)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt, "->CONNECT FAIL" VSFSHELL_LINEEND);
+		vsf_debug("->CONNECT FAIL" VSFSHELL_LINEEND);
 #endif
 		goto close;
 	}
@@ -189,7 +179,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	if (httpc->buf == NULL)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt, "->NO BUF FAIL" VSFSHELL_LINEEND);
+		vsf_debug("->NO BUF FAIL" VSFSHELL_LINEEND);
 #endif
 		err = VSFERR_NOT_ENOUGH_RESOURCES;
 		goto tcp_close;
@@ -199,7 +189,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	if (err != 0)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt, "->ERR REQ FAIL" VSFSHELL_LINEEND);
+		vsf_debug("->ERR REQ FAIL" VSFSHELL_LINEEND);
 #endif
 		goto tcp_close;
 	}
@@ -210,7 +200,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	if (err > 0) return err; else if (err < 0)
 	{
 #ifdef HTTPC_DEBUG
-		vsfshell_printf(&httpc->debug_pt, "->SEND REQ FAIL" VSFSHELL_LINEEND);
+		vsf_debug("->SEND REQ FAIL" VSFSHELL_LINEEND);
 #endif
 		goto tcp_close;
 	}
@@ -218,7 +208,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 	httpc->so->tx_timeout_ms = 0;
 
 #ifdef HTTPC_DEBUG
-	vsfshell_printf(&httpc->debug_pt, "->SEND GET " VSFSHELL_LINEEND);
+	vsf_debug("->SEND GET " VSFSHELL_LINEEND);
 #endif
 
 	httpc->resp_length = 0;
@@ -231,7 +221,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 		if (err > 0) return err; else if (err < 0)
 		{
 #ifdef HTTPC_DEBUG
-			vsfshell_printf(&httpc->debug_pt, "->RECV FAIL" VSFSHELL_LINEEND);
+			vsf_debug("->RECV FAIL" VSFSHELL_LINEEND);
 #endif
 			goto tcp_close;
 		}
@@ -239,7 +229,7 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 		if (0 == httpc->resp_length)
 		{
 #ifdef HTTPC_DEBUG
-			vsfshell_printf(&httpc->debug_pt, "->RECV HEAD " VSFSHELL_LINEEND);
+			vsf_debug("->RECV HEAD " VSFSHELL_LINEEND);
 #endif
 			err = vsfip_httpc_prasehead(httpc, httpc->buf);
 			if (err > 0)
@@ -256,9 +246,9 @@ vsf_err_t vsfip_httpc_get(struct vsfsm_pt_t *pt, vsfsm_evt_t evt, char *wwwaddr,
 				goto tcp_close;
 			}
 
-			if (0 == httpc->resp_length)
+			// no data or data not required
+			if ((0 == httpc->resp_length) || (NULL == output))
 			{
-				// no data
 				goto tcp_close;
 			}
 

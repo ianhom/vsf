@@ -19,7 +19,7 @@
 #ifndef __VSFIP_HTTPC_H_INCLUDED__
 #define __VSFIP_HTTPC_H_INCLUDED__
 
-#define HTTPC_DEBUG
+//#define HTTPC_DEBUG
 
 struct vsfip_httpc_op_t
 {
@@ -36,9 +36,6 @@ struct vsfip_httpc_param_t
 
 	// private
 	struct vsfsm_pt_t local_pt;
-#ifdef HTTPC_DEBUG
-	struct vsfsm_pt_t debug_pt;
-#endif
 
 	struct vsfip_socket_t *so;
 	struct vsfip_sockaddr_t hostip;
