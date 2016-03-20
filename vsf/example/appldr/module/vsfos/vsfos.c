@@ -142,7 +142,7 @@ static vsf_err_t vsfos_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	// timer
 	VSFPOOL_INIT(&ifs->vsftimer_pool, struct vsftimer_t, VSFOSCFG_VSFSM_PENDSVQ_LEN);
 	vsftimer_init(&ifs->vsftimer_memop);
-	vsfhal_tickclk_set_callback(vsfos_tickclk_callback_int, NULL);
+	vsfhal_tickclk_config_cb(vsfos_tickclk_callback_int, NULL);
 
 	// file
 	VSFPOOL_INIT(&ifs->vfsfile_pool, struct vsfile_vfsfile_t, VSFOSCFG_VFS_NO);

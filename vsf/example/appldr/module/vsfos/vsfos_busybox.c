@@ -102,16 +102,18 @@ static vsf_err_t vsfos_busybox_lsmod(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfos_busybox_lsmod_t
 	{
 		struct vsf_module_t *module;
+		uint32_t flashbase;
 	} *lparam = (struct vsfos_busybox_lsmod_t *)ctx->user_buff;
 
 	vsfsm_pt_begin(pt);
 
+	lparam->flashbase = vsfhal_flash_baseaddr(0);
 	lparam->module = vsf_module_get(NULL);
-
 	while (lparam->module != NULL)
 	{
-		vsfshell_printf(outpt, "%08X: %s"VSFSHELL_LINEEND,
-				(uint32_t)lparam->module->flash, lparam->module->flash->name);
+		vsfshell_printf(outpt, "%08X(%d): %s"VSFSHELL_LINEEND,
+				(uint32_t)lparam->module->flash - lparam->flashbase,
+				lparam->module->flash->size, lparam->module->flash->name);
 		lparam->module = lparam->module->next;
 	}
 
@@ -148,14 +150,159 @@ end:
 	return VSFERR_NONE;
 }
 
+#define VSFOS_REPO				"http://versaloon.github.io/modules/CM0/"
 static vsf_err_t vsfos_busybox_repo(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfshell_handler_param_t *param =
 						(struct vsfshell_handler_param_t *)pt->user_data;
 	struct vsfsm_pt_t *outpt = &param->output_pt;
+	struct vsfos_ctx_t *ctx = (struct vsfos_ctx_t *)param->context;
+	struct vsfos_busybox_repo_t
+	{
+		char *path;
+		struct vsf_buffer_t buf;
+		uint8_t *buffer_list[1];
+		struct vsf_malstream_t *malstream;
+		struct vsfip_httpc_param_t *httpc;
+		struct vsf_module_t *module;
+		struct vsfsm_pt_t local_pt;
+		uint32_t offset;
+	} *lparam = (struct vsfos_busybox_repo_t *)ctx->user_buff;
+	vsf_err_t err;
+	struct vsf_multibuf_t *multibuf;
 
 	vsfsm_pt_begin(pt);
-	vsfshell_printf(outpt, "not supported now"VSFSHELL_LINEEND);
+
+	if (param->argc != 3)
+	{
+		vsfshell_printf(outpt, "format: %s MODULE OFFSET"VSFSHELL_LINEEND,
+							param->argv[0]);
+		goto end;
+	}
+
+	memset(lparam, 0, sizeof(*lparam));
+	lparam->offset = strtoul(param->argv[2], NULL, 0);
+	lparam->local_pt.sm = pt->sm;
+	lparam->path = vsf_bufmgr_malloc(128);
+	lparam->httpc = vsf_bufmgr_malloc(sizeof(*lparam->httpc));
+	if ((NULL == lparam->path) || (NULL == lparam->httpc))
+	{
+		vsfshell_printf(outpt, "fail to allocate httpc"VSFSHELL_LINEEND);
+		goto end;
+	}
+	strcpy(lparam->path, VSFOS_REPO);
+	strncat(lparam->path, param->argv[1], 127);
+
+	// Step 1: try get xml configuration file
+/*	strncat(lparam->path, ".xml", 127);
+	lparam->httpc->op = &vsfip_httpc_op_buffer;
+	lparam->local_pt.user_data = lparam->httpc;
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_httpc_get(&lparam->local_pt, evt, lparam->path, NULL);
+	if (err > 0) return err; else if ((err < 0) || !lparam->httpc->resp_length)
+	{
+		vsfshell_printf(outpt, "fail to get size of %s"VSFSHELL_LINEEND,
+							lparam->path);
+		goto end;
+	}
+
+	lparam->buf.size = lparam->httpc->resp_length;
+	lparam->buf.buffer = vsf_bufmgr_malloc(lparam->buf.size);
+	if (NULL == lparam->buf.buffer)
+	{
+		goto malloc_fail_end;
+	}
+
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_httpc_get(&lparam->local_pt, evt, lparam->path, &lparam->buf);
+	if (err > 0) return err; else if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to download %s"VSFSHELL_LINEEND,
+							lparam->path);
+		goto end;
+	}
+
+	// Step 2: check dependency, version and size
+	// TODO:
+	if (lparam->buf.buffer != NULL)
+	{
+		vsf_bufmgr_free(lparam->buf.buffer);
+		lparam->buf.buffer = NULL;
+	}
+
+	// Step 3: download and install
+	lparam->path[strlen(lparam->path) - 4] = '\0';
+*/	lparam->httpc->op = &vsfip_httpc_op_stream;
+	lparam->local_pt.user_data = lparam->httpc;
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_httpc_get(&lparam->local_pt, evt, lparam->path, NULL);
+	if (err > 0) return err; else if ((err < 0) || !lparam->httpc->resp_length)
+	{
+		vsfshell_printf(outpt, "fail to get size of %s"VSFSHELL_LINEEND,
+							lparam->path);
+		goto end;
+	}
+
+	lparam->malstream = vsf_bufmgr_malloc(sizeof(struct vsf_malstream_t));
+	if (NULL == lparam->malstream)
+		goto malloc_fail_end;
+	lparam->malstream->mal = vsf_bufmgr_malloc(sizeof(struct vsfmal_t));
+	if (NULL == lparam->malstream->mal)
+		goto malloc_fail_end;
+	lparam->malstream->mbufstream = vsf_bufmgr_malloc(sizeof(struct vsf_mbufstream_t));
+	if (NULL == lparam->malstream->mal)
+		goto malloc_fail_end;
+
+	{
+		uint32_t pagesize;
+		vsfhal_flash_capacity(0, &pagesize, NULL);
+		lparam->buffer_list[0] = vsf_bufmgr_malloc(pagesize);
+		if (NULL == lparam->buffer_list[0])
+			goto malloc_fail_end;
+
+		multibuf = &lparam->malstream->mbufstream->mem.multibuf;
+		multibuf->buffer_list = lparam->buffer_list;
+		multibuf->size = pagesize;
+		multibuf->count = dimof(lparam->buffer_list);
+	}
+
+	vsf_malstream_init(lparam->malstream);
+	vsf_malstream_write(lparam->malstream, 0, 0);
+
+	lparam->local_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfip_httpc_get(&lparam->local_pt, evt, lparam->path,
+							lparam->malstream->mbufstream);
+	if (err > 0) return err; else if (err < 0)
+	{
+		vsfshell_printf(outpt, "fail to download %s"VSFSHELL_LINEEND,
+							lparam->path);
+		goto end;
+	}
+
+malloc_fail_end:
+	vsfshell_printf(outpt, "fail to get allocate buffer"VSFSHELL_LINEEND);
+end:
+	if (lparam->buf.buffer != NULL)
+		vsf_bufmgr_free(lparam->buf.buffer);
+	if (lparam->malstream != NULL)
+	{
+		if (lparam->malstream->mal != NULL)
+			vsf_bufmgr_free(lparam->malstream->mal);
+		if (lparam->malstream->mbufstream != NULL)
+			vsf_bufmgr_free(lparam->malstream->mbufstream);
+		vsf_bufmgr_free(lparam->malstream);
+	}
+	if (lparam->buffer_list[0] != NULL)
+		vsf_bufmgr_free(lparam->buffer_list[0]);
+	if (lparam->path != NULL)
+		vsf_bufmgr_free(lparam->path);
+	if (lparam->httpc != NULL)
+		vsf_bufmgr_free(lparam->httpc);
+
 	vsfshell_handler_exit(param);
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -624,15 +771,19 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		goto end;
 	}
 
+	memset(lparam, 0, sizeof(*lparam));
 	lparam->httpd = vsf_bufmgr_malloc(sizeof(struct vsfip_httpd_t));
 	if (!lparam->httpd)
+	{
+		vsfshell_printf(outpt, "fail to allocate httpd"VSFSHELL_LINEEND);
 		goto end;
+	}
 	memset(lparam->httpd, 0, sizeof(struct vsfip_httpd_t));
 	lparam->httpd->service_num = atoi(param->argv[1]);
 	if (!lparam->httpd->service_num)
 	{
-		vsfshell_printf(outpt, "fail to allocate httpd"VSFSHELL_LINEEND);
-		goto end_free;
+		vsfshell_printf(outpt, "service number is 0"VSFSHELL_LINEEND);
+		goto free_end;
 	}
 	lparam->httpd->service = vsf_bufmgr_malloc(
 			lparam->httpd->service_num * sizeof(struct vsfip_httpd_service_t));
@@ -640,14 +791,14 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		vsfshell_printf(outpt, "fail to allocate %d service(s)"VSFSHELL_LINEEND,
 							lparam->httpd->service_num);
-		goto end_free;
+		goto free_end;
 	}
 	lparam->httpd->homepage = vsf_bufmgr_malloc(strlen(param->argv[4]) + 1);
 	if (!lparam->httpd->homepage)
 	{
 		vsfshell_printf(outpt, "fail to allocate homepage: %s"VSFSHELL_LINEEND,
 							param->argv[4]);
-		goto end_free;
+		goto free_end;
 	}
 	strcpy(lparam->httpd->homepage, param->argv[4]);
 
@@ -660,7 +811,7 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		vsfshell_printf(outpt, "fail to open root %s"VSFSHELL_LINEEND,
 							param->argv[3]);
-		goto end_free;
+		goto free_end;
 	}
 
 	vsfshell_printf(outpt, "start httpd on port %d, root: %s"VSFSHELL_LINEEND,
@@ -668,7 +819,7 @@ static vsf_err_t vsfos_busybox_httpd(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfip_httpd_start(lparam->httpd, lparam->port);
 	goto end;
 
-end_free:
+free_end:
 	if (lparam->httpd->root != NULL)
 	{
 		lparam->local_pt.state = 0;
