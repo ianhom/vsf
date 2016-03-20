@@ -341,4 +341,6 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 	.tool.bittool.mskarr.set = mskarr_set,
 	.tool.bittool.mskarr.clr = mskarr_clr,
 	.tool.bittool.mskarr.ffz = mskarr_ffz,
+	.tool.bittool.msb = msb,
+	.tool.bittool.ffz = ffz,
 };

@@ -387,6 +387,9 @@ struct vsf_t
 				void (*clr)(uint32_t*, int);
 				int (*ffz)(uint32_t*, int);
 			} mskarr;
+
+			int (*msb)(uint32_t);
+			int (*ffz)(uint32_t);
 		} bittool;
 	} tool;
 };
@@ -646,6 +649,9 @@ struct vsf_t
 #define mskarr_set						vsf.tool.bittool.mskarr.set
 #define mskarr_clr						vsf.tool.bittool.mskarr.clr
 #define mskarr_ffz						vsf.tool.bittool.mskarr.ffz
+
+#define msb								vsf.tool.bittool.msb
+#define ffz								vsf.tool.bittool.ffz
 
 #else
 

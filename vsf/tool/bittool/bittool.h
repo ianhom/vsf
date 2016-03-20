@@ -49,6 +49,7 @@ uint32_t SWAP_U24(uint32_t);
 uint32_t SWAP_U32(uint32_t);
 uint64_t SWAP_U64(uint64_t);
 
+int msb(uint32_t);
 int ffz(uint32_t);
 
 // mask array

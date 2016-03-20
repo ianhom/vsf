@@ -349,9 +349,9 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 		uint32_t sectornum, clusternum;
 
 		BytsPerSec = LE_TO_SYS_U16(dbr->bpb.BytsPerSec);
-		fat->sectorsize_bits = BytsPerSec & (BytsPerSec - 1);
+		fat->sectorsize_bits = msb(BytsPerSec);
 		tmp32 = dbr->bpb.SecPerClus;
-		fat->clustersize_bits = tmp32 & (tmp32 - 1);
+		fat->clustersize_bits = msb(tmp32);
 		fat->reserved_size = LE_TO_SYS_U16(dbr->bpb.RsvdSecCnt);
 		fat->fatnum = dbr->bpb.NumFATs;
 		sectornum = LE_TO_SYS_U16(dbr->bpb.TotSec16);

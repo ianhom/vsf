@@ -188,17 +188,21 @@ void SET_U64_LSBFIRST(uint8_t *p, uint64_t v64)
 	p[7] = (v64 >> 56) & 0xFF;
 }
 
-int ffz(uint32_t a)
+int msb(uint32_t a)
 {
-	int b = a, c = -1;
-	b = ~b;
-	b &= -b;
-	while (b > 0)
+	int c = -1;
+	while (a > 0)
 	{
 		c++;
-		b >>= 1;
+		a >>= 1;
 	}
 	return c;
+}
+
+int ffz(uint32_t a)
+{
+	a = ~a;
+	return msb(a & -a);
 }
 
 // mask array
