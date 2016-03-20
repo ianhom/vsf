@@ -41,9 +41,12 @@ void main(void)
 	struct vsf_module_t *module;
 	struct vsf_module_info_t *minfo =
 						(struct vsf_module_info_t *)APPCFG_MODULES_ADDR;
+	int32_t pagesize;
 
 	vsf_enter_critical();
 	vsfhal_core_init(NULL);
+	vsfhal_flash_capacity(0, (uint32_t*)&pagesize, NULL);
+	pagesize = msb(pagesize);
 	vsf_bufmgr_init(app.bufmgr_buffer, sizeof(app.bufmgr_buffer));
 
 	// register modules
@@ -56,10 +59,8 @@ void main(void)
 		}
 
 		module->flash = minfo;
-		// APPCFG_MODULES_GRANULARITY aligned and leave one more empty block
 		minfo = (struct vsf_module_info_t *)((uint8_t *)minfo +\
-			((minfo->size + (1 << APPCFG_MODULES_GRANULARITY) - 1) &\
-				~((1 << APPCFG_MODULES_GRANULARITY) - 1)));
+			((minfo->size + (1 << pagesize) - 1) & ~((1 << pagesize) - 1)));
 		vsf_module_register(module);
 	}
 
