@@ -35,10 +35,6 @@
 #define nuc505_HCD_PORT1			(0x1 << 0)
 #define nuc505_HCD_PORT2			(0x1 << 1)
 
-#define nuc505_USART_MODE0
-#define nuc505_USART_MODE1
-#define nuc505_USART_MODE2
-#define nuc505_USART_MODE3
 #define nuc505_USART_CLKEN
 #define nuc505_USART_STOPBITS_0P5
 #define nuc505_USART_STOPBITS_1

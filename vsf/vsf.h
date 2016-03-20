@@ -66,6 +66,7 @@ struct vsf_module_t
 #ifdef VSFCFG_SCSI
 #include "component/mal/vsfscsi.h"
 #endif
+#include "tool/embflash/embflash.h"
 #endif
 #ifdef VSFCFG_FILE
 #include "component/file/vsfile.h"
@@ -81,7 +82,6 @@ struct vsf_module_t
 
 // some tools
 #include "tool/crc/crc.h"
-#include "tool/embflash/embflash.h"
 
 #define VSF_API_VERSION						0x00000001
 

@@ -156,8 +156,7 @@ vsf_err_t nuc505_usart_fini(uint8_t index)
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate,
-								uint8_t datalength, uint8_t mode)
+vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate, uint32_t mode)
 {
 	UART_T *usart;
 	uint32_t usart_idx = index & 0x0F;
@@ -166,7 +165,7 @@ vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate,
 
 	usart = (UART_T *)(UART0_BASE + (usart_idx << 12));
 
-	switch (datalength)
+/*	switch (datalength)
 	{
 	case 5:
 		reg_line = 0;
@@ -183,7 +182,7 @@ vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate,
 	default:
 		return VSFERR_INVALID_PARAMETER;
 	}
-
+*/
 	// mode:
 	// bit0 - bit1: parity
 	// ------------------------------------- bit2 - bit3: mode [nothing]
@@ -247,7 +246,7 @@ vsf_err_t nuc505_usart_config(uint8_t index, uint32_t baudrate,
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_usart_config_callback(uint8_t index, uint32_t int_priority,
+vsf_err_t nuc505_usart_config_cb(uint8_t index, uint32_t int_priority,
 				void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t))
 {
 	uint32_t usart_idx = index & 0x0F;
@@ -282,7 +281,7 @@ uint16_t nuc505_usart_rx(uint8_t index)
 	return usart->DAT;
 }
 
-vsf_err_t nuc505_usart_tx_bytes(uint8_t index, uint8_t *data, uint16_t size)
+uint16_t nuc505_usart_tx_bytes(uint8_t index, uint8_t *data, uint16_t size)
 {
 	UART_T *usart;
 	uint32_t usart_idx = index & 0x0F;
@@ -296,10 +295,10 @@ vsf_err_t nuc505_usart_tx_bytes(uint8_t index, uint8_t *data, uint16_t size)
 	}
 	usart->INTEN |= UART_INTEN_THREIEN_Msk;
 
-	return VSFERR_NONE;
+	return 0;
 }
 
-uint16_t nuc505_usart_tx_get_avail_length(uint8_t index)
+uint16_t nuc505_usart_tx_get_free_size(uint8_t index)
 {
 	UART_T *usart;
 	uint32_t usart_idx = index & 0x0F, fifo_len;
@@ -340,7 +339,7 @@ uint16_t nuc505_usart_rx_bytes(uint8_t index, uint8_t *data, uint16_t size)
 	return i;
 }
 
-uint16_t nuc505_usart_rx_get_data_length(uint8_t index)
+uint16_t nuc505_usart_rx_get_data_size(uint8_t index)
 {
 	UART_T *usart;
 	uint32_t usart_idx = index & 0x0F, fifo_len;

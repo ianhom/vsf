@@ -2216,9 +2216,6 @@
     <name>$PROJ_DIR$\app_cfg.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\..\app_interfaces.h</name>
-  </file>
-  <file>
     <name>$PROJ_DIR$\hw_cfg_nuc505.h</name>
   </file>
   <file>

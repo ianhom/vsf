@@ -64,7 +64,7 @@ vsf_err_t nuc505_eint_fini(uint32_t index)
 
 // need configure related gpio first
 vsf_err_t nuc505_eint_config(uint32_t index, uint32_t type,
-			uint32_t int_priority, void (*callback)(void *param), void *param)
+			uint32_t int_priority, void *param, void (*callback)(void *param))
 {
 	uint8_t i, eint_idx = index & 0x0F, port_idx = (index & 0xF0) >> 4;
 

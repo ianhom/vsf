@@ -275,7 +275,7 @@ vsf_err_t nuc505_spi_config(uint8_t index, uint32_t kHz, uint32_t mode)
 	return VSFERR_NONE;
 }
 
-vsf_err_t nuc505_spi_config_callback(uint8_t index, uint32_t int_priority,
+vsf_err_t nuc505_spi_config_cb(uint8_t index, uint32_t int_priority,
 										void *p, void (*onready)(void *))
 {
 	uint8_t spi_idx = index & 0x0F;

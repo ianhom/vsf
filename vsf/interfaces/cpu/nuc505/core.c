@@ -209,7 +209,7 @@ vsf_err_t nuc505_interface_init(void *p)
 #define CM3_SYSTICK_CLKSOURCE			(1 << 2)
 #define CM3_SYSTICK_COUNTFLAG			(1 << 16)
 
-static void (*nuc505_tickclk_callback)(void *param) = NULL;
+static void (*nuc505_tickclk_cb)(void *param) = NULL;
 static void *nuc505_tickclk_param = NULL;
 static uint32_t nuc505_tickcnt = 0;
 vsf_err_t nuc505_tickclk_start(void)
@@ -244,18 +244,18 @@ uint32_t nuc505_tickclk_get_count(void)
 ROOTFUNC void SysTick_Handler(void)
 {
 	nuc505_tickcnt++;
-	if (nuc505_tickclk_callback != NULL)
+	if (nuc505_tickclk_cb != NULL)
 	{
-		nuc505_tickclk_callback(nuc505_tickclk_param);
+		nuc505_tickclk_cb(nuc505_tickclk_param);
 	}
 }
 
-vsf_err_t nuc505_tickclk_set_callback(void (*callback)(void*), void *param)
+vsf_err_t nuc505_tickclk_config_cb(void (*callback)(void*), void *param)
 {
 	uint32_t tmp = SysTick->CTRL;
 
 	SysTick->CTRL &= ~CM3_SYSTICK_INT;
-	nuc505_tickclk_callback = callback;
+	nuc505_tickclk_cb = callback;
 	nuc505_tickclk_param = param;
 	SysTick->CTRL = tmp;
 	return VSFERR_NONE;

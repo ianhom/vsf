@@ -112,9 +112,9 @@ const struct interfaces_info_t core_interfaces =
 	.usart.config = CORE_USART_CONFIG(__TARGET_CHIP__),
 	.usart.config_cb = CORE_USART_CONFIG_CB(__TARGET_CHIP__),
 	.usart.tx_bytes = CORE_USART_TX_BYTES(__TARGET_CHIP__),
-	.usart.get_free_size = CORE_USART_TX_GET_FREE_SIZE(__TARGET_CHIP__),
+	.usart.tx_get_free_size = CORE_USART_TX_GET_FREE_SIZE(__TARGET_CHIP__),
 	.usart.rx_bytes = CORE_USART_RX_BYTES(__TARGET_CHIP__),
-	.usart.get_data_size = CORE_USART_RX_GET_DATA_SIZE(__TARGET_CHIP__),
+	.usart.rx_get_data_size = CORE_USART_RX_GET_DATA_SIZE(__TARGET_CHIP__),
 #endif
 #if IFS_SPI_EN
 #if IFS_CONST_EN
