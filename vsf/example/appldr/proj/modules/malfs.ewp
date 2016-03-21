@@ -647,7 +647,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild></postbuild>
+        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
       </data>
     </settings>
     <settings>
@@ -1613,7 +1613,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild></postbuild>
+        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
       </data>
     </settings>
     <settings>

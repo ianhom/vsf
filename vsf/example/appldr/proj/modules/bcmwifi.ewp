@@ -616,7 +616,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>bcm_wifi.bin</state>
+          <state>bcmwifi.bin</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -647,7 +647,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild></postbuild>
+        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
       </data>
     </settings>
     <settings>
@@ -659,7 +659,7 @@
         <debug>1</debug>
         <option>
           <name>IlinkOutputFile</name>
-          <state>bcm_wifi.out</state>
+          <state>bcmwifi.out</state>
         </option>
         <option>
           <name>IlinkLibIOConfig</name>
@@ -1580,7 +1580,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>bcm_wifi.bin</state>
+          <state>bcmwifi.bin</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -1611,7 +1611,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild></postbuild>
+        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
       </data>
     </settings>
     <settings>
@@ -1623,7 +1623,7 @@
         <debug>0</debug>
         <option>
           <name>IlinkOutputFile</name>
-          <state>bcm_wifi.out</state>
+          <state>bcmwifi.out</state>
         </option>
         <option>
           <name>IlinkLibIOConfig</name>
