@@ -161,10 +161,6 @@
         <configuration>Release</configuration>
       </member>
       <member>
-        <project>ohci</project>
-        <configuration>Release</configuration>
-      </member>
-      <member>
         <project>os</project>
         <configuration>Release</configuration>
       </member>

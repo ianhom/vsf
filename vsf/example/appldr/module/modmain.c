@@ -19,18 +19,12 @@
 #include "vsf.h"
 #include "app_hw_cfg.h"
 
-// dummy main, make compiler happy
-int main(void)
-{
-	return 0;
-}
-
 ROOTFUNC vsf_err_t module_exit(struct vsf_module_t *module)
 {
 	return MODULE_EXIT(module);
 }
 
-ROOTFUNC vsf_err_t __iar_program_start(struct vsf_module_t *module,
+ROOTFUNC vsf_err_t module_entry(struct vsf_module_t *module,
 							struct app_hwcfg_t const *hwcfg)
 {
 	// check api version
