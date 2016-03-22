@@ -483,7 +483,6 @@ static vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsf_malfs_read(malfs, fat->rootbase, malfs->sector_buffer, 1);
 	vsfsm_pt_wait(pt);
-	vsfsm_crit_leave(&malfs->crit);
 	if (VSF_MALFS_EVT_IOFAIL == evt)
 	{
 		goto fail;
@@ -518,6 +517,7 @@ static vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			}
 		}
 	}
+	vsfsm_crit_leave(&malfs->crit);
 
 	// initialize root
 	fat->root.file.name = malfs->volume_name;

@@ -98,6 +98,7 @@ vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfile.srch.cur_name = name;
 	vsfile.srch.cur_file = dir;
+	vsfile.srch.file_pt.sm = pt->sm;
 	while (*vsfile.srch.cur_name != '\0')
 	{
 		if (vsfile_is_div(*vsfile.srch.cur_name))
