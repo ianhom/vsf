@@ -605,21 +605,15 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			file_temp++;
 			rawfile = &file_temp->memfile.file;
 		}
-		// CANNOT add/delete file
+		// seems host add some file, just ignore it
 		if (NULL == file_match)
 		{
-			return VSFERR_FAIL;
+			goto fakefat32_dir_write_next;
 		}
 
 		want_size = GET_LE_U32(&buff[28]);
 		want_first_cluster =
 				GET_LE_U16(&buff[26]) + (GET_LE_U16(&buff[20]) << 16);
-
-		// CANNOT change file attribute
-		if (rawfile->attr != buff[11])
-		{
-			return VSFERR_FAIL;
-		}
 
 		// host can change the size and first_cluster
 		// ONLY one limitation: host MUST guarantee that the space is continuous
