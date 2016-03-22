@@ -297,6 +297,10 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->fakefat32_fs.SVI_dir[2].memfile.file.size = sizeof(Win10_IndexerVolumeGuid);
 	ifs->fakefat32_fs.SVI_dir[2].memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_READONLY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
 	ifs->fakefat32_fs.SVI_dir[2].memfile.f.buff = (uint8_t *)Win10_IndexerVolumeGuid;
+	ifs->fakefat32_fs.SVI_dir[3].memfile.file.name = "WPSettings.dat";
+	ifs->fakefat32_fs.SVI_dir[3].memfile.file.size = sizeof(Win10_WPSettings_dat);
+	ifs->fakefat32_fs.SVI_dir[3].memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_READONLY | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+	ifs->fakefat32_fs.SVI_dir[3].memfile.f.buff = (uint8_t *)Win10_WPSettings_dat;
 
 	ifs->fakefat32_fs.root_dir[0].memfile.file.name = "VSFDriver";
 	ifs->fakefat32_fs.root_dir[0].memfile.file.attr = VSFILE_ATTR_VOLUMID;

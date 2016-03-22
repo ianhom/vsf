@@ -42,7 +42,7 @@ struct vsfos_modifs_t
 		struct fakefat32_file_t Driver_dir[4];
 		struct fakefat32_file_t LOSTDIR_dir[3];
 		struct fakefat32_file_t RECYCLEBIN_dir[4];
-		struct fakefat32_file_t SVI_dir[4];
+		struct fakefat32_file_t SVI_dir[5];
 		struct fakefat32_file_t root_dir[6];
 	} fakefat32_fs;
 

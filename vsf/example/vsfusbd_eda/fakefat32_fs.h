@@ -249,6 +249,10 @@ static uint8_t Win10_IndexerVolumeGuid[] =
 	0x2D,0x00,0x41,0x00,0x42,0x00,0x44,0x00,0x41,0x00,0x44,0x00,0x39,0x00,0x45,0x00,
 	0x30,0x00,0x43,0x00,0x34,0x00,0x30,0x00,0x34,0x00,0x7D,0x00
 };
+static uint8_t Win10_WPSettings_dat[] =
+{
+	0x0C,0x00,0x00,0x00,0x30,0xC7,0xEF,0x0A,0xE0,0xD2,0x39,0x57
+};
 static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
 {
 	{
@@ -264,6 +268,12 @@ static struct fakefat32_file_t fakefat32_systemvolumeinformation_dir[] =
 		.memfile.file.size = sizeof(Win10_IndexerVolumeGuid),
 		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
 		.memfile.f.buff = Win10_IndexerVolumeGuid,
+	},
+	{
+		.memfile.file.name = "WPSettings.dat",
+		.memfile.file.size = sizeof(Win10_WPSettings_dat),
+		.memfile.file.attr = VSFILE_ATTR_ARCHIVE | VSFILE_ATTR_SYSTEM | VSFILE_ATTR_HIDDEN,
+		.memfile.f.buff = Win10_WPSettings_dat,
 	},
 	{
 		.memfile.file.name = NULL,
