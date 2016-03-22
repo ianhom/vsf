@@ -316,7 +316,7 @@ static vsf_err_t vsffat_alloc_cluschain(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 static bool vsffat_FATentry_valid(struct vsffat_t *fat, uint32_t cluster)
 {
 	uint8_t fatbit = vsffat_FAT_bitsize[(int)fat->type];
-	uint32_t mask = (1 << fatbit) - 1;
+	uint32_t mask = (((uint64_t)1 << fatbit) - 1) & 0x0FFFFFFF;
 
 	cluster &= (32 == fatbit) ? 0x0FFFFFFF : mask;
 	return (cluster >= 2) && (cluster <= mask);
@@ -326,7 +326,7 @@ static bool vsffat_FATentry_valid(struct vsffat_t *fat, uint32_t cluster)
 static bool vsffat_FATentry_EOF(struct vsffat_t *fat, uint32_t cluster)
 {
 	uint8_t fatbit = vsffat_FAT_bitsize[(int)fat->type];
-	uint32_t mask = (1 << fatbit) - 1;
+	uint32_t mask = (((uint64_t)1 << fatbit) - 1) & 0x0FFFFFFF;
 
 	cluster &= (32 == fatbit) ? 0x0FFFFFFF : mask;
 	return (cluster >= (mask - 8)) && (cluster <= mask);
