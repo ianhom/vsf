@@ -152,6 +152,9 @@ void* vsfhal_getif(char *ifname)
 {
 	if (!strcmp(ifname, "core")) return (void *)&core_interfaces.core;
 	else if (!strcmp(ifname, "tickclk")) return (void *)&core_interfaces.tickclk;
+#if IFS_FLASH_EN
+	else if (!strcmp(ifname, "flash")) return (void *)&core_interfaces.flash;
+#endif
 #if IFS_GPIO_EN
 	else if (!strcmp(ifname, "gpio")) return (void *)&core_interfaces.gpio;
 #endif
