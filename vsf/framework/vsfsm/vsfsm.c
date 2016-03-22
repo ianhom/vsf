@@ -45,12 +45,13 @@ uint32_t vsfsm_get_event_pending(void)
 static vsf_err_t vsfsm_evtq_post(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	struct vsfsm_evtq_t *evtq = sm->evtq;
+	vsf_gint_t gint = vsf_get_gint();
 
 	vsf_enter_critical();
 
 	if (evtq->evt_count >= evtq->size)
 	{
-		vsf_leave_critical();
+		vsf_set_gint(gint);
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
 
@@ -61,7 +62,7 @@ static vsf_err_t vsfsm_evtq_post(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	sm->evt_count++;
 	evtq->evt_count++;
 
-	vsf_leave_critical();
+	vsf_set_gint(gint);
 
 	if (evtq->activate != NULL)
 	{

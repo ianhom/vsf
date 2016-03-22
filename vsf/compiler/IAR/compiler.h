@@ -11,6 +11,9 @@
 #define PACKED_MID	
 #define PACKED_TAIL	
 
+#define vsf_gint_t						__istate_t
+#define vsf_set_gint(gint)				__set_interrupt_state(gint)
+#define vsf_get_gint()					__get_interrupt_state()
 #define vsf_enter_critical()			__disable_interrupt()
 #define vsf_leave_critical()			__enable_interrupt()
 
