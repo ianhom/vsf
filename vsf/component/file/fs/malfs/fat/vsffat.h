@@ -38,6 +38,14 @@ enum vsffat_type_t
 	VSFFAT_EXFAT,
 };
 
+struct vsffat_dentry_parser_t
+{
+	uint8_t *entry;
+	uint16_t entry_num;
+	uint8_t lfn;
+	char *filename;
+};
+
 struct vsffat_t
 {
 	struct vsf_malfs_t malfs;
@@ -92,6 +100,8 @@ struct vsffat_t
 	uint32_t readbit;
 	uint32_t cur_fatsector;
 	// for vsffat_alloc_cluschain
+	// for vsffat_parse_dentry_fat
+	struct vsffat_dentry_parser_t dparser;
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
@@ -115,6 +125,7 @@ vsf_err_t vsffat_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 extern const struct vsfile_fsop_t vsffat_op;
 // helper
 bool vsffat_is_LFN(char *name);
+bool vsffat_parse_dentry_fat(struct vsffat_dentry_parser_t *parser);
 #endif
 
 #endif	// __VSFFAT_H_INCLUDED__

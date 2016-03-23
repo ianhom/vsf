@@ -69,6 +69,19 @@ bool vsfile_is_div(char ch)
 	return ('\\' == ch) || ('/' == ch);
 }
 
+bool vsfile_match(char *path, char *filename)
+{
+	if (strstr(path, filename) == path)
+	{
+		char ch = path[strlen(filename)];
+		if (('\0' == ch) || vsfile_is_div(ch))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 vsf_err_t vsfile_init(struct vsfile_memop_t *memop)
 {
 	memset(&vsfile, 0, sizeof(vsfile));
@@ -124,6 +137,17 @@ vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		if (err > 0) return err; else if (err < 0)
 		{
 			goto end;
+		}
+
+		if (vsfile.srch.cur_file != dir)
+		{
+			vsfile.srch.file_pt.state = 0;
+			vsfsm_pt_entry(pt);
+			err = vsfile_close(&vsfile.srch.file_pt, evt, vsfile.srch.cur_file);
+			if (err > 0) return err; else if (err < 0)
+			{
+				goto end;
+			}
 		}
 		vsfile.srch.cur_name += strlen((*file)->name);
 		vsfile.srch.cur_file = *file;
@@ -280,6 +304,26 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // memfs
+static vsf_err_t vsfile_memfs_getchild(struct vsfile_memfile_t *dir,
+					struct vsfile_t **file, char *name, uint32_t idx)
+{
+	struct vsfile_t *child = (struct vsfile_t *)dir->d.child;
+	uint32_t index = 0;
+
+	while ((child != NULL) && (child->name != NULL))
+	{
+		if ((name && vsfile_match(name, child->name)) ||
+			(!name && (index == idx)))
+		{
+			break;
+		}
+		index++;
+		child = (struct vsfile_t *)((uint32_t)child + dir->d.child_size);
+	}
+	*file = (!child || !child->name) ? NULL : child;
+	return (NULL == *file) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+}
+
 vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
@@ -288,27 +332,7 @@ vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
 	{
 		dir = (struct vsfile_t *)pt->user_data;
 	}
-
-	{
-		struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)dir;
-		struct vsfile_t *child = (struct vsfile_t *)memfile->d.child;
-		char ch;
-
-		while ((child != NULL) && (child->name != NULL))
-		{
-			if (strstr(name, child->name) == name)
-			{
-				ch = name[strlen(child->name)];
-				if (('\0' == ch) || vsfile_is_div(ch))
-				{
-					break;
-				}
-			}
-			child = (struct vsfile_t *)((uint32_t)child + memfile->d.child_size);
-		}
-		*file = (!child || !child->name) ? NULL : child;
-		return (NULL == *file) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
-	}
+	return vsfile_memfs_getchild((struct vsfile_memfile_t *)dir, file, name, 0);
 }
 
 vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
@@ -319,24 +343,7 @@ vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
 	{
 		dir = (struct vsfile_t *)pt->user_data;
 	}
-
-	{
-		struct vsfile_memfile_t *memfile = (struct vsfile_memfile_t *)dir;
-		struct vsfile_t *child = (struct vsfile_t *)memfile->d.child;
-		uint32_t i;
-
-		for (i = 0; i < idx; i++)
-		{
-			if (NULL == child->name)
-			{
-				return VSFERR_NOT_AVAILABLE;
-			}
-			child = (struct vsfile_t *)((uint32_t)child + memfile->d.child_size);
-		}
-
-		*file = child;
-		return (!child) || (!child->name) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
-	}
+	return vsfile_memfs_getchild((struct vsfile_memfile_t *)dir, file, 0, idx);
 }
 
 vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -425,6 +432,26 @@ static vsf_err_t vsfile_vfs_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return err;
 }
 
+static vsf_err_t vsfile_vfs_getchild(struct vsfile_vfsfile_t *dir,
+					struct vsfile_t **file, char *name, uint32_t idx)
+{
+	struct vsfile_vfsfile_t *child = dir->dir.child;
+	uint32_t index = 0;
+
+	while (child != NULL)
+	{
+		if ((name && vsfile_match(name, child->file.name)) ||
+			(!name && (index == idx)))
+		{
+			break;
+		}
+		index++;
+		child = child->next;
+	}
+	*file = (struct vsfile_t *)child;
+	return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+}
+
 static vsf_err_t vsfile_vfs_getchild_byname(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
 					struct vsfile_t **file)
@@ -438,23 +465,7 @@ static vsf_err_t vsfile_vfs_getchild_byname(struct vsfsm_pt_t *pt,
 	}
 	else
 	{
-		struct vsfile_vfsfile_t *child = vfsfile->dir.child;
-		char ch;
-
-		while (child != NULL)
-		{
-			if (strstr(name, child->file.name) == name)
-			{
-				ch = name[strlen(child->file.name)];
-				if (('\0' == ch) || vsfile_is_div(ch))
-				{
-					break;
-				}
-			}
-			child = child->next;
-		}
-		*file = (struct vsfile_t *)child;
-		return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+		return vsfile_vfs_getchild(vfsfile, file, name, 0);
 	}
 }
 
@@ -471,20 +482,7 @@ static vsf_err_t vsfile_vfs_getchild_byidx(struct vsfsm_pt_t *pt,
 	}
 	else
 	{
-		struct vsfile_vfsfile_t *child = vfsfile->dir.child;
-		uint32_t i;
-
-		for (i = 0; i < idx; i++)
-		{
-			if (NULL == child->file.name)
-			{
-				return VSFERR_NOT_AVAILABLE;
-			}
-			child = child->next;
-		}
-
-		*file = (struct vsfile_t *)child;
-		return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
+		return vsfile_vfs_getchild(vfsfile, file, NULL, idx);
 	}
 }
 

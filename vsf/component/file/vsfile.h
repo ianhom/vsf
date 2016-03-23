@@ -196,8 +196,9 @@ struct vsfile_modifs_t
 	vsf_err_t (*dummy_rw)(struct vsfsm_pt_t*, vsfsm_evt_t, struct vsfile_t*,
 					uint64_t, uint32_t, uint8_t*, uint32_t*);
 
-	char* (*getfileext)(char* name);
-	bool (*is_div)(char ch);
+	char* (*getfileext)(char*);
+	bool (*is_div)(char);
+	bool (*match)(char*, char*);
 
 	struct
 	{
@@ -231,6 +232,7 @@ vsf_err_t vsfile_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define vsfile_dummy_rw						VSFILE_MOD->dummy_rw
 #define vsfile_getfileext					VSFILE_MOD->getfileext
 #define vsfile_is_div						VSFILE_MOD->is_div
+#define vsfile_match						VSFILE_MOD->match
 #define vsfile_vfs_op						VSFILE_MOD->vfs.op
 #define vsfile_memfs_op						VSFILE_MOD->memfs.op
 #define vsfile								VSFILE_MOD->vsfile
@@ -275,6 +277,7 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 // helper
 char* vsfile_getfileext(char* name);
 bool vsfile_is_div(char ch);
+bool vsfile_match(char *path, char *filename);
 
 // vfs
 extern const struct vsfile_fsop_t vsfile_vfs_op;

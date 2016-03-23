@@ -24,6 +24,10 @@
 // Refer to:
 // 1. "Microsoft Extensible Firmware Initiative FAT32 File System Specification"
 
+#define FATFS_FILEATTR_LONGNAME			\
+			(VSFILE_ATTR_READONLY | VSFILE_ATTR_HIDDEN |\
+			VSFILE_ATTR_SYSTEM | VSFILE_ATTR_VOLUMID)
+
 PACKED_HEAD struct PACKED_MID fatfs_bpb_t
 {
 	uint16_t BytsPerSec;
@@ -115,7 +119,8 @@ PACKED_HEAD struct PACKED_MID fatfs_dentry_t
 	{
 		PACKED_HEAD struct PACKED_MID
 		{
-			char Name[11];
+			char Name[8];
+			char Ext[3];
 			uint8_t Attr;
 			uint8_t LCase;
 			uint8_t CrtTimeTenth;
@@ -214,7 +219,7 @@ static const uint8_t vsffat_FAT_bitsize[] = {0, 12, 16, 32, 32};
 static uint32_t vsffat_clus2sec(struct vsffat_t *fat, uint32_t cluster)
 {
 	cluster -= fat->root_cluster ? fat->root_cluster : 2;
-	return fat->database + (cluster >> fat->clustersize_bits);
+	return fat->database + (cluster << fat->clustersize_bits);
 }
 
 bool vsffat_is_LFN(char *name)
@@ -304,8 +309,9 @@ static vsf_err_t vsffat_get_FATentry(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // if *cluster != 0, then allocate chain from *cluster for data in size
+// 		ofc, if size is smaller then current chain, free unused clusters
 // if *cluster == 0, then allocate new chain for data in size
-static vsf_err_t vsffat_alloc_cluschain(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+static vsf_err_t vsffat_realloc_cluschain(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 										uint32_t size, uint32_t *cluster)
 {
 	// TODO: implement this for addfile
@@ -445,6 +451,118 @@ static vsf_err_t vsffat_parse_dbr(struct vsffat_t *fat, struct fatfs_dbr_t *dbr)
 	return VSFERR_NONE;
 }
 
+// entry_num is the number of entry remain in buffer,
+// 	and the entry_num of entry for current filename parsed
+// lfn is unicode encoded, but we just support ascii
+// if a filename parsed, parser->entry will point to the sfn
+bool vsffat_parse_dentry_fat(struct vsffat_dentry_parser_t *parser)
+{
+	struct fatfs_dentry_t *entry = (struct fatfs_dentry_t *)parser->entry;
+	bool parsed = false;
+
+	while (parser->entry_num-- > 0)
+	{
+		if (!entry->fat.Name[0])
+		{
+			parser->entry_num = 0;
+			break;
+		}
+		else if (entry->fat.Name[0] != 0xE5)
+		{
+			char *ptr;
+			int i;
+
+			if (entry->fat.Attr == FATFS_FILEATTR_LONGNAME)
+			{
+				uint8_t index = (uint8_t)entry->fat.Name[0];
+				uint8_t pos = ((index & 0x0F) - 1) * 13;
+				uint8_t *buf;
+
+				parser->lfn = index & 0x0F;
+				ptr = parser->filename + pos;
+				buf = (uint8_t *)entry + 1;
+				for (i = 0; i < 5; i++, buf += 2)
+				{
+					if ((buf[0] == '\0') && (buf[1] == '\0'))
+					{
+						goto parsed;
+					}
+					*ptr++ = (char)buf[0];
+				}
+
+				buf = (uint8_t *)entry + 14;
+				for (i = 0; i < 6; i++, buf += 2)
+				{
+					if ((buf[0] == '\0') && (buf[1] == '\0'))
+					{
+						goto parsed;
+					}
+					*ptr++ = (char)buf[0];
+				}
+
+				buf = (uint8_t *)entry + 28;
+				for (i = 0; i < 2; i++, buf += 2)
+				{
+					if ((buf[0] == '\0') && (buf[1] == '\0'))
+					{
+						goto parsed;
+					}
+					*ptr++ = (char)buf[0];
+				}
+
+			parsed:
+				if ((index & 0xF0) == 0x40)
+				{
+					*ptr = '\0';
+				}
+			}
+			else if (entry->fat.Attr != VSFILE_ATTR_VOLUMID)
+			{
+				bool lower;
+				if (parser->lfn == 1)
+				{
+					// previous lfn parsed, igure sfn and return
+					parsed = true;
+					break;
+				}
+
+				parser->lfn = 0;
+				ptr = parser->filename;
+				lower = (entry->fat.LCase & 0x08) > 0;
+				for (i = 0; (i < 8) && (entry->fat.Name[i] != ' '); i++)
+				{
+					*ptr = entry->fat.Name[i];
+					if (lower) tolower(*ptr);
+					ptr++;
+				}
+				if (entry->fat.Ext[0] != ' ')
+				{
+					*ptr++ = '.';
+					lower = (entry->fat.LCase & 0x10) > 0;
+					for (i = 0; (i < 3) && (entry->fat.Ext[i] != ' '); i++)
+					{
+						*ptr = entry->fat.Ext[i];
+						if (lower) tolower(*ptr);
+						ptr++;
+					}
+				}
+				*ptr = '\0';
+				parsed = true;
+				break;
+			}
+		}
+		else if (parser->lfn > 0)
+		{
+			// an erased entry with previous parsed lfn entry?
+			parser->lfn = 0;
+		}
+
+		entry++;
+	}
+	parser->entry = (uint8_t *)entry;
+	return parsed;
+}
+
 static vsf_err_t vsffat_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 								struct vsfile_t *dir)
 {
@@ -562,6 +680,7 @@ static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
 					struct vsfile_t **file, char *name, uint32_t idx)
 {
 	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
+	struct vsffat_dentry_parser_t *dparser = &fat->dparser;
 	struct vsf_malfs_t *malfs = &fat->malfs;
 	struct vsfile_fatfile_t *fatdir;
 	struct fatfs_dentry_t *dentry;
@@ -581,6 +700,7 @@ static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
 	}
 	malfs->notifier_sm = pt->sm;
 
+	fat->cur_index = -1;
 	fat->cur_cluster = fatdir->first_cluster;
 	if (!fat->cur_cluster)
 	{
@@ -609,8 +729,72 @@ static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
 		}
 
 		dentry = (struct fatfs_dentry_t *)malfs->sector_buffer;
-		// TODO: try to search file equal to name or idx
-		// TODO: if found, allocate and initialize file structure
+		if (fat->type != VSFFAT_EXFAT)
+		{
+			dparser->entry = (uint8_t *)dentry;
+			dparser->entry_num = 1 << (fat->sectorsize_bits - 5);
+			dparser->lfn = 0;
+			dparser->filename = (char *)dentry;
+
+			while (dparser->entry_num)
+			{
+				if (vsffat_parse_dentry_fat(dparser))
+				{
+					fat->cur_index++;
+					if ((name && vsfile_match(name, dparser->filename)) ||
+						(!name && (idx == fat->cur_index)))
+					{
+						// match: allocate file structure and return
+						struct fatfs_dentry_t *entry =
+							(struct fatfs_dentry_t *)dparser->entry;
+						struct vsfile_fatfile_t *fatfile =
+							vsf_bufmgr_malloc(sizeof(struct vsfile_fatfile_t));
+						if (fatfile != NULL)
+						{
+							fatfile->file.name = vsf_bufmgr_malloc(
+												strlen(dparser->filename) + 1);
+							if (fatfile->file.name != NULL)
+							{
+								strcpy(fatfile->file.name, dparser->filename);
+								fatfile->file.attr =
+											(enum vsfile_attr_t)entry->fat.Attr;
+								fatfile->file.op =
+											(struct vsfile_fsop_t *)&vsffat_op;
+								fatfile->file.size = entry->fat.FileSize;
+								fatfile->fat = fat;
+								fatfile->first_cluster = entry->fat.FstClusLO +
+											(entry->fat.FstClusHI << 16);
+								*file = (struct vsfile_t *)fatfile;
+							}
+							else
+							{
+								vsf_bufmgr_free(fatfile);
+								err = VSFERR_NOT_ENOUGH_RESOURCES;
+							}
+						}
+						else
+							err = VSFERR_NOT_ENOUGH_RESOURCES;
+						goto exit;
+					}
+					// skip the sfn of the parsed file
+					dparser->entry += 32;
+					dparser->filename = (char *)dentry;
+				}
+				else if (dparser->entry_num > 0)
+				{
+					// no more files
+					err = VSFERR_NOT_AVAILABLE;
+					break;
+				}
+				else
+					break;
+			}
+		}
+		else
+		{
+			err = VSFERR_NOT_SUPPORT;
+			goto exit;
+		}
 
 		if ((!fat->cur_cluster && (fat->cur_sector < fat->rootsize)) ||
 			(fat->cur_sector & ((1 << fat->clustersize_bits) - 1)))
