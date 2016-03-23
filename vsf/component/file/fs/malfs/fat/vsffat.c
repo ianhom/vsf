@@ -464,7 +464,6 @@ bool vsffat_parse_dentry_fat(struct vsffat_dentry_parser_t *parser)
 	{
 		if (!entry->fat.Name[0])
 		{
-			parser->entry_num = 0;
 			break;
 		}
 		else if (entry->fat.Name[0] != 0xE5)
@@ -784,7 +783,7 @@ static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
 				{
 					// no more files
 					err = VSFERR_NOT_AVAILABLE;
-					break;
+					goto exit;
 				}
 				else
 					break;
