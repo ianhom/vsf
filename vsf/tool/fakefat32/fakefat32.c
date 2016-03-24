@@ -561,78 +561,63 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			struct fakefat32_file_t *file, uint64_t addr, uint8_t *buff,
 			uint32_t page_size)
 {
-	struct vsfile_t *rawfile;
 	struct fakefat32_file_t *file_temp, *file_match;
 	uint32_t want_size;
 	uint16_t want_first_cluster;
-	char short_filename[11];
+	struct vsffat_dentry_parser_t dparser;
 
 	REFERENCE_PARAMETER(addr);
 
 	file = (struct fakefat32_file_t *)file->memfile.d.child;
-	while (page_size)
+	dparser.entry = buff;
+	dparser.entry_num = page_size >> 5;
+	dparser.lfn = 0;
+	dparser.filename = (char *)buff;
+	while (dparser.entry_num)
 	{
-		if ('\0' == buff[0])
+		if (vsffat_parse_dentry_fat(&dparser))
 		{
-			break;
-		}
-		if (FAKEFAT32_FILEATTR_LONGNAME == buff[0x0B])
-		{
-			// longname file entry
-			goto fakefat32_dir_write_next;
-		}
-
-		file_temp = file;
-		rawfile = &file_temp->memfile.file;
-		file_match = NULL;
-		while (rawfile->name != NULL)
-		{
-			// generate short 8.3 filename
-			if (rawfile->attr != VSFILE_ATTR_VOLUMID)
+			file_temp = file;
+			file_match = NULL;
+			while (file_temp->memfile.file.name != NULL)
 			{
-				fakefat32_get_shortname(file_temp, short_filename);
+				if (!strcmp(file_temp->memfile.file.name, dparser.filename))
+				{
+					file_match = file_temp;
+					break;
+				}
+				file_temp++;
 			}
-			else
+			// seems host add some file, just ignore it
+			if (NULL == file_match)
 			{
-				strncpy_fill(short_filename, rawfile->name, ' ', 11);
+				goto fakefat32_dir_write_next;
 			}
 
-			if (!memcmp((const char *)buff, short_filename, 11))
+			want_size = GET_LE_U32(&dparser.entry[28]);
+			want_first_cluster = GET_LE_U16(&dparser.entry[26]) +
+									(GET_LE_U16(&dparser.entry[20]) << 16);
+
+			// host can change the size and first_cluster
+			// ONLY one limitation:
+			// 		host MUST guarantee that the space is continuous
+			if (!(file_temp->memfile.file.attr & VSFILE_ATTR_DIRECTORY) &&
+				(file_temp->memfile.file.size != want_size))
 			{
-				file_match = file_temp;
-				break;
+/*				if ((file_match->callback.change_size != NULL) &&
+					file_match->callback.change_size(file_match, want_size))
+				{
+					return VSFERR_FAIL;
+				}
+*/				file_temp->memfile.file.size = want_size;
 			}
-			file_temp++;
-			rawfile = &file_temp->memfile.file;
-		}
-		// seems host add some file, just ignore it
-		if (NULL == file_match)
-		{
-			goto fakefat32_dir_write_next;
-		}
+			file_match->first_cluster = want_first_cluster;
+			memcpy(&file_match->record, &buff[13], sizeof(file_match->record));
 
-		want_size = GET_LE_U32(&buff[28]);
-		want_first_cluster =
-				GET_LE_U16(&buff[26]) + (GET_LE_U16(&buff[20]) << 16);
-
-		// host can change the size and first_cluster
-		// ONLY one limitation: host MUST guarantee that the space is continuous
-		if (!(rawfile->attr & VSFILE_ATTR_DIRECTORY) &&
-			(rawfile->size != want_size))
-		{
-/*			if ((file_match->callback.change_size != NULL) &&
-				file_match->callback.change_size(file_match, want_size))
-			{
-				return VSFERR_FAIL;
-			}
-*/			rawfile->size = want_size;
+fakefat32_dir_write_next:
+			dparser.entry += 32;
+			dparser.filename = (char *)buff;
 		}
-		file_match->first_cluster = want_first_cluster;
-		memcpy(&file_match->record, &buff[13], sizeof(file_match->record));
-
-	fakefat32_dir_write_next:
-		buff += 0x20;
-		page_size -= 0x20;
 	}
 	return VSFERR_NONE;
 }
