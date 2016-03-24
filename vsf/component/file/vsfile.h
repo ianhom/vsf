@@ -45,11 +45,10 @@ struct vsfile_fop_t
 };
 struct vsfile_dop_t
 {
-	// for getchild_byname and getchild_byidx, if dir is NULL, means root
-	vsf_err_t (*getchild_byname)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *dir, char *name, struct vsfile_t **file);
-	vsf_err_t (*getchild_byidx)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *dir, uint32_t idx, struct vsfile_t **file);
+	// for getchild, if dir is NULL, means root, if name is NULL, use idx
+	vsf_err_t (*getchild)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *dir, char *name, uint32_t idx,
+					struct vsfile_t **file);
 	vsf_err_t (*addfile)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name, enum vsfile_attr_t attr);
 	vsf_err_t (*removefile)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -285,12 +284,9 @@ extern const struct vsfile_fsop_t vsfile_vfs_op;
 // normal memfs
 extern const struct vsfile_fsop_t vsfile_memfs_op;
 // for derived memfs classes
-vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
+vsf_err_t vsfile_memfs_getchild(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file);
-vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
-					struct vsfile_t **file);
+					uint32_t idx, struct vsfile_t **file);
 vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *file, uint64_t offset,
 					uint32_t size, uint8_t *buff, uint32_t *rsize);

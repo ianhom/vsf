@@ -35,8 +35,7 @@
 #undef vsfile_dummy_rw
 #undef vsfile_getfileext
 #undef vsfile_is_div
-#undef vsfile_memfs_getchild_byname
-#undef vsfile_memfs_getchild_byidx
+#undef vsfile_memfs_getchild
 #undef vsfile_memfs_read
 #undef vsfile_memfs_write
 
@@ -131,9 +130,9 @@ vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 		vsfile.srch.file_pt.state = 0;
 		vsfsm_pt_entry(pt);
-		err = vsfile.srch.cur_file->op->d_op.getchild_byname(
+		err = vsfile.srch.cur_file->op->d_op.getchild(
 					&vsfile.srch.file_pt, evt, vsfile.srch.cur_file,
-					vsfile.srch.cur_name, file);
+					vsfile.srch.cur_name, 0, file);
 		if (err > 0) return err; else if (err < 0)
 		{
 			goto end;
@@ -175,7 +174,7 @@ vsf_err_t vsfile_findfirst(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	vsfile.srch.cur_idx = 0;
 	vsfile.srch.file_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = dir->op->d_op.getchild_byidx(&vsfile.srch.file_pt, evt, dir,
+	err = dir->op->d_op.getchild(&vsfile.srch.file_pt, evt, dir, NULL,
 					vsfile.srch.cur_idx, file);
 	if (err != 0) return err;
 
@@ -193,7 +192,7 @@ vsf_err_t vsfile_findnext(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	vsfile.srch.file_pt.state = 0;
 	vsfsm_pt_entry(pt);
-	err = dir->op->d_op.getchild_byidx(&vsfile.srch.file_pt, evt, dir,
+	err = dir->op->d_op.getchild(&vsfile.srch.file_pt, evt, dir, NULL,
 					vsfile.srch.cur_idx, file);
 	if (err != 0) return err;
 
@@ -304,46 +303,32 @@ vsf_err_t vsfile_dummy_rw(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // memfs
-static vsf_err_t vsfile_memfs_getchild(struct vsfile_memfile_t *dir,
-					struct vsfile_t **file, char *name, uint32_t idx)
+vsf_err_t vsfile_memfs_getchild(struct vsfsm_pt_t *pt,
+					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
+					uint32_t idx, struct vsfile_t **file)
 {
-	struct vsfile_t *child = (struct vsfile_t *)dir->d.child;
-	uint32_t index = 0;
+	struct vsfile_memfile_t *memfile;
+	struct vsfile_t *child;
+
+	if (NULL == dir)
+	{
+		dir = (struct vsfile_t *)pt->user_data;
+	}
+	memfile = (struct vsfile_memfile_t *)dir;
+	child = (struct vsfile_t *)memfile->d.child;
 
 	while ((child != NULL) && (child->name != NULL))
 	{
 		if ((name && vsfile_match(name, child->name)) ||
-			(!name && (index == idx)))
+			(!name && !idx))
 		{
 			break;
 		}
-		index++;
-		child = (struct vsfile_t *)((uint32_t)child + dir->d.child_size);
+		idx--;
+		child = (struct vsfile_t *)((uint32_t)child + memfile->d.child_size);
 	}
 	*file = (!child || !child->name) ? NULL : child;
 	return (NULL == *file) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
-}
-
-vsf_err_t vsfile_memfs_getchild_byname(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file)
-{
-	if (NULL == dir)
-	{
-		dir = (struct vsfile_t *)pt->user_data;
-	}
-	return vsfile_memfs_getchild((struct vsfile_memfile_t *)dir, file, name, 0);
-}
-
-vsf_err_t vsfile_memfs_getchild_byidx(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
-					struct vsfile_t **file)
-{
-	if (NULL == dir)
-	{
-		dir = (struct vsfile_t *)pt->user_data;
-	}
-	return vsfile_memfs_getchild((struct vsfile_memfile_t *)dir, file, 0, idx);
 }
 
 vsf_err_t vsfile_memfs_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -432,57 +417,33 @@ static vsf_err_t vsfile_vfs_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return err;
 }
 
-static vsf_err_t vsfile_vfs_getchild(struct vsfile_vfsfile_t *dir,
-					struct vsfile_t **file, char *name, uint32_t idx)
-{
-	struct vsfile_vfsfile_t *child = dir->dir.child;
-	uint32_t index = 0;
-
-	while (child != NULL)
-	{
-		if ((name && vsfile_match(name, child->file.name)) ||
-			(!name && (index == idx)))
-		{
-			break;
-		}
-		index++;
-		child = child->next;
-	}
-	*file = (struct vsfile_t *)child;
-	return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
-}
-
-static vsf_err_t vsfile_vfs_getchild_byname(struct vsfsm_pt_t *pt,
+static vsf_err_t vsfile_vfs_getchild(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file)
+					uint32_t idx, struct vsfile_t **file)
 {
 	struct vsfile_vfsfile_t *vfsfile = (struct vsfile_vfsfile_t *)dir;
 
 	if (vfsfile->mounted)
 	{
 		pt->user_data = vfsfile->subfs.param;
-		return vfsfile->subfs.op->d_op.getchild_byname(pt, evt, NULL, name, file);
+		return vfsfile->subfs.op->d_op.getchild(pt, evt, NULL, name, idx, file);
 	}
 	else
 	{
-		return vsfile_vfs_getchild(vfsfile, file, name, 0);
-	}
-}
+		struct vsfile_vfsfile_t *child = vfsfile->dir.child;
 
-static vsf_err_t vsfile_vfs_getchild_byidx(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
-					struct vsfile_t **file)
-{
-	struct vsfile_vfsfile_t *vfsfile = (struct vsfile_vfsfile_t *)dir;
-
-	if (vfsfile->mounted)
-	{
-		pt->user_data = vfsfile->subfs.param;
-		return vfsfile->subfs.op->d_op.getchild_byidx(pt, evt, NULL, idx, file);
-	}
-	else
-	{
-		return vsfile_vfs_getchild(vfsfile, file, NULL, idx);
+		while (child != NULL)
+		{
+			if ((name && vsfile_match(name, child->file.name)) ||
+				(!name && !idx))
+			{
+				break;
+			}
+			idx--;
+			child = child->next;
+		}
+		*file = (struct vsfile_t *)child;
+		return (NULL == child) ? VSFERR_NOT_AVAILABLE : VSFERR_NONE;
 	}
 }
 
@@ -494,7 +455,7 @@ static vsf_err_t vsfile_vfs_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	// can only add directory to vfs
 	if (!(attr & VSFILE_ATTR_DIRECTORY) ||
-		!vsfile_vfs_getchild_byname(NULL, 0, dir, name,
+		!vsfile_vfs_getchild(NULL, 0, dir, name, 0,
 									(struct vsfile_t **)&newfile))
 	{
 		return VSFERR_FAIL;
@@ -521,7 +482,7 @@ static vsf_err_t vsfile_vfs_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	struct vsfile_vfsfile_t *vfsfile = (struct vsfile_vfsfile_t *)dir;
 	struct vsfile_vfsfile_t *child = vfsfile->dir.child, *oldfile;
 
-	if (vsfile_vfs_getchild_byname(NULL, 0, dir, name,
+	if (vsfile_vfs_getchild(NULL, 0, dir, name, 0,
 									(struct vsfile_t **)&oldfile))
 	{
 		return VSFERR_FAIL;
@@ -580,8 +541,7 @@ vsf_err_t vsfile_modinit(struct vsf_module_t *module,
 	ifs->vfs.op.mount = vsfile_vfs_mount;
 	ifs->vfs.op.unmount = vsfile_vfs_unmount;
 	ifs->vfs.op.f_op.close = vsfile_dummy_close;
-	ifs->vfs.op.d_op.getchild_byname = vsfile_vfs_getchild_byname;
-	ifs->vfs.op.d_op.getchild_byidx = vsfile_vfs_getchild_byidx;
+	ifs->vfs.op.d_op.getchild = vsfile_vfs_getchild;
 	ifs->vfs.op.d_op.addfile = vsfile_vfs_addfile;
 	ifs->vfs.op.d_op.removefile = vsfile_vfs_removefile;
 	ifs->memfs.op.mount = vsfile_memfs_mount;
@@ -589,8 +549,7 @@ vsf_err_t vsfile_modinit(struct vsf_module_t *module,
 	ifs->memfs.op.f_op.close = vsfile_dummy_close;
 	ifs->memfs.op.f_op.read = vsfile_memfs_read;
 	ifs->memfs.op.f_op.write = vsfile_memfs_write;
-	ifs->memfs.op.d_op.getchild_byname = vsfile_memfs_getchild_byname;
-	ifs->memfs.op.d_op.getchild_byidx = vsfile_memfs_getchild_byidx;
+	ifs->memfs.op.d_op.getchild = vsfile_memfs_getchild;
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }
@@ -605,8 +564,7 @@ const struct vsfile_fsop_t vsfile_memfs_op =
 	.f_op.read = vsfile_memfs_read,
 	.f_op.write = vsfile_memfs_write,
 	// d_op
-	.d_op.getchild_byname = vsfile_memfs_getchild_byname,
-	.d_op.getchild_byidx = vsfile_memfs_getchild_byidx,
+	.d_op.getchild = vsfile_memfs_getchild,
 };
 
 const struct vsfile_fsop_t vsfile_vfs_op =
@@ -619,8 +577,7 @@ const struct vsfile_fsop_t vsfile_vfs_op =
 	.f_op.read = NULL,
 	.f_op.write = NULL,
 	// d_op
-	.d_op.getchild_byname = vsfile_vfs_getchild_byname,
-	.d_op.getchild_byidx = vsfile_vfs_getchild_byidx,
+	.d_op.getchild = vsfile_vfs_getchild,
 	.d_op.addfile = vsfile_vfs_addfile,
 	.d_op.removefile = vsfile_vfs_removefile,
 };

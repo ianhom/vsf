@@ -675,8 +675,8 @@ static vsf_err_t vsffat_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 static vsf_err_t vsffat_getchild(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir,
-					struct vsfile_t **file, char *name, uint32_t idx)
+					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
+					uint32_t idx, struct vsfile_t **file)
 {
 	struct vsffat_t *fat = (struct vsffat_t *)pt->user_data;
 	struct vsffat_dentry_parser_t *dparser = &fat->dparser;
@@ -828,20 +828,6 @@ exit:
 	vsfsm_crit_leave(&malfs->crit);
 	vsfsm_pt_end(pt);
 	return err;
-}
-
-static vsf_err_t vsffat_getchild_byname(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file)
-{
-	return vsffat_getchild(pt, evt, dir, file, name, 0);
-}
-
-static vsf_err_t vsffat_getchild_byidx(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
-					struct vsfile_t **file)
-{
-	return vsffat_getchild(pt, evt, dir, file, NULL, idx);
 }
 
 static vsf_err_t vsffat_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -1022,8 +1008,7 @@ vsf_err_t vsffat_modinit(struct vsf_module_t *module,
 	ifs->op.f_op.write = vsffat_write;
 	ifs->op.d_op.addfile = vsffat_addfile;
 	ifs->op.d_op.removefile = vsffat_removefile;
-	ifs->op.d_op.getchild_byname = vsffat_getchild_byname;
-	ifs->op.d_op.getchild_byidx = vsffat_getchild_byidx;
+	ifs->op.d_op.getchild = vsffat_getchild;
 	ifs->is_LFN = vsffat_is_LFN;
 	module->ifs = ifs;
 	return VSFERR_NONE;
@@ -1041,7 +1026,6 @@ const struct vsfile_fsop_t vsffat_op =
 	// d_op
 	.d_op.addfile = vsffat_addfile,
 	.d_op.removefile = vsffat_removefile,
-	.d_op.getchild_byname = vsffat_getchild_byname,
-	.d_op.getchild_byidx = vsffat_getchild_byidx,
+	.d_op.getchild = vsffat_getchild,
 };
 #endif

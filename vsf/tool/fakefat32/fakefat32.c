@@ -652,9 +652,9 @@ static vsf_err_t fakefat32_fs_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	return fakefat32_init(param, param->root, &cur_cluster);
 }
 
-static vsf_err_t fakefat32_getchild_byname(struct vsfsm_pt_t *pt,
+static vsf_err_t fakefat32_getchild(struct vsfsm_pt_t *pt,
 					vsfsm_evt_t evt, struct vsfile_t *dir, char *name,
-					struct vsfile_t **file)
+					uint32_t idx, struct vsfile_t **file)
 {
 	if (NULL == dir)
 	{
@@ -663,21 +663,7 @@ static vsf_err_t fakefat32_getchild_byname(struct vsfsm_pt_t *pt,
 
 		pt->user_data = &param->root[0].memfile;
 	}
-	return vsfile_memfs_op.d_op.getchild_byname(pt, evt, dir, name, file);
-}
-
-static vsf_err_t fakefat32_getchild_byidx(struct vsfsm_pt_t *pt,
-					vsfsm_evt_t evt, struct vsfile_t *dir, uint32_t idx,
-					struct vsfile_t **file)
-{
-	if (NULL == dir)
-	{
-		struct fakefat32_param_t *param =
-									(struct fakefat32_param_t *)pt->user_data;
-
-		pt->user_data = &param->root[0].memfile;
-	}
-	return vsfile_memfs_op.d_op.getchild_byidx(pt, evt, dir, idx, file);
+	return vsfile_memfs_op.d_op.getchild(pt, evt, dir, name, idx, file);
 }
 
 static uint32_t fakefat32_mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
@@ -979,8 +965,7 @@ vsf_err_t fakefat32_modinit(struct vsf_module_t *module,
 	ifs->fs_op.f_op.close = vsfile_dummy_close;
 	ifs->fs_op.f_op.read = vsfile_memfs_op.f_op.read;
 	ifs->fs_op.f_op.write = vsfile_memfs_op.f_op.write;
-	ifs->fs_op.d_op.getchild_byname = fakefat32_getchild_byname;
-	ifs->fs_op.d_op.getchild_byidx = fakefat32_getchild_byidx;
+	ifs->fs_op.d_op.getchild = fakefat32_getchild;
 	ifs->mal_drv.block_size = fakefat32_mal_blocksize;
 	ifs->mal_drv.init = fakefat32_mal_init;
 	ifs->mal_drv.fini = fakefat32_mal_fini;
@@ -1001,8 +986,7 @@ const struct vsfile_fsop_t fakefat32_fs_op =
 	.f_op.read = vsfile_memfs_read,
 	.f_op.write = vsfile_memfs_write,
 	// d_op
-	.d_op.getchild_byname = fakefat32_getchild_byname,
-	.d_op.getchild_byidx = fakefat32_getchild_byidx,
+	.d_op.getchild = fakefat32_getchild,
 };
 
 const struct vsfmal_drv_t fakefat32_mal_drv =
