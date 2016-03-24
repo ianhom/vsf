@@ -263,11 +263,28 @@ static vsf_err_t fakefat32_init(struct fakefat32_param_t *param,
 
 	if (rawfile->attr & VSFILE_ATTR_DIRECTORY)
 	{
-		clusters = fakefat32_calc_dir_clusters(param, file);
-		rawfile->size = clusters * param->sectors_per_cluster *
-							param->sector_size;
+		if (!strcmp(rawfile->name, "."))
+		{
+			clusters = 0;
+			file->first_cluster =
+				((struct fakefat32_file_t *)rawfile->parent)->first_cluster;
+		}
+		else if (!strcmp(rawfile->name, ".."))
+		{
+			clusters = 0;
+		}
+		else
+		{
+			clusters = fakefat32_calc_dir_clusters(param, file);
+			rawfile->size = clusters * param->sectors_per_cluster *
+								param->sector_size;
+		}
 		file->cb.read = fakefat32_dir_read;
 		file->cb.write = fakefat32_dir_write;
+	}
+	else if (rawfile->attr == VSFILE_ATTR_VOLUMID)
+	{
+		clusters = 0;
 	}
 	else
 	{
@@ -562,6 +579,7 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			uint32_t page_size)
 {
 	struct fakefat32_file_t *file_temp, *file_match;
+	uint8_t *entry;
 	uint32_t want_size;
 	uint16_t want_first_cluster;
 	struct vsffat_dentry_parser_t dparser;
@@ -577,6 +595,7 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	{
 		if (vsffat_parse_dentry_fat(&dparser))
 		{
+			entry = dparser.entry;
 			file_temp = file;
 			file_match = NULL;
 			while (file_temp->memfile.file.name != NULL)
@@ -594,9 +613,9 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				goto fakefat32_dir_write_next;
 			}
 
-			want_size = GET_LE_U32(&dparser.entry[28]);
-			want_first_cluster = GET_LE_U16(&dparser.entry[26]) +
-									(GET_LE_U16(&dparser.entry[20]) << 16);
+			want_size = GET_LE_U32(&entry[28]);
+			want_first_cluster =
+						GET_LE_U16(&entry[26]) + (GET_LE_U16(&entry[20]) << 16);
 
 			// host can change the size and first_cluster
 			// ONLY one limitation:
@@ -612,11 +631,15 @@ static vsf_err_t fakefat32_dir_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 */				file_temp->memfile.file.size = want_size;
 			}
 			file_match->first_cluster = want_first_cluster;
-			memcpy(&file_match->record, &buff[13], sizeof(file_match->record));
+			memcpy(&file_match->record, &entry[13], sizeof(file_match->record));
 
 fakefat32_dir_write_next:
 			dparser.entry += 32;
 			dparser.filename = (char *)buff;
+		}
+		else
+		{
+			break;
 		}
 	}
 	return VSFERR_NONE;

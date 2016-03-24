@@ -20,6 +20,7 @@
 #include "vsf.h"
 
 #undef vsffat_is_LFN
+#undef vsffat_parse_dentry_fat
 
 // Refer to:
 // 1. "Microsoft Extensible Firmware Initiative FAT32 File System Specification"
@@ -1010,6 +1011,7 @@ vsf_err_t vsffat_modinit(struct vsf_module_t *module,
 	ifs->op.d_op.removefile = vsffat_removefile;
 	ifs->op.d_op.getchild = vsffat_getchild;
 	ifs->is_LFN = vsffat_is_LFN;
+	ifs->parse_dentry_fat = vsffat_parse_dentry_fat;
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }

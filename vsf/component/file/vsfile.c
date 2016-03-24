@@ -35,6 +35,7 @@
 #undef vsfile_dummy_rw
 #undef vsfile_getfileext
 #undef vsfile_is_div
+#undef vsfile_match
 #undef vsfile_memfs_getchild
 #undef vsfile_memfs_read
 #undef vsfile_memfs_write
@@ -89,6 +90,12 @@ vsf_err_t vsfile_init(struct vsfile_memop_t *memop)
 	vsfile.rootfs.file.attr = VSFILE_ATTR_DIRECTORY;
 	vsfile.rootfs.file.op = (struct vsfile_fsop_t *)&vsfile_vfs_op;
 	return vsfsm_crit_init(&vsfile.srch.crit, VSFILE_EVT_CRIT);
+}
+
+vsf_err_t vsfile_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					struct vsfile_t *file)
+{
+	return file->op->f_op.close(pt, evt, file);
 }
 
 vsf_err_t vsfile_getfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -227,12 +234,6 @@ vsf_err_t vsfile_unmount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfile_t *dir)
 {
 	return dir->op->unmount(pt, evt, dir);
-}
-
-vsf_err_t vsfile_close(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfile_t *file)
-{
-	return file->op->f_op.close(pt, evt, file);
 }
 
 vsf_err_t vsfile_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
@@ -538,6 +539,7 @@ vsf_err_t vsfile_modinit(struct vsf_module_t *module,
 	ifs->dummy_rw = vsfile_dummy_rw;
 	ifs->getfileext = vsfile_getfileext;
 	ifs->is_div = vsfile_is_div;
+	ifs->match = vsfile_match;
 	ifs->vfs.op.mount = vsfile_vfs_mount;
 	ifs->vfs.op.unmount = vsfile_vfs_unmount;
 	ifs->vfs.op.f_op.close = vsfile_dummy_close;

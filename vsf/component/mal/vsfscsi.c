@@ -81,20 +81,19 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 	struct vsf_mal2scsi_t *mal2scsi = (struct vsf_mal2scsi_t *)lun->param;
 	struct vsfscsi_transact_t *transact = &lun->dev->transact;
 	struct vsf_stream_t *stream = (struct vsf_stream_t *)&mal2scsi->scsistream;
-	uint8_t *buffer;
+	uint8_t *buffer = mal2scsi->multibuf.buffer_list[0];
+
+	if (NULL == buffer)
+	{
+		return NULL;
+	}
 
 	if (bufstream)
 	{
 		struct vsf_bufstream_t *bufstream =
 							(struct vsf_bufstream_t *)&mal2scsi->scsistream;
 
-		buffer = mal2scsi->multibuf.buffer_list[0];
-		if (NULL == buffer)
-		{
-			return NULL;
-		}
 		memset(buffer, 0, size);
-
 		// setup bufstream
 		bufstream->mem.buffer.buffer = buffer;
 		bufstream->mem.buffer.size = size;
