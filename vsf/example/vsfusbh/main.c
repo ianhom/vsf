@@ -253,7 +253,11 @@ struct vsfapp_t
 
 	.usbh.hcd = &vsfohci_drv,
 	.usbh.hcd_index = OHCI_PORT_INDEX,
-	
+	.usbh.usb_maxinterfaces = 4,
+	.usbh.usb_maxendpoints = 4,
+	.usbh.usb_altsettingalloc = 4,
+	.usbh.usb_maxaltsetting = 8,
+
 	//.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	//.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
 

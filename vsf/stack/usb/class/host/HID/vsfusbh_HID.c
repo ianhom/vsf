@@ -20,6 +20,8 @@
 
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 
+int32_t (*vsfusbh_hid_report)(struct usbh_hid_event_t *) = NULL;
+
 static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 		int size, uint8_t *buf, struct hid_report_t *hidrpt)
 {
@@ -450,7 +452,8 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 					event.type |= HID_VALUE_TYPE_REL;
 				}
 
-				//usbh_hid_event(&event);
+				if (vsfusbh_hid_report)
+					vsfusbh_hid_report(&event);
 			}
 		}
 		usage = sllist_get_container(usage->list.next, struct hid_usage_t, list);
@@ -506,7 +509,7 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	// submit urb
 	inturb->pipe = usb_rcvintpipe(inturb->vsfdev, hid->intf_desc->ep_desc->bEndpointAddress & 0x7f);
-	inturb->interval = 2;
+	inturb->interval = 4;
 	inturb->transfer_length = max(hid->hid_report.input_bitlen >> 3, hid->intf_desc->ep_desc->wMaxPacketSize);
 	inturb->transfer_buffer = hid->hid_report.cur_value;
 	if (inturb->transfer_buffer == NULL)
@@ -522,18 +525,19 @@ static vsf_err_t hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	// poll
 	while(1)
 	{
-		err = vsfusbh_relink_urb(hid->usbh, inturb);
-		if (err != VSFERR_NONE)
-			return VSFERR_FAIL;
-
-		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-
 		if (inturb->status == URB_OK)
 		{
 			usbh_hid_process_input(&hid->hid_report);
 			memcpy(hid->hid_report.pre_value, hid->hid_report.cur_value,
 					hid->hid_report.input_bitlen >> 3);
 		}
+
+		err = vsfusbh_relink_urb(hid->usbh, inturb);
+		if (err != VSFERR_NONE)
+			return VSFERR_FAIL;
+
+		vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
+
 	}
 
 	vsfsm_pt_end(pt);
