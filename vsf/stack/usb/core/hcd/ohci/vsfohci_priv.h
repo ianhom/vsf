@@ -23,11 +23,14 @@
 /*******************************************************
  * OHCI config
  *******************************************************/
+#define OHCI_ENABLE_ISO				0
+#define OHCI_ISO_PACKET_LIMIT		4
+
 #define MAXPSW					1
 #define TD_MAX_NUM				64
 #define NUM_INTS				32
 #define MAX_EP_NUM_EACH_DEVICE	8
-#define TD_MAX_NUM_EACH_UARB	8
+#define TD_MAX_NUM_EACH_URB	8
 /* Maximum number of root hub ports. */
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 	3
 
@@ -304,9 +307,9 @@ struct td_t
 	uint32_t hwCBP;		/* Current Buffer Pointer */
 	uint32_t hwNextTD;	/* Next TD Pointer */
 	uint32_t hwBE;		/* Memory Buffer End Pointer */
-#if USBH_CFG_ENABLE_ISO
+#if OHCI_ENABLE_ISO
 	uint32_t hwPSW[4];
-#endif // USBH_CFG_ENABLE_ISO
+#endif // OHCI_ENABLE_ISO
 
 	uint8_t busy : 1;
 	uint8_t :7;
@@ -316,9 +319,9 @@ struct td_t
 	struct urb_priv_t *urb_priv;
 	struct td_t *next_dl_td;
 	struct ed_t *ed_dummy;
-#if USBH_CFG_ENABLE_ISO
+#if OHCI_ENABLE_ISO
 	uint32_t dummy[4];
-#endif // USBH_CFG_ENABLE_ISO
+#endif // OHCI_ENABLE_ISO
 };
 
 /* Full ohci controller descriptor */
@@ -369,7 +372,12 @@ struct urb_priv_t
 #define URB_PRIV_TDLINK				(0x1 << 4)
 #define URB_PRIV_WAIT_COMPLETE		(0x1 << 5)
 #define URB_PRIV_WAIT_DELETE		(0x1 << 6)
-	struct td_t *td[TD_MAX_NUM_EACH_UARB];	/* list pointer to all corresponding TDs associated with this request */
+	struct td_t *td[TD_MAX_NUM_EACH_URB];	/* list pointer to all corresponding TDs associated with this request */
+#if OHCI_ENABLE_ISO
+	uint32_t number_of_packets;		/*!< number of packets (iso)		*/
+	uint32_t error_count;			/*!< number of errors (iso only)	*/
+	struct iso_packet_descriptor_t iso_frame_desc[OHCI_ISO_PACKET_LIMIT];
+#endif // OHCI_ENABLE_ISO
 };
 
 #endif	// __VSFOHCI_H_INCLUDED__

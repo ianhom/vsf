@@ -147,6 +147,8 @@ struct vsfusbh_hid_t
 	struct hid_report_t hid_report;
 };
 
+extern int32_t (*vsfusbh_hid_report)(struct usbh_hid_event_t *);
+
 #ifdef VSFCFG_STANDALONE_MODULE
 #define VSFUSBH_HID_MODNAME					"vsf.stack.usb.host.hid"
 

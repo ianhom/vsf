@@ -8,7 +8,7 @@
 
 #define VSFSM_EVT_URB_COMPLETE	(VSFSM_EVT_USER_LOCAL + 1)
 #define VSFSM_EVT_NEW_DEVICE	(VSFSM_EVT_USER_LOCAL + 2)
-#define VSFSM_EVT_EP0_CRIT		(VSFSM_EVT_USER_LOCAL + 2)
+#define VSFSM_EVT_EP0_CRIT		(VSFSM_EVT_USER_LOCAL + 3)
 
 #define DEFAULT_TIMEOUT			50	// 50ms
 
@@ -25,8 +25,8 @@ struct vsfusbh_device_t
 
 	uint32_t toggle[2];	// one bit per endpoint
 
-	uint16_t epmaxpacketin[USB_MAXENDPOINTS];
-	uint16_t epmaxpacketout[USB_MAXENDPOINTS];
+	uint16_t *epmaxpacketin;
+	uint16_t *epmaxpacketout;
 
 	struct vsfusbh_device_t *parent;
 	struct vsfusbh_device_t *children[USB_MAXCHILDREN];
@@ -36,13 +36,14 @@ struct vsfusbh_device_t
 	uint8_t num_config;
 	uint8_t maxchild;
 	uint8_t temp_u8;
-
-	// TODO
-	// *deiver[num]
-	// driver_cnt
+	uint8_t dummy;
 
 	// save priv device pointer
 	void *priv;
+	
+	// NOTE: need alloc usbh->usb_maxendpoints * 4 bytes for epmaxpacket
+	//uint16_t epmaxpacketin[USB_MAXENDPOINTS];
+	//uint16_t epmaxpacketout[USB_MAXENDPOINTS];
 };
 
 #define USB_DEVICE_ID_MATCH_VENDOR		0x0001
@@ -123,12 +124,6 @@ struct vsfusbh_urb_t
 	uint32_t start_frame;			/*!< start frame (iso/irq only)		*/
 	uint16_t interval;				/*!< polling interval (iso/irq only)*/
 	int16_t status;					/*!< returned status				*/
-#if USBH_CFG_ENABLE_ISO
-	uint32_t number_of_packets;		/*!< number of packets (iso)		*/
-	uint32_t error_count;			/*!< number of errors (iso only)	*/
-	struct iso_packet_descriptor_t iso_frame_desc[USBH_CFG_ISO_PACKET_LIMIT];
-#endif // USBH_CFG_ENABLE_ISO
-
 	uint32_t timeout;
 	struct vsfsm_t *sm;
 
@@ -167,8 +162,15 @@ struct vsfusbh_t
 {
 	const struct vsfusbh_hcddrv_t *hcd;
 	uint32_t hcd_index;
-
+	
+	// config
+	uint8_t usb_maxinterfaces : 4;		// Recommend: 4
+	uint8_t usb_maxendpoints : 4;		// Recommend: 4, 6, 8
+	uint8_t usb_altsettingalloc;		// fixed: 4
+	uint8_t usb_maxaltsetting;			// Recommend: 8, 16, 32
+	
 	// private
+	uint8_t hcd_rh_speed;
 	void *hcd_data; // print to 'struct vsfohci_t *vsfohci'
 	uint32_t device_bitmap[4];
 	struct vsfusbh_device_t *rh_dev;
