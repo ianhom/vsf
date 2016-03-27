@@ -20,7 +20,9 @@
 
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 
+#ifndef VSFCFG_STANDALONE_MODULE
 int32_t (*vsfusbh_hid_report)(struct usbh_hid_event_t *) = NULL;
+#endif
 
 static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
 		int size, uint8_t *buf, struct hid_report_t *hidrpt)

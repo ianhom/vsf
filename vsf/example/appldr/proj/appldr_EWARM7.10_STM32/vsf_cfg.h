@@ -42,3 +42,5 @@
 #define VSFCFG_FUNC_SHELL
 #define VSFCFG_FUNC_TCPIP
 #define VSFCFG_FUNC_BCMWIFI
+
+#include "vsfip_cfg.h"

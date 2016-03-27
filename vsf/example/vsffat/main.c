@@ -398,10 +398,10 @@ static vsf_err_t app_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if (err > 0) return err; else if (err < 0) return VSFERR_FAIL;
 
 	// tester
-//	app.caller_pt.state = 0;
-//	vsfsm_pt_entry(pt);
-//	err = vsfile_getfile(&app.caller_pt, evt, NULL, "/fat_root/Driver/Windows/VSFRNDIS.inf", &file);
-//	if (err > 0) return err; else if (err < 0) return VSFERR_FAIL;
+	app.caller_pt.state = 0;
+	vsfsm_pt_entry(pt);
+	err = vsfile_getfile(&app.caller_pt, evt, NULL, "/fat_root/Driver/Windows/VSFRNDIS.inf", &file);
+	if (err > 0) return err; else if (err < 0) return VSFERR_FAIL;
 #endif
 
 	vsfscsi_init(&app.mal.scsi_dev);

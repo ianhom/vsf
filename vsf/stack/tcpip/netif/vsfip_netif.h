@@ -21,6 +21,13 @@
 
 #include "../vsfip.h"
 
+#ifndef VSFIP_CFG_ARPCACHE_SIZE
+#define VSFIP_CFG_ARPCACHE_SIZE				8
+#endif
+#ifndef VSFIP_CFG_ARP_TIMEOUT_MS
+#define VSFIP_CFG_ARP_TIMEOUT_MS			1000
+#endif
+
 enum vsfip_netif_proto_t
 {
 	VSFIP_NETIF_PROTO_IP = 0x0800,

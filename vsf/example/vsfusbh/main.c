@@ -251,12 +251,8 @@ struct vsfapp_t
 	.usbd.device.drv						= (struct interface_usbd_t *)&core_interfaces.usbd,
 	.usbd.device.int_priority				= 0,
 
-	.usbh.hcd = &vsfohci_drv,
-	.usbh.hcd_index = OHCI_PORT_INDEX,
-	.usbh.usb_maxinterfaces = 4,
-	.usbh.usb_maxendpoints = 4,
-	.usbh.usb_altsettingalloc = 4,
-	.usbh.usb_maxaltsetting = 8,
+	.usbh.hcd								= &vsfohci_drv,
+	.usbh.hcd_index							= OHCI_PORT_INDEX,
 
 	//.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	//.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
@@ -303,7 +299,6 @@ void cdc_stream_debug_init(struct vsf_stream_t *stream)
 {
 	stream->callback_tx.param = stream;
 	stream->callback_tx.on_connect = (void (*)(void *))debug_init;
-	
 	stream_connect_tx(stream);
 }
 
@@ -329,7 +324,7 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		//vsfshell_init(&app.shell);
 		cdc_stream_debug_init((struct vsf_stream_t *)&app.usbd.cdc.stream_tx);
 		app.usbd.device.drv->connect();
-		
+
 		vsfusbh_init(&app.usbh);
 		vsfusbh_register_driver(&app.usbh, &vsfusbh_hub_drv);
 		vsfusbh_register_driver(&app.usbh, &vsfusbh_hid_drv);

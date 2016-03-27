@@ -2164,12 +2164,6 @@
             </group>
           </group>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\dcd.h</name>
-          </file>
-          <file>
-            <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\hcd.h</name>
-          </file>
-          <file>
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbd.c</name>
           </file>
           <file>
@@ -2182,9 +2176,6 @@
             <name>$PROJ_DIR$\..\..\..\..\stack\usb\core\vsfusbh.h</name>
           </file>
         </group>
-        <file>
-          <name>$PROJ_DIR$\..\..\..\..\stack\usb\vsfusb.h</name>
-        </file>
       </group>
     </group>
     <group>
@@ -2196,21 +2187,6 @@
         </file>
       </group>
     </group>
-  </group>
-  <group>
-    <name>vsf_cfg</name>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\dal_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfsm_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbd_cfg.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\vsf_cfg\vsfusbh_cfg.h</name>
-    </file>
   </group>
   <file>
     <name>$PROJ_DIR$\app_cfg.h</name>

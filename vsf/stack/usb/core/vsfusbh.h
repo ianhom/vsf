@@ -1,7 +1,16 @@
 #ifndef __VSFUSBH_H_INCLUDED__
 #define __VSFUSBH_H_INCLUDED__
 
-#include "vsfusbh_cfg.h"
+#ifndef USB_MAXCHILDREN
+#define USB_MAXCHILDREN					4
+#endif
+#ifndef USB_MAXENDPOINTS
+#define USB_MAXENDPOINTS				16
+#endif
+#ifndef USB_ALTSETTINGALLOC
+#define USB_ALTSETTINGALLOC				4
+#endif
+
 #include "stack/usb/common/usb_common.h"
 #include "stack/usb/common/usb_ch11.h"
 #include "hcd/hcd.h"
@@ -25,8 +34,8 @@ struct vsfusbh_device_t
 
 	uint32_t toggle[2];	// one bit per endpoint
 
-	uint16_t *epmaxpacketin;
-	uint16_t *epmaxpacketout;
+	uint16_t epmaxpacketin[USB_MAXENDPOINTS];
+	uint16_t epmaxpacketout[USB_MAXENDPOINTS];
 
 	struct vsfusbh_device_t *parent;
 	struct vsfusbh_device_t *children[USB_MAXCHILDREN];
@@ -40,10 +49,6 @@ struct vsfusbh_device_t
 
 	// save priv device pointer
 	void *priv;
-	
-	// NOTE: need alloc usbh->usb_maxendpoints * 4 bytes for epmaxpacket
-	//uint16_t epmaxpacketin[USB_MAXENDPOINTS];
-	//uint16_t epmaxpacketout[USB_MAXENDPOINTS];
 };
 
 #define USB_DEVICE_ID_MATCH_VENDOR		0x0001
@@ -162,16 +167,10 @@ struct vsfusbh_t
 {
 	const struct vsfusbh_hcddrv_t *hcd;
 	uint32_t hcd_index;
-	
-	// config
-	uint8_t usb_maxinterfaces : 4;		// Recommend: 4
-	uint8_t usb_maxendpoints : 4;		// Recommend: 4, 6, 8
-	uint8_t usb_altsettingalloc;		// fixed: 4
-	uint8_t usb_maxaltsetting;			// Recommend: 8, 16, 32
-	
+
 	// private
 	uint8_t hcd_rh_speed;
-	void *hcd_data; // print to 'struct vsfohci_t *vsfohci'
+	void *hcd_data;
 	uint32_t device_bitmap[4];
 	struct vsfusbh_device_t *rh_dev;
 	struct vsfusbh_device_t *new_dev;

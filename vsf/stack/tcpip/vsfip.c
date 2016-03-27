@@ -31,6 +31,7 @@
 #undef vsfip_socket_cb
 #undef vsfip_listen
 #undef vsfip_bind
+#undef vsfip_tcp_config_window
 #undef vsfip_tcp_connect
 #undef vsfip_tcp_accept
 #undef vsfip_tcp_async_send
@@ -721,6 +722,8 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 			memset(pcb, 0, sizeof(struct vsfip_tcppcb_t));
 			pcb->rclose = pcb->lclose = true;
 			pcb->state = VSFIP_TCPSTAT_CLOSED;
+			pcb->rx_window = VSFIP_CFG_TCP_RX_WINDOW;
+			pcb->tx_window = VSFIP_CFG_TCP_TX_WINDOW;
 			socket->pcb.protopcb = (struct vsfip_tcppcb_t *)pcb;
 		}
 		else if (IPPROTO_UDP == protocol)
@@ -1227,7 +1230,7 @@ static vsf_err_t vsfip_add_tcphead(struct vsfip_socket_t *socket,
 	flags |= (pcb->rseq != 0) ? VSFIP_TCPFLAG_ACK : 0;
 	head->flags = flags;
 
-	window_size = VSFIP_CFG_TCP_RX_WINDOW - vsfip_bufferlist_len(&socket->inq);
+	window_size = pcb->rx_window - vsfip_bufferlist_len(&socket->inq);
 	head->window_size = SYS_TO_BE_U16(window_size);
 
 	head->checksum = SYS_TO_BE_U16(0);
@@ -1729,6 +1732,14 @@ re_process:
 	}
 }
 
+void vsfip_tcp_config_window(struct vsfip_socket_t *socket, uint32_t rx_window,
+		uint32_t tx_window)
+{
+	struct vsfip_tcppcb_t *pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
+	pcb->rx_window = rx_window;
+	pcb->tx_window = tx_window;
+}
+
 vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr)
 {
@@ -1865,7 +1876,7 @@ vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 	}
 
 	size = vsfip_bufferlist_len(&socket->outq);
-	window = min(VSFIP_CFG_TCP_TX_WINDOW, pcb->rwnd);
+	window = min(pcb->tx_window, pcb->rwnd);
 	if ((size + buf->app.size) > window)
 	{
 		return VSFERR_NOT_READY;
@@ -2169,6 +2180,7 @@ vsf_err_t vsfip_modinit(struct vsf_module_t *module,
 	ifs->socket_cb = vsfip_socket_cb;
 	ifs->listen = vsfip_listen;
 	ifs->bind = vsfip_bind;
+	ifs->tcp_config_window = vsfip_tcp_config_window;
 	ifs->tcp_connect = vsfip_tcp_connect;
 	ifs->tcp_accept = vsfip_tcp_accept;
 	ifs->tcp_async_send = vsfip_tcp_async_send;

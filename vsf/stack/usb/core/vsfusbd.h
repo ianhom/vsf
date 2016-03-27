@@ -20,8 +20,23 @@
 #ifndef __VSFUSBD_H_INCLUDED__
 #define __VSFUSBD_H_INCLUDED__
 
-#include "vsfusbd_cfg.h"
 #include "../common/usb_common.h"
+
+#ifndef VSFUSBD_CFG_AUTOSETUP
+#define VSFUSBD_CFG_AUTOSETUP			1
+#endif
+#ifndef VSFUSBD_CFG_EPMAXNO
+#define VSFUSBD_CFG_EPMAXNO				15
+#endif
+#ifndef VSFUSBD_CFG_DBUFFER_EN
+#define VSFUSBD_CFG_DBUFFER_EN			1
+#endif
+#ifndef VSFUSBD_CFG_EPISO_EN
+#define VSFUSBD_CFG_EPISO_EN			0
+#endif
+#ifndef VSFUSBD_CFG_LP_EN
+#define VSFUSBD_CFG_LP_EN				0
+#endif
 
 #define VSFUSBD_EVT_DATAIO_INEP(ep)		(VSFUSBD_EVT_DATAIO_IN + (ep))
 #define VSFUSBD_EVT_DATAIO_OUTEP(ep)	(VSFUSBD_EVT_DATAIO_OUT + (ep))
@@ -113,8 +128,8 @@ struct vsfusbd_config_t
 
 	// private
 	uint8_t configuration_value;
-	int8_t ep_OUT_iface_map[16];
-	int8_t ep_IN_iface_map[16];
+	int8_t ep_OUT_iface_map[VSFUSBD_CFG_EPMAXNO + 1];
+	int8_t ep_IN_iface_map[VSFUSBD_CFG_EPMAXNO + 1];
 };
 
 struct vsfusbd_device_t
@@ -163,11 +178,11 @@ struct vsfusbd_device_t
 	uint8_t feature;
 	struct vsfusbd_ctrl_handler_t ctrl_handler;
 
-	struct vsfusbd_transact_t *IN_transact[16];
-	struct vsfusbd_transact_t *OUT_transact[16];
+	struct vsfusbd_transact_t *IN_transact[VSFUSBD_CFG_EPMAXNO + 1];
+	struct vsfusbd_transact_t *OUT_transact[VSFUSBD_CFG_EPMAXNO + 1];
 
-	vsf_err_t (*IN_handler[16])(struct vsfusbd_device_t*, uint8_t);
-	vsf_err_t (*OUT_handler[16])(struct vsfusbd_device_t*, uint8_t);
+	vsf_err_t (*IN_handler[VSFUSBD_CFG_EPMAXNO + 1])(struct vsfusbd_device_t*, uint8_t);
+	vsf_err_t (*OUT_handler[VSFUSBD_CFG_EPMAXNO + 1])(struct vsfusbd_device_t*, uint8_t);
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE

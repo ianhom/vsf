@@ -48,15 +48,10 @@ struct vsfusbh_device_t *vsfusbh_alloc_device(struct vsfusbh_t *usbh)
 	vsf_err_t err;
 	struct vsfusbh_device_t *dev;
 
-	dev = vsf_bufmgr_malloc(sizeof(struct vsfusbh_device_t) +
-			usbh->usb_maxendpoints * 4);
+	dev = vsf_bufmgr_malloc(sizeof(struct vsfusbh_device_t));
 	if (NULL == dev)
 		return NULL;
 	memset(dev, 0, sizeof(struct vsfusbh_device_t));
-	dev->epmaxpacketin = (uint16_t *)((uint32_t)dev +
-			sizeof(struct vsfusbh_device_t));
-	dev->epmaxpacketout = (uint16_t *)((uint32_t)dev +
-			sizeof(struct vsfusbh_device_t) + usbh->usb_maxendpoints * 2);
 
 	err = usbh->hcd->alloc_device(usbh->hcd_data, dev);
 	if (err != VSFERR_NONE)
@@ -287,7 +282,6 @@ vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 			dev->config[i].config_buffer = NULL;
 		}
 	}
-
 
 #if 0
 	if (rejected); // unhandled interfaces on device
@@ -781,8 +775,7 @@ static int parse_endpoint(struct usb_endpoint_desc_t *endpoint,
 	return parsed;
 }
 
-static int parse_interface(struct vsfusbh_t *usbh,
-		struct usb_interface_t *interface, unsigned char *buffer, int size)
+static int parse_interface(struct usb_interface_t *interface, unsigned char *buffer, int size)
 {
 	int i, len, numskipped, retval, parsed = 0;
 	struct usb_descriptor_header_t *header;
@@ -791,7 +784,7 @@ static int parse_interface(struct vsfusbh_t *usbh,
 
 	interface->act_altsetting = 0;
 	interface->num_altsetting = 0;
-	interface->max_altsetting = usbh->usb_altsettingalloc;
+	interface->max_altsetting = USB_ALTSETTINGALLOC;
 	interface->altsetting = vsf_bufmgr_malloc\
 			(sizeof(struct usb_interface_desc_t) * interface->max_altsetting);
 
@@ -808,11 +801,13 @@ static int parse_interface(struct vsfusbh_t *usbh,
 			int oldmas;
 
 			oldmas = interface->max_altsetting;
-			interface->max_altsetting += usbh->usb_altsettingalloc;
-			if (interface->max_altsetting > usbh->usb_maxaltsetting)
+			interface->max_altsetting += USB_ALTSETTINGALLOC;
+#ifdef USB_MAXALTSETTING
+			if (interface->max_altsetting > USB_MAXALTSETTING)
 			{
 				return -1;
 			}
+#endif
 
 			ptr = interface->altsetting;
 			interface->altsetting = vsf_bufmgr_malloc\
@@ -884,7 +879,7 @@ static int parse_interface(struct vsfusbh_t *usbh,
 						(header->bDescriptorType == USB_DT_DEVICE)))
 			return parsed;
 
-		if (ifp->bNumEndpoints > usbh->usb_maxendpoints)
+		if (ifp->bNumEndpoints > USB_MAXENDPOINTS)
 		{
 			return -1;
 		}
@@ -931,8 +926,8 @@ static int parse_interface(struct vsfusbh_t *usbh,
 	return parsed;
 }
 
-static vsf_err_t parse_configuration(struct vsfusbh_t *usbh,
-		struct usb_config_t *config, uint8_t *buffer)
+static vsf_err_t parse_configuration(struct usb_config_t *config,
+		uint8_t *buffer)
 {
 	int i, retval, size;
 	struct usb_descriptor_header_t *header;
@@ -940,8 +935,10 @@ static vsf_err_t parse_configuration(struct vsfusbh_t *usbh,
 	memcpy(config, buffer, USB_DT_CONFIG_SIZE);
 	size = config->wTotalLength;
 
-	if (config->bNumInterfaces > usbh->usb_maxinterfaces)
+#ifdef USB_MAXINTERFACES
+	if (config->bNumInterfaces > USB_MAXINTERFACES)
 		return VSFERR_FAIL;
+#endif
 
 	config->interface = vsf_bufmgr_malloc(sizeof(struct usb_interface_t) *
 			config->bNumInterfaces);
@@ -1004,7 +1001,7 @@ static vsf_err_t parse_configuration(struct vsfusbh_t *usbh,
 				}
 		*/
 
-		retval = parse_interface(usbh, config->interface + i, buffer, size);
+		retval = parse_interface(config->interface + i, buffer, size);
 		if (retval < 0)
 			return VSFERR_FAIL;
 
@@ -1117,7 +1114,7 @@ vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (probe_urb->actual_length != len)
 			goto get_config_fail;
 
-		err = parse_configuration(usbh, dev->config + dev->temp_u8,
+		err = parse_configuration(dev->config + dev->temp_u8,
 				probe_urb->transfer_buffer);
 		if (err != VSFERR_NONE)
 			goto get_config_fail;
@@ -1245,9 +1242,7 @@ static struct vsfsm_state_t *vsfusbh_init_evt_handler(struct vsfsm_t *sm,
 
 vsf_err_t vsfusbh_init(struct vsfusbh_t *usbh)
 {
-	if ((NULL == usbh->hcd) || (!usbh->usb_maxinterfaces) ||
-			(!usbh->usb_maxendpoints) || (!usbh->usb_altsettingalloc) ||
-			(!usbh->usb_maxaltsetting))
+	if (NULL == usbh->hcd)
 	{
 		return VSFERR_INVALID_PARAMETER;
 	}

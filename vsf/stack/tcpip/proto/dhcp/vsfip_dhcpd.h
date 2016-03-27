@@ -19,6 +19,13 @@
 #ifndef __VSFIP_DHCPD_H_INCLUDED__
 #define __VSFIP_DHCPD_H_INCLUDED__
 
+#ifndef VSFIP_CFG_DHCPD_ASSOCNUM
+#define VSFIP_CFG_DHCPD_ASSOCNUM			2
+#endif
+#ifndef VSFIP_CFG_DOMAIN
+#define VSFIP_CFG_DOMAIN					"vsfip.net"
+#endif
+
 #include "vsfip_dhcp_common.h"
 
 struct vsfip_dhcpd_t

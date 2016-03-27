@@ -19,13 +19,35 @@
 #ifndef __VSFIP_H_INCLUDED__
 #define __VSFIP_H_INCLUDED__
 
-#include "vsfip_cfg.h"
+#ifndef VSFIP_CFG_TTL_INPUT
+#define VSFIP_CFG_TTL_INPUT		10
+#endif
+#ifndef VSFIP_CFG_UDP_PORT
+#define VSFIP_CFG_UDP_PORT		40000
+#endif
+#ifndef VSFIP_CFG_TCP_PORT
+#define VSFIP_CFG_TCP_PORT		40000
+#endif
+#ifndef VSFIP_CFG_HOSTNAME
+#define VSFIP_CFG_HOSTNAME		"vsfip"
+#endif
+#ifndef VSFIP_CFG_MTU
+#define VSFIP_CFG_MTU			1500
+#endif
+#ifndef VSFIP_BUFFER_SIZE
+// NETIF_HEAD + 1500(MTU)
+#define VSFIP_BUFFER_SIZE		(VSFIP_CFG_MTU + VSFIP_CFG_NETIF_HEADLEN)
+#endif
+#ifndef VSFIP_CFG_TCP_MSS
+// 1500(MTU) - 20(TCP_HEAD) - 20(IP_HEAD)
+#define VSFIP_CFG_TCP_MSS		(VSFIP_CFG_MTU - VSFIP_IP_HEADLEN - VSFIP_TCP_HEADLEN)
+#endif
 
-#define VSFIP_IPADDR_ANY				0
+#define VSFIP_IPADDR_ANY		0
 
-#define VSFIP_IP_HEADLEN				20
-#define VSFIP_UDP_HEADLEN				8
-#define VSFIP_TCP_HEADLEN				20
+#define VSFIP_IP_HEADLEN		20
+#define VSFIP_UDP_HEADLEN		8
+#define VSFIP_TCP_HEADLEN		20
 
 struct vsfip_addr_t
 {
@@ -38,8 +60,8 @@ struct vsfip_addr_t
 	} addr;
 };
 
-#define vsfip_ipaddr_t		vsfip_addr_t
-#define vsfip_macaddr_t		vsfip_addr_t
+#define vsfip_ipaddr_t			vsfip_addr_t
+#define vsfip_macaddr_t			vsfip_addr_t
 
 struct vsfip_ipmac_assoc
 {
@@ -209,10 +231,12 @@ struct vsfip_tcppcb_t
 	struct vsfsm_t *tx_sm;
 	uint32_t tx_timeout_ms;		// only for FIN and SYN
 	uint32_t tx_retry;			// only for FIN and SYN
+	uint32_t tx_window;
 
 	// rx
 	struct vsfsm_t *rx_sm;
 	uint32_t rx_timeout_ms;
+	uint32_t rx_window;
 
 	uint32_t ack_tick;
 	bool rclose;
@@ -336,6 +360,7 @@ struct vsfip_modifs_t
 	vsf_err_t (*listen)(struct vsfip_socket_t*, uint8_t);
 	vsf_err_t (*bind)(struct vsfip_socket_t*, uint16_t);
 
+	void (*tcp_config_window)(struct vsfip_socket_t*, uint32_t, uint32_t);
 	vsf_err_t (*tcp_connect)(struct vsfsm_pt_t*, vsfsm_evt_t,
 				struct vsfip_socket_t*, struct vsfip_sockaddr_t*);
 	vsf_err_t (*tcp_accept)(struct vsfsm_pt_t*, vsfsm_evt_t,
@@ -396,6 +421,7 @@ vsf_err_t vsfip_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define vsfip_socket_cb						VSFIP_MOD->socket_cb
 #define vsfip_listen						VSFIP_MOD->listen
 #define vsfip_bind							VSFIP_MOD->bind
+#define vsfip_tcp_config_window				VSFIP_MOD->tcp_config_window
 #define vsfip_tcp_connect					VSFIP_MOD->tcp_connect
 #define vsfip_tcp_accept					VSFIP_MOD->tcp_accept
 #define vsfip_tcp_async_send				VSFIP_MOD->tcp_async_send
@@ -439,6 +465,8 @@ vsf_err_t vsfip_listen(struct vsfip_socket_t *socket, uint8_t backlog);
 vsf_err_t vsfip_bind(struct vsfip_socket_t *socket, uint16_t port);
 
 // for TCP
+void vsfip_tcp_config_window(struct vsfip_socket_t *socket, uint32_t rx_window,
+		uint32_t tx_window);
 vsf_err_t vsfip_tcp_connect(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		struct vsfip_socket_t *socket, struct vsfip_sockaddr_t *sockaddr);
 vsf_err_t vsfip_tcp_accept(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,

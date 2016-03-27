@@ -89,6 +89,8 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep);
 vsf_err_t vsfusbd_set_IN_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t))
 {
+	if (ep > VSFUSBD_CFG_EPMAXNO)
+		return VSFERR_FAIL;
 	device->IN_handler[ep] = handler;
 	return VSFERR_NONE;
 }
@@ -96,6 +98,8 @@ vsf_err_t vsfusbd_set_IN_handler(struct vsfusbd_device_t *device,
 vsf_err_t vsfusbd_set_OUT_handler(struct vsfusbd_device_t *device,
 		uint8_t ep, vsf_err_t (*handler)(struct vsfusbd_device_t*, uint8_t))
 {
+	if (ep > VSFUSBD_CFG_EPMAXNO)
+		return VSFERR_FAIL;
 	device->OUT_handler[ep] = handler;
 	return VSFERR_NONE;
 }
@@ -140,8 +144,12 @@ static void vsfusbd_transact_out(struct vsfusbd_device_t *device,
 vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 								struct vsfusbd_transact_t *transact)
 {
-	device->OUT_handler[transact->ep] = vsfusbd_on_OUT_do;
-	device->OUT_transact[transact->ep] = transact;
+	uint8_t ep = transact->ep;
+
+	if (ep > VSFUSBD_CFG_EPMAXNO)
+		return VSFERR_FAIL;
+	device->OUT_handler[ep] = vsfusbd_on_OUT_do;
+	device->OUT_transact[ep] = transact;
 	transact->idle = true;
 	transact->device = device;
 	if (transact->data_size)
@@ -157,7 +165,7 @@ vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 	}
 	else
 	{
-		device->drv->ep.enable_OUT(transact->ep);
+		device->drv->ep.enable_OUT(ep);
 	}
 
 	return VSFERR_NONE;
@@ -171,11 +179,14 @@ void vsfusbd_ep_cancel_recv(struct vsfusbd_device_t *device,
 		transact->stream->callback_tx.on_disconnect = NULL;
 		transact->stream->callback_tx.on_inout = NULL;
 	}
-	device->OUT_handler[transact->ep] = NULL;
-	device->OUT_transact[transact->ep] = NULL;
-	if (transact->cb.on_finish != NULL)
+	if (transact->ep <= VSFUSBD_CFG_EPMAXNO)
 	{
-		transact->cb.on_finish(transact->cb.param);
+		device->OUT_handler[transact->ep] = NULL;
+		device->OUT_transact[transact->ep] = NULL;
+		if (transact->cb.on_finish != NULL)
+		{
+			transact->cb.on_finish(transact->cb.param);
+		}
 	}
 }
 
@@ -202,6 +213,8 @@ vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
 {
 	uint8_t ep = transact->ep;
 
+	if (ep > VSFUSBD_CFG_EPMAXNO)
+		return VSFERR_FAIL;
 	device->IN_handler[ep] = vsfusbd_on_IN_do;
 	device->IN_transact[ep] = transact;
 	transact->idle = true;
@@ -216,11 +229,11 @@ vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
 		stream->callback_rx.on_inout = vsfusbd_stream_on_in;
 		stream_connect_rx(stream);
 
-		vsfusbd_on_IN_do(device, transact->ep);
+		vsfusbd_on_IN_do(device, ep);
 #if VSFUSBD_CFG_DBUFFER_EN
-		if (device->drv->ep.is_IN_dbuffer(transact->ep))
+		if (device->drv->ep.is_IN_dbuffer(ep))
 		{
-			vsfusbd_on_IN_do(device, transact->ep);
+			vsfusbd_on_IN_do(device, ep);
 		}
 #endif
 	}
@@ -241,11 +254,14 @@ void vsfusbd_ep_cancel_send(struct vsfusbd_device_t *device,
 		transact->stream->callback_rx.on_disconnect = NULL;
 		transact->stream->callback_rx.on_inout = NULL;
 	}
-	device->IN_handler[transact->ep] = NULL;
-	device->IN_transact[transact->ep] = NULL;
-	if (transact->cb.on_finish != NULL)
+	if (transact->ep <= VSFUSBD_CFG_EPMAXNO)
 	{
-		transact->cb.on_finish(transact->cb.param);
+		device->IN_handler[transact->ep] = NULL;
+		device->IN_transact[transact->ep] = NULL;
+		if (transact->cb.on_finish != NULL)
+		{
+			transact->cb.on_finish(transact->cb.param);
+		}
 	}
 }
 
@@ -338,6 +354,10 @@ static vsf_err_t vsfusbd_auto_init(struct vsfusbd_device_t *device)
 			ep_attr = desc.buffer[pos + 3];
 			ep_size = desc.buffer[pos + 4];
 			ep_index = ep_addr & 0x0F;
+			if (ep_index > VSFUSBD_CFG_EPMAXNO)
+			{
+				return VSFERR_FAIL;
+			}
 #if __VSF_DEBUG__
 			num_endpoint--;
 			if (ep_index > (*device->drv->ep.num_of_ep - 1))
@@ -1237,9 +1257,13 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		{
 			uint8_t ep = evt & VSFUSBD_EVT_EP_MASK;
 			uint8_t dir_in = evt & VSFUSBD_EVT_DIR_IN;
-			struct vsfusbd_transact_t *transact =
-					dir_in ? device->IN_transact[ep] : device->OUT_transact[ep];
+			struct vsfusbd_transact_t *transact;
 
+			if (ep > VSFUSBD_CFG_EPMAXNO)
+				break;
+
+			transact = dir_in ?
+					device->IN_transact[ep] : device->OUT_transact[ep];
 			if (transact != NULL)
 			{
 				switch (evt & VSFUSBD_EVT_EVT_MASK)
