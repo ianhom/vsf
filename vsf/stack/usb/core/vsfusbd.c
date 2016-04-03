@@ -1272,10 +1272,11 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					vsfusbd_ep_cancel_send(device, transact);
 					break;
 				case VSFUSBD_STREAM_IN:
-					if (!transact->idle)
+					if (transact->idle)
 					{
-						break;
+						evt = VSFUSBD_INTEVT_IN;
 					}
+					break;
 				case VSFUSBD_STREAM_CLOSE_OUT:
 					vsfusbd_ep_cancel_recv(device, transact);
 					break;
