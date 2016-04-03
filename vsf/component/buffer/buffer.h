@@ -67,8 +67,8 @@ uint8_t vsf_fifo_pop8(struct vsf_fifo_t *fifo);
 uint32_t vsf_fifo_push(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
 uint32_t vsf_fifo_pop(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
 uint32_t vsf_fifo_peek(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data);
-uint32_t vsf_fifo_peek_consequent(struct vsf_fifo_t *fifo, uint32_t size,
-								uint8_t *data);
+uint32_t vsf_fifo_get_wbuf(struct vsf_fifo_t *fifo, uint8_t **data);
+uint32_t vsf_fifo_get_rbuf(struct vsf_fifo_t *fifo, uint8_t **data);
 uint32_t vsf_fifo_get_data_length(struct vsf_fifo_t *fifo);
 uint32_t vsf_fifo_get_avail_length(struct vsf_fifo_t *fifo);
 

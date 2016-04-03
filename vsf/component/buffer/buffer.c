@@ -221,13 +221,19 @@ uint32_t vsf_fifo_push(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data)
 	tmp32 = fifo->buffer.size - fifo->head;
 	if (size > tmp32)
 	{
-		memcpy(&fifo->buffer.buffer[fifo->head], &data[0], tmp32);
-		memcpy(&fifo->buffer.buffer[0], &data[tmp32], size - tmp32);
+		if (data)
+		{
+			memcpy(&fifo->buffer.buffer[fifo->head], &data[0], tmp32);
+			memcpy(&fifo->buffer.buffer[0], &data[tmp32], size - tmp32);
+		}
 		fifo->head = size - tmp32;
 	}
 	else
 	{
-		memcpy(&fifo->buffer.buffer[fifo->head], data, size);
+		if (data)
+		{
+			memcpy(&fifo->buffer.buffer[fifo->head], data, size);
+		}
 		fifo->head += size;
 		if (fifo->head == fifo->buffer.size)
 		{
@@ -237,11 +243,9 @@ uint32_t vsf_fifo_push(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data)
 	return size;
 }
 
-uint32_t vsf_fifo_peek_consequent(struct vsf_fifo_t *fifo, uint32_t size,
-								uint8_t *data)
+uint32_t vsf_fifo_get_rbuf(struct vsf_fifo_t *fifo, uint8_t **data)
 {
-	uint32_t tmp32;
-	uint32_t avail_len = vsf_fifo_get_data_length(fifo);
+	uint32_t tmp32, avail_len = vsf_fifo_get_data_length(fifo);
 
 #if __VSF_DEBUG__
 	if (NULL == fifo)
@@ -249,22 +253,30 @@ uint32_t vsf_fifo_peek_consequent(struct vsf_fifo_t *fifo, uint32_t size,
 		return 0;
 	}
 #endif
-	if (size > avail_len)
+	if (data)
 	{
-		size = avail_len;
+		*data = &fifo->buffer.buffer[fifo->tail];
 	}
-
 	tmp32 = fifo->buffer.size - fifo->tail;
-	if (size > tmp32)
+	return min(tmp32, avail_len);
+}
+
+uint32_t vsf_fifo_get_wbuf(struct vsf_fifo_t *fifo, uint8_t **data)
+{
+	uint32_t tmp32, avail_len = vsf_fifo_get_avail_length(fifo);
+
+#if __VSF_DEBUG__
+	if (NULL == fifo)
 	{
-		size = tmp32;
-		memcpy(&data[0], &fifo->buffer.buffer[fifo->tail], tmp32);
+		return 0;
 	}
-	else
+#endif
+	if (data)
 	{
-		memcpy(data, &fifo->buffer.buffer[fifo->tail], size);
+		*data = &fifo->buffer.buffer[fifo->head];
 	}
-	return size;
+	tmp32 = fifo->buffer.size - fifo->head;
+	return min(tmp32, avail_len);
 }
 
 uint32_t vsf_fifo_peek(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data)
@@ -284,14 +296,17 @@ uint32_t vsf_fifo_peek(struct vsf_fifo_t *fifo, uint32_t size, uint8_t *data)
 	}
 
 	tmp32 = fifo->buffer.size - fifo->tail;
-	if (size > tmp32)
+	if (data)
 	{
-		memcpy(&data[0], &fifo->buffer.buffer[fifo->tail], tmp32);
-		memcpy(&data[tmp32], &fifo->buffer.buffer[0], size - tmp32);
-	}
-	else
-	{
-		memcpy(data, &fifo->buffer.buffer[fifo->tail], size);
+		if (size > tmp32)
+		{
+			memcpy(&data[0], &fifo->buffer.buffer[fifo->tail], tmp32);
+			memcpy(&data[tmp32], &fifo->buffer.buffer[0], size - tmp32);
+		}
+		else
+		{
+			memcpy(data, &fifo->buffer.buffer[fifo->tail], size);
+		}
 	}
 	return size;
 }

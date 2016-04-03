@@ -27,10 +27,15 @@ struct vsf_stream_op_t
 {
 	void (*init)(struct vsf_stream_t *stream);
 	void (*fini)(struct vsf_stream_t *stream);
+	// for read/write, if buffer->buffer is NULL,
+	// 		then do dummy read/write of buffer->size
 	uint32_t (*write)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 	uint32_t (*read)(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 	uint32_t (*get_data_length)(struct vsf_stream_t *stream);
 	uint32_t (*get_avail_length)(struct vsf_stream_t *stream);
+	// get consequent buffer for read/write
+	uint32_t (*get_wbuf)(struct vsf_stream_t *stream, uint8_t **ptr);
+	uint32_t (*get_rbuf)(struct vsf_stream_t *stream, uint8_t **ptr);
 };
 
 struct vsf_stream_cb_t
@@ -63,6 +68,8 @@ struct vsf_stream_t
 #define STREAM_READ(s, b)		stream_read((struct vsf_stream_t *)(s), (b))
 #define STREAM_GET_DATA_SIZE(s)	stream_get_data_size((struct vsf_stream_t *)(s))
 #define STREAM_GET_FREE_SIZE(s)	stream_get_free_size((struct vsf_stream_t *)(s))
+#define STREAM_GET_WBUF(s, p)	stream_get_wbuf((struct vsf_stream_t *)(s), (p))
+#define STREAM_GET_RBUF(s, p)	stream_get_rbuf((struct vsf_stream_t *)(s), (p))
 #define STREAM_CONNECT_RX(s)	stream_connect_rx((struct vsf_stream_t *)(s))
 #define STREAM_CONNECT_TX(s)	stream_connect_tx((struct vsf_stream_t *)(s))
 #define STREAM_DISCONNECT_RX(s)	stream_disconnect_rx((struct vsf_stream_t *)(s))
@@ -111,6 +118,8 @@ struct vsfstream_modifs_t
 	uint32_t (*read)(struct vsf_stream_t*, struct vsf_buffer_t*);
 	uint32_t (*get_data_size)(struct vsf_stream_t*);
 	uint32_t (*get_free_size)(struct vsf_stream_t*);
+	uint32_t (*get_wbuf)(struct vsf_stream_t*, uint8_t**);
+	uint32_t (*get_rbuf)(struct vsf_stream_t*, uint8_t**);
 	void (*connect_rx)(struct vsf_stream_t*);
 	void (*connect_tx)(struct vsf_stream_t*);
 	void (*disconnect_rx)(struct vsf_stream_t*);
@@ -141,6 +150,8 @@ vsf_err_t vsfstream_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define stream_read							VSFSTREAM_MOD->read
 #define stream_get_data_size				VSFSTREAM_MOD->get_data_size
 #define stream_get_free_size				VSFSTREAM_MOD->get_free_size
+#define stream_get_wbuf						VSFSTREAM_MOD->get_wbuf
+#define stream_get_rbuf						VSFSTREAM_MOD->get_rbuf
 #define stream_connect_rx					VSFSTREAM_MOD->connect_rx
 #define stream_connect_tx					VSFSTREAM_MOD->connect_tx
 #define stream_disconnect_rx				VSFSTREAM_MOD->disconnect_rx
@@ -156,6 +167,8 @@ uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
 uint32_t stream_get_data_size(struct vsf_stream_t *stream);
 uint32_t stream_get_free_size(struct vsf_stream_t *stream);
+uint32_t stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr);
+uint32_t stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr);
 void stream_connect_rx(struct vsf_stream_t *stream);
 void stream_connect_tx(struct vsf_stream_t *stream);
 void stream_disconnect_rx(struct vsf_stream_t *stream);
