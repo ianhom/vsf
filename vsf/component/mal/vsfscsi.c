@@ -23,8 +23,6 @@
 #undef vsfscsi_execute
 #undef vsfscsi_cancel_transact
 #undef vsfscsi_release_transact
-#undef vsf_mal2scsi_init
-#undef vsf_mal2scsi_execute
 
 void vsfscsi_release_transact(struct vsfscsi_transact_t *transact)
 {
@@ -401,6 +399,40 @@ static vsf_err_t vsf_mal2scsi_init(struct vsfscsi_lun_t *lun)
 	return vsf_malstream_init(&mal2scsi->malstream);
 }
 
+// mal2scsi
+static uint32_t vsf_scsi2mal_blocksize(struct vsfmal_t *mal, uint64_t addr,
+					uint32_t size, enum vsfmal_op_t op)
+{
+	return mal->cap.block_size;
+}
+
+static vsf_err_t vsf_scsi2mal_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+	struct vsfmal_t *mal = (struct vsfmal_t *)pt->user_data;
+	struct vsf_scsi2mal_t *scsi2mal = (struct vsf_scsi2mal_t *)mal->param;
+
+	vsfsm_pt_begin(pt);
+
+	
+
+	vsfsm_pt_end(pt);
+	return VSFERR_NONE;
+}
+
+static vsf_err_t vsf_scsi2mal_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+{
+}
+
+static vsf_err_t vsf_scsi2mal_read(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					uint64_t addr, uint8_t *buff, uint32_t size)
+{
+}
+
+static vsf_err_t vsf_scsi2mal_write(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
+					uint64_t addr, uint8_t *buff, uint32_t size)
+{
+}
+
 #ifdef VSFCFG_STANDALONE_MODULE
 vsf_err_t vsfscsi_modexit(struct vsf_module_t *module)
 {
@@ -423,6 +455,11 @@ vsf_err_t vsfscsi_modinit(struct vsf_module_t *module,
 	ifs->release_transact = vsfscsi_release_transact;
 	ifs->mal2scsi.op.init = vsf_mal2scsi_init;
 	ifs->mal2scsi.op.execute = vsf_mal2scsi_execute;
+	ifs->scsi2mal.op.block_size = vsf_scsi2mal_blocksize,
+	ifs->scsi2mal.op.init = vsf_scsi2mal_init,
+	ifs->scsi2mal.op.fini = vsf_scsi2mal_fini,
+	ifs->scsi2mal.op.read = vsf_scsi2mal_read,
+	ifs->scsi2mal.op.write = vsf_scsi2mal_write,
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }
@@ -431,5 +468,13 @@ const struct vsfscsi_lun_op_t vsf_mal2scsi_op =
 {
 	.init = vsf_mal2scsi_init,
 	.execute = vsf_mal2scsi_execute,
+};
+const struct vsfmal_drv_t vsf_scsi2mal_op =
+{
+	.block_size = vsf_scsi2mal_blocksize,
+	.init = vsf_scsi2mal_init,
+	.fini = vsf_scsi2mal_fini,
+	.read = vsf_scsi2mal_read,
+	.write = vsf_scsi2mal_write,
 };
 #endif

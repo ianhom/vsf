@@ -65,8 +65,8 @@ static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		scsi_dev->lun[i].param = msc;
 	}
 	vsfscsi_init(&msc->scsi_dev);
-	if (vsfusbh_msc.after_new)
-		vsfusbh_msc.after_new(msc);
+	if (vsfusbh_msc.after_new && vsfusbh_msc.after_new(msc))
+		return VSFERR_FAIL;
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;

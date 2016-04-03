@@ -45,7 +45,7 @@ struct vsfusbh_msc_t
 
 struct vsfusbh_msc_global_t
 {
-	void (*after_new)(struct vsfusbh_msc_t *msc);
+	vsf_err_t (*after_new)(struct vsfusbh_msc_t *msc);
 	void (*before_delete)(struct vsfusbh_msc_t *msc);
 };
 
