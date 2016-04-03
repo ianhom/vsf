@@ -47,20 +47,6 @@ static const struct vsfusbd_desc_filter_t USB_descriptors[] =
 	VSFUSBD_DESC_NULL
 };
 
-struct vsfip_httpd_ca_t
-{
-	uint8_t 					islogin;
-	uint8_t 					rsp;
-	uint8_t 					user[32];
-	uint8_t 					pass[32];
-	struct vsfip_ipaddr_t		userip;
-	uint8_t						timerout;
-};
-
-const struct vsfip_httpd_urlhandler_t vsfip_httpd_urlhandler[2];
-vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-			struct vsfip_httpd_service_t *service);
-
 // app state machine events
 #define APP_EVT_USBPU_TO				VSFSM_EVT_USER_LOCAL_INSTANT + 0
 
@@ -86,6 +72,7 @@ struct vsfapp_t
 		struct vsfscsi_device_t scsi_dev;
 		struct vsfscsi_lun_t lun[1];
 
+		struct vsf_scsistream_t scsistream;
 		struct vsf_mal2scsi_t mal2scsi;
 		struct vsfmal_t mal;
 		struct fakefat32_param_t fakefat32;
@@ -138,13 +125,6 @@ struct vsfapp_t
 			uint8_t txbuff[65];
 			uint8_t rxbuff[65];
 		} telnetd;
-
-		struct
-		{
-			struct vsfip_httpd_t httpd;
-			struct vsfip_httpd_service_t service[3];
-			struct vsfip_httpd_ca_t ca;
-		} httpd;
 	} vsfip;
 
 	struct vsfsm_pt_t pt;
@@ -188,11 +168,11 @@ struct vsfapp_t
 	.mal.mal.param							= &app.mal.fakefat32,
 	.mal.pbuffer[0]							= app.mal.buffer[0],
 	.mal.pbuffer[1]							= app.mal.buffer[1],
+	.mal.scsistream.mbuf.count				= dimof(app.mal.buffer),
+	.mal.scsistream.mbuf.size				= sizeof(app.mal.buffer[0]),
+	.mal.scsistream.mbuf.buffer_list		= app.mal.pbuffer,
 
 	.mal.mal2scsi.malstream.mal				= &app.mal.mal,
-	.mal.mal2scsi.multibuf.count			= dimof(app.mal.buffer),
-	.mal.mal2scsi.multibuf.size				= sizeof(app.mal.buffer[0]),
-	.mal.mal2scsi.multibuf.buffer_list		= app.mal.pbuffer,
 	.mal.mal2scsi.cparam.block_size			= 512,
 	.mal.mal2scsi.cparam.removable			= false,
 	.mal.mal2scsi.cparam.vendor				= "Simon   ",
@@ -201,6 +181,8 @@ struct vsfapp_t
 	.mal.mal2scsi.cparam.type				= SCSI_PDT_DIRECT_ACCESS_BLOCK,
 
 	.mal.lun[0].op							= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
+	// lun->stream MUST be scsistream for mal2scsi
+	.mal.lun[0].stream						= (struct vsf_stream_t *)&app.mal.scsistream,
 	.mal.lun[0].param						= &app.mal.mal2scsi,
 	.mal.scsi_dev.max_lun					= 0,
 	.mal.scsi_dev.lun						= app.mal.lun,
@@ -268,13 +250,6 @@ struct vsfapp_t
 	.vsfip.telnetd.stream_rx.stream.op				= &fifostream_op,
 	.vsfip.telnetd.stream_rx.mem.buffer.buffer		= (uint8_t *)&app.vsfip.telnetd.rxbuff,
 	.vsfip.telnetd.stream_rx.mem.buffer.size		= sizeof(app.vsfip.telnetd.rxbuff),
-
-	.vsfip.httpd.httpd.homepage				= "/index.htm",
-	.vsfip.httpd.httpd.service_num			= dimof(app.vsfip.httpd.service),
-	.vsfip.httpd.httpd.service				= app.vsfip.httpd.service,
-	.vsfip.httpd.httpd.urlhandler			= (struct vsfip_httpd_urlhandler_t *)vsfip_httpd_urlhandler,
-	.vsfip.httpd.httpd.cb.onca				= vsfip_httpd_ca,
-	.vsfip.httpd.httpd.cb.param				= &app.vsfip.httpd.ca,
 
 #if defined(APPCFG_BUFMGR_SIZE) && (APPCFG_BUFMGR_SIZE > 0)
 //	.shell.echo								= true,
@@ -382,78 +357,6 @@ static const struct vsfile_memop_t app_vsfile_memop =
 	.free_vfs = app_vsfile_free_vfs,
 };
 
-vsf_err_t loginpost(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-					struct vsfip_httpd_service_t *service)
-{
-	struct vsfip_httpd_service_req_t *req = &service->req;
-	struct vsfip_httpd_service_resp_t *resp = &service->resp;
-	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)service->httpd->cb.param;
-	uint32_t tmpsize;
-	char *user, *pass;
-
-	if (req->post.type != VSFIP_HTTPD_MIMETYPE_XWWW)		// XWWW is type 0
-		goto loginfail;
-
-
-
-	//postdat is xwww type
-	user = vsfip_httpd_getarg(req->body, "user", &tmpsize);
-	if (user == NULL)
-		goto loginfail;
-	memcpy(param->user, user, tmpsize);
-
-	pass = vsfip_httpd_getarg(req->body, "pass", &tmpsize);
-	if (user == NULL)
-		goto loginfail;
-	memcpy(param->pass, pass, tmpsize);
-
-	resp->target_filename = "/loginsuccess.htm";
-	param->islogin = true;
-	param->rsp = true;
-	return VSFERR_NONE;
-
-loginfail:
-	resp->target_filename = "/loginfail.htm";
-
-	param->rsp = false;
-
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfip_httpd_ca(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
-							struct vsfip_httpd_service_t *service)
-{
-	struct vsfip_httpd_service_req_t *req = &service->req;
-	struct vsfip_sockaddr_t *remote = &service->so->remote_sockaddr;
-	struct vsfip_httpd_ca_t *param = (struct vsfip_httpd_ca_t *)pt->user_data;
-
-	if ((param->islogin) &&
-		(remote->sin_addr.size == param->userip.size) &&
-		!memcmp(remote->sin_addr.addr.s_addr_buf, param->userip.addr.s_addr_buf,
-				param->userip.size))
-	{
-		return VSFERR_NONE;
-	}
-
-	memcpy(&param->userip, &remote->sin_addr, sizeof(struct vsfip_ipaddr_t));
-
-	//access to login is vaild
-	if (strcmp(req->url, "/login") == 0)
-		return VSFERR_NONE;
-
-	req->url = "/login.htm";
-	return VSFERR_NONE;
-}
-
-const struct vsfip_httpd_urlhandler_t vsfip_httpd_urlhandler[2] = 
-{
-	{
-		.url = "/login",
-		.handle = loginpost,
-		.param = &app.vsfip.httpd.ca
-	},
-};
-
 // rndis on_connect
 void app_rndis_on_connect(void *param)
 {
@@ -525,11 +428,6 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		STREAM_INIT(&app.vsfip.telnetd.stream_rx);
 		STREAM_INIT(&app.vsfip.telnetd.stream_tx);
 		vsfip_telnetd_start(&app.vsfip.telnetd.telnetd);
-
-		app.caller_pt.state = 0;
-		vsfile_getfile(&app.caller_pt, 0, NULL, "/msc_root/HttpRoot",
-						&app.vsfip.httpd.httpd.root);
-		vsfip_httpd_start(&app.vsfip.httpd.httpd, 80);
 	
 		// usbd cdc init
 		STREAM_INIT(&app.usbd.cdc.stream_rx);

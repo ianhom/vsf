@@ -94,7 +94,8 @@ struct vsfscsi_transact_t
 struct vsfscsi_lun_op_t
 {
 	vsf_err_t (*init)(struct vsfscsi_lun_t *lun);
-	vsf_err_t (*execute)(struct vsfscsi_lun_t *lun, uint8_t *CDB);
+	vsf_err_t (*execute)(struct vsfscsi_lun_t *lun, uint8_t *CDB,
+							uint8_t CDB_size, uint32_t size);
 	void (*cancel)(struct vsfscsi_lun_t *lun);
 };
 
@@ -102,6 +103,7 @@ struct vsfscsi_device_t;
 struct vsfscsi_lun_t
 {
 	struct vsfscsi_lun_op_t *op;
+	struct vsf_stream_t *stream;
 	void *param;
 
 	// private
@@ -138,6 +140,8 @@ struct vsf_mal2scsi_cparam_t
 	enum SCSI_PDT_t type;
 };
 
+// scsistream can be bufstream or mbufstream
+// lun->stream MUST be scsistream for mal2scsi
 struct vsf_scsistream_t
 {
 	struct vsf_stream_t stream;
@@ -146,24 +150,16 @@ struct vsf_scsistream_t
 		struct vsf_mbufstream_mem_t mbufstream_mem;
 		struct vsf_bufstream_mem_t bufstream_mem;
 	};
+	struct vsf_multibuf_t mbuf;
 };
+
 struct vsf_mal2scsi_t
 {
-	// for multibuf
-	struct
-	{
-		uint32_t size;
-		uint8_t **buffer_list;
-		uint16_t count;
-	} multibuf;
-
 	struct vsfscsi_handler_t *vendor_handlers;
 	struct vsf_mal2scsi_cparam_t cparam;
 	void *param;
 
 	struct vsf_malstream_t malstream;
-	// scsistream can be bufstream or mbufstream
-	struct vsf_scsistream_t scsistream;
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
@@ -172,7 +168,7 @@ struct vsf_mal2scsi_t
 struct vsfscsi_modifs_t
 {
 	vsf_err_t (*init)(struct vsfscsi_device_t*);
-	vsf_err_t (*execute)(struct vsfscsi_lun_t*, uint8_t*);
+	vsf_err_t (*execute)(struct vsfscsi_lun_t*, uint8_t*, uint8_t, uint32_t);
 	void (*cancel_transact)(struct vsfscsi_transact_t*);
 	void (*release_transact)(struct vsfscsi_transact_t*);
 
@@ -195,7 +191,8 @@ vsf_err_t vsfscsi_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #else
 vsf_err_t vsfscsi_init(struct vsfscsi_device_t *dev);
-vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB);
+vsf_err_t vsfscsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
+							uint8_t CDB_size, uint32_t size);
 void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact);
 void vsfscsi_release_transact(struct vsfscsi_transact_t *transact);
 extern const struct vsfscsi_lun_op_t vsf_mal2scsi_op;
