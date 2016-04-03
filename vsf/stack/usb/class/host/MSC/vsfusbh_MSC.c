@@ -202,7 +202,7 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		{
 			while (1)
 			{
-				msc->cur_size = STREAM_GET_RBUF(lun->scsistream, &msc->cur_ptr);
+				msc->cur_size = STREAM_GET_RBUF(lun->stream, &msc->cur_ptr);
 				if (msc->cur_size >= 64)
 					break;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_USER);
@@ -223,14 +223,14 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 					.buffer = NULL,
 					.size = msc->cur_size,
 				};
-				STREAM_READ(lun->scsistream, &buffer);
+				STREAM_READ(lun->stream, &buffer);
 			}
 		}
 		else
 		{
 			while (1)
 			{
-				msc->cur_size = STREAM_GET_WBUF(lun->scsistream, &msc->cur_ptr);
+				msc->cur_size = STREAM_GET_WBUF(lun->stream, &msc->cur_ptr);
 				if (msc->cur_size >= 64)
 					break;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_USER);
@@ -251,7 +251,7 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 					.buffer = NULL,
 					.size = msc->cur_size,
 				};
-				STREAM_WRITE(lun->scsistream, &buffer);
+				STREAM_WRITE(lun->stream, &buffer);
 			}
 		}
 		msc->all_size += msc->cur_size;
@@ -272,9 +272,9 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return VSFERR_NONE;
 fail:
 	if (send)
-		STREAM_DISCONNECT_RX(lun->scsistream);
+		STREAM_DISCONNECT_RX(lun->stream);
 	else
-		STREAM_DISCONNECT_TX(lun->scsistream);
+		STREAM_DISCONNECT_TX(lun->stream);
 	if (vsfusbh_msc.before_delete)
 		vsfusbh_msc.before_delete(msc);
 	vsfusbh_remove_interface(msc->usbh, msc->dev, msc->interface);
