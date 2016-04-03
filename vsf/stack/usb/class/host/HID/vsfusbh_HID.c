@@ -21,7 +21,7 @@
 #define HID_LONG_ITEM(x)			((x) == 0xFE)
 
 #ifndef VSFCFG_STANDALONE_MODULE
-int32_t (*vsfusbh_hid_report)(struct usbh_hid_event_t *) = NULL;
+struct vsfusbh_hid_global_t vsfusbh_hid;
 #endif
 
 static vsf_err_t usbh_hid_parse_item(struct hid_desc_t *desc, uint8_t tag,
@@ -454,8 +454,8 @@ static void usbh_hid_process_input(struct hid_report_t *report_x)
 					event.type |= HID_VALUE_TYPE_REL;
 				}
 
-				if (vsfusbh_hid_report)
-					vsfusbh_hid_report(&event);
+				if (vsfusbh_hid.report)
+					vsfusbh_hid.report(&event);
 			}
 		}
 		usage = sllist_get_container(usage->list.next, struct hid_usage_t, list);

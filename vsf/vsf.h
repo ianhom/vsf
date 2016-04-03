@@ -118,6 +118,7 @@ struct vsf_module_t
 #include "stack/usb/core/hcd/ohci/vsfohci.h"
 #include "stack/usb/class/host/HUB/vsfusbh_HUB.h"
 #include "stack/usb/class/host/HID/vsfusbh_HID.h"
+#include "stack/usb/class/host/MSC/vsfusbh_MSC.h"
 #endif
 
 #ifdef VSFCFG_FUNC_BCMWIFI

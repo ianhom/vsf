@@ -1953,12 +1953,36 @@
         </file>
       </group>
       <group>
+        <name>file</name>
+        <group>
+          <name>fs</name>
+          <group>
+            <name>malfs</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\file\fs\malfs\vsf_malfs.c</name>
+            </file>
+          </group>
+        </group>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\file\vsfile.c</name>
+        </file>
+      </group>
+      <group>
         <name>list</name>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\list\list.c</name>
         </file>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\component\list\list.h</name>
+        </file>
+      </group>
+      <group>
+        <name>mal</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfmal.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\component\mal\vsfscsi.c</name>
         </file>
       </group>
       <group>
@@ -2115,6 +2139,12 @@
               </file>
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\HUB\vsfusbh_HUB.h</name>
+              </file>
+            </group>
+            <group>
+              <name>MSC</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\stack\usb\class\host\MSC\vsfusbh_MSC.c</name>
               </file>
             </group>
             <group>

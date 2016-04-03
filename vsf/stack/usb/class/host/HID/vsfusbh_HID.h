@@ -147,13 +147,18 @@ struct vsfusbh_hid_t
 	struct hid_report_t hid_report;
 };
 
+struct vsfusbh_hid_global_t
+{
+	int32_t (*report)(struct usbh_hid_event_t *);
+};
+
 #ifdef VSFCFG_STANDALONE_MODULE
 #define VSFUSBH_HID_MODNAME					"vsf.stack.usb.host.hid"
 
 struct vsfusbh_hid_modifs_t
 {
 	struct vsfusbh_class_drv_t drv;
-	int32_t (*report)(struct usbh_hid_event_t *);
+	struct vsfusbh_hid_global_t global;
 };
 
 vsf_err_t vsfusbh_hid_modexit(struct vsf_module_t*);
@@ -162,11 +167,11 @@ vsf_err_t vsfusbh_hid_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 #define VSFUSBH_HIDMOD						\
 	((struct vsfusbh_hid_modifs_t *)vsf_module_load(VSFUSBH_HID_MODNAME, true))
 #define vsfusbh_hid_drv						VSFUSBH_HIDMOD->drv
-#define vsfusbh_hid_report					VSFUSBH_HIDMOD->report
+#define vsfusbh_hid							VSFUSBH_HIDMOD->global
 
 #else
 extern const struct vsfusbh_class_drv_t vsfusbh_hid_drv;
-extern int32_t (*vsfusbh_hid_report)(struct usbh_hid_event_t *);
+extern struct vsfusbh_hid_global_t vsfusbh_hid;
 #endif
 
 #endif

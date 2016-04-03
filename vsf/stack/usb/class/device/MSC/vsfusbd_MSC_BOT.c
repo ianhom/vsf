@@ -95,19 +95,20 @@ static void vsfusbd_MSCBOT_on_data_finish(void *p)
 static void vsfusbd_MSCBOT_on_cbw(void *p)
 {
 	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
+	struct USBMSC_CBW_t *CBW = &param->CBW;
 	struct vsfscsi_transact_t *scsi_transact = &param->scsi_dev->transact;
 	struct vsfusbd_device_t *device = param->device;
 	struct vsfscsi_lun_t *lun;
 
 	if (param->transact.data_size ||
-		(param->CBW.dCBWSignature != USBMSC_CBW_SIGNATURE) ||
-		(param->CBW.bCBWCBLength < 1) || (param->CBW.bCBWCBLength > 16))
+		(CBW->dCBWSignature != USBMSC_CBW_SIGNATURE) ||
+		(CBW->bCBWCBLength < 1) || (CBW->bCBWCBLength > 16))
 	{
 		vsfusbd_MSCBOT_on_idle(param);
 		return;
 	}
 
-	if (param->CBW.bCBWLUN > param->scsi_dev->max_lun)
+	if (CBW->bCBWLUN > param->scsi_dev->max_lun)
 	{
 	reply_failure:
 		vsfusbd_MSCBOT_ErrHandler(device, param, USBMSC_CSW_FAIL);
@@ -115,13 +116,14 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 	}
 
 	param->CSW.dCSWStatus = USBMSC_CSW_OK;
-	lun = &param->scsi_dev->lun[param->CBW.bCBWLUN];
-	if (vsfscsi_execute(lun, param->CBW.CBWCB))
+	lun = &param->scsi_dev->lun[CBW->bCBWLUN];
+	if (vsfscsi_execute(lun, CBW->CBWCB, CBW->bCBWCBLength,
+			((CBW->bmCBWFlags & 0x80) << 24) | CBW->dCBWDataTransferLength))
 	{
 		goto reply_failure;
 	}
 
-	if (param->CBW.dCBWDataTransferLength)
+	if (CBW->dCBWDataTransferLength)
 	{
 		struct vsfusbd_transact_t *transact = &param->transact;
 
@@ -134,7 +136,7 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 		transact->cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
 		transact->cb.param = param;
 
-		if ((param->CBW.bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) ==
+		if ((CBW->bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) ==
 					USBMSC_CBWFLAGS_DIR_IN)
 		{
 			transact->ep = param->ep_in;

@@ -16,43 +16,62 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef __VSFUSBD_MSCBOT_H_INCLUDED__
-#define __VSFUSBD_MSCBOT_H_INCLUDED__
 
-#include "../../common/MSC/vsfusb_MSC.h"
+#ifndef __VSFUSBH_MSC_H_INCLUDED__
+#define __VSFUSBH_MSC_H_INCLUDED__
 
-struct vsfusbd_MSCBOT_param_t
+struct vsfusbh_msc_t
 {
+	struct vsfsm_t sm;
+	struct vsfsm_pt_t pt;
+
+	struct vsfusbh_t *usbh;
+	struct vsfusbh_device_t *dev;
+	struct usb_interface_t *interface;
+
+	struct vsfusbh_urb_t *urb;
+	struct vsfscsi_device_t scsi_dev;
 	uint8_t ep_out;
 	uint8_t ep_in;
+	uint8_t iface;
 
-	struct vsfscsi_device_t *scsi_dev;
-
-	// no need to initialize below by user
+	uint8_t executing;
+	uint32_t cur_size;
+	uint32_t all_size;
+	uint8_t *cur_ptr;
 	struct USBMSC_CBW_t CBW;
 	struct USBMSC_CSW_t CSW;
-	struct vsfusbd_transact_t transact;
-	struct vsf_bufstream_t bufstream;
-	struct vsfusbd_device_t *device;
+};
+
+struct vsfusbh_msc_global_t
+{
+	void (*after_new)(struct vsfusbh_msc_t *msc);
+	void (*before_delete)(struct vsfusbh_msc_t *msc);
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
-#define VSFUSBD_MSC_MODNAME					"vsf.stack.usb.device.classes.msc"
+#define VSFUSBH_MSC_MODNAME					"vsf.stack.usb.host.msc"
 
-struct vsfusbd_MSC_modifs_t
+struct vsfusbh_msc_modifs_t
 {
-	struct vsfusbd_class_protocol_t protocol;
+	struct vsfusbh_class_drv_t drv;
+	struct vsfscsi_lun_op_t scsi_op;
+	struct vsfusbh_msc_global_t global;
 };
 
-vsf_err_t vsfusbd_MSC_modexit(struct vsf_module_t*);
-vsf_err_t vsfusbd_MSC_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
+vsf_err_t vsfusbh_msc_modexit(struct vsf_module_t*);
+vsf_err_t vsfusbh_msc_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
-#define VSFUSBD_MSCMOD						\
-	((struct vsfusbd_MSC_modifs_t *)vsf_module_load(VSFUSBD_MSC_MODNAME, true))
-#define vsfusbd_MSCBOT_class				VSFUSBD_MSCMOD->protocol
+#define VSFUSBH_MSCMOD						\
+	((struct vsfusbh_msc_modifs_t *)vsf_module_load(VSFUSBH_MSC_MODNAME, true))
+#define vsfusbh_msc_drv						VSFUSBH_MSCMOD->drv
+#define vsfscsi_lun_op_t					VSFUSBH_MSCMOD->scsi_op
+#define vsfusbh_msc							VSFUSBH_MSCMOD->global
 
 #else
-extern const struct vsfusbd_class_protocol_t vsfusbd_MSCBOT_class;
+extern const struct vsfusbh_class_drv_t vsfusbh_msc_drv;
+extern const struct vsfscsi_lun_op_t vsfusbh_msc_scsi_op;
+extern struct vsfusbh_msc_global_t vsfusbh_msc;
 #endif
 
-#endif	// __VSFUSBD_MSC_H_INCLUDED__
+#endif
