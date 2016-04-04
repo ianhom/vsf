@@ -78,7 +78,6 @@ void vsfscsi_cancel_transact(struct vsfscsi_transact_t *transact)
 static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 									uint32_t size, bool write, bool bufstream)
 {
-	struct vsf_mal2scsi_t *mal2scsi = (struct vsf_mal2scsi_t *)lun->param;
 	struct vsfscsi_transact_t *transact = &lun->dev->transact;
 	struct vsf_scsistream_t *stream = (struct vsf_scsistream_t *)lun->stream;
 	uint8_t *buffer = stream->mbuf.buffer_list[0];
@@ -103,7 +102,6 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		stream->stream.callback_tx.on_connect = NULL;
 		stream->stream.callback_tx.on_disconnect = NULL;
 		STREAM_INIT(stream);
-		transact->stream = (struct vsf_stream_t *)stream;
 	}
 	else
 	{
@@ -113,7 +111,6 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		mbufstream->mem.multibuf = stream->mbuf;
 		stream->stream.op = &mbufstream_op;
 		STREAM_INIT(stream);
-		transact->stream = (struct vsf_stream_t *)stream;
 	}
 	transact->data_size = size;
 	transact->err = VSFERR_NONE;
@@ -382,11 +379,11 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 
 	lun->sensekey = SCSI_SENSEKEY_NO_SENSE;
 	lun->asc = SCSI_ASC_NONE;
-	if (transact->stream != NULL)
+	if (transact->lun->stream != NULL)
 	{
-		if (transact->stream->op == &bufstream_op)
+		if (transact->lun->stream->op == &bufstream_op)
 		{
-			stream_connect_tx(transact->stream);
+			stream_connect_tx(transact->lun->stream);
 		}
 	}
 	return VSFERR_NONE;

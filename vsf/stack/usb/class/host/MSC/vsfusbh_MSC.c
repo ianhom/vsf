@@ -175,14 +175,37 @@ static const struct vsfusbh_device_id_t vsfusbh_msc_id_table[] =
 	{0},
 };
 
+static void vsfusbh_msc_on_inout(void *p)
+{
+	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)p;
+	if (msc->inout_notifier)
+		vsfsm_post_evt_pending(msc->inout_notifier, VSFSM_EVT_USER);
+}
+
 static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfscsi_lun_t *lun = (struct vsfscsi_lun_t *)pt->user_data;
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)lun->param;
 	struct vsfusbh_urb_t *urb = msc->urb;
 	bool send = msc->CBW.bmCBWFlags > 0;
+	uint32_t tmp32, remain;
+	uint16_t epsize = send ? msc->dev->epmaxpacketout[msc->ep_out] :
+								msc->dev->epmaxpacketin[msc->ep_in];
 
 	vsfsm_pt_begin(pt);
+
+	if (send)
+	{
+		lun->stream->callback_rx.param = msc;
+		lun->stream->callback_rx.on_inout = vsfusbh_msc_on_inout;
+		STREAM_CONNECT_RX(lun->stream);
+	}
+	else
+	{
+		lun->stream->callback_rx.param = msc;
+		lun->stream->callback_rx.on_inout = vsfusbh_msc_on_inout;
+		STREAM_CONNECT_TX(lun->stream);
+	}
 
 	urb->pipe = usb_sndbulkpipe(urb->vsfdev, msc->ep_in);
 	urb->transfer_buffer = &msc->CBW;
@@ -193,8 +216,8 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if (urb->status != URB_OK)
 		goto fail;
 
-	urb->pipe = send ? usb_sndbulkpipe(urb->vsfdev, msc->ep_in) :
-						usb_rcvbulkpipe(urb->vsfdev, msc->ep_out);
+	urb->pipe = send ? usb_sndbulkpipe(urb->vsfdev, msc->ep_out) :
+						usb_rcvbulkpipe(urb->vsfdev, msc->ep_in);
 	msc->all_size = 0;
 	while (msc->all_size < msc->CBW.dCBWDataTransferLength)
 	{
@@ -203,12 +226,17 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			while (1)
 			{
 				msc->cur_size = STREAM_GET_RBUF(lun->stream, &msc->cur_ptr);
-				if (msc->cur_size >= 64)
+				remain = msc->CBW.dCBWDataTransferLength - msc->all_size;
+				tmp32 = min(epsize, remain);
+				if (msc->cur_size >= tmp32)
 					break;
+				msc->inout_notifier = pt->sm;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_USER);
+				msc->inout_notifier = NULL;
 			}
 
-			msc->cur_size &= 0x3F;
+			if (msc->cur_size < remain)
+				msc->cur_size &= epsize - 1;
 			urb->transfer_buffer = msc->cur_ptr;
 			urb->transfer_length = msc->cur_size;
 			if (vsfusbh_submit_urb(msc->usbh, urb))
@@ -231,12 +259,17 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			while (1)
 			{
 				msc->cur_size = STREAM_GET_WBUF(lun->stream, &msc->cur_ptr);
-				if (msc->cur_size >= 64)
+				remain = msc->CBW.dCBWDataTransferLength - msc->all_size;
+				tmp32 = min(epsize, remain);
+				if (msc->cur_size >= tmp32)
 					break;
+				msc->inout_notifier = pt->sm;
 				vsfsm_pt_wfe(pt, VSFSM_EVT_USER);
+				msc->inout_notifier = NULL;
 			}
 
-			msc->cur_size &= 0x3F;
+			if (msc->cur_size < remain)
+				msc->cur_size &= epsize - 1;
 			urb->transfer_buffer = &msc->cur_ptr;
 			urb->transfer_length = msc->cur_size;
 			if (vsfusbh_submit_urb(msc->usbh, urb))
@@ -255,6 +288,8 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			}
 		}
 		msc->all_size += msc->cur_size;
+		if (msc->cur_size < epsize)
+			break;
 	}
 
 	urb->pipe = usb_rcvbulkpipe(urb->vsfdev, msc->ep_out);
@@ -267,10 +302,18 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	if ((msc->CSW.dCSWSignature != SYS_TO_LE_U32(USBMSC_CSW_SIGNATURE)) ||
 		(msc->CSW.dCSWTag != msc->CBW.dCBWTag))
 		goto fail;
+
+	lun->dev->transact.data_size = msc->all_size;
+	if (send)
+		STREAM_DISCONNECT_RX(lun->stream);
+	else
+		STREAM_DISCONNECT_TX(lun->stream);
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
 fail:
+	lun->dev->transact.err = VSFERR_FAIL;
+	lun->dev->transact.data_size = msc->all_size;
 	if (send)
 		STREAM_DISCONNECT_RX(lun->stream);
 	else
@@ -297,6 +340,9 @@ static vsf_err_t vsfusbh_msc_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 	msc->CBW.bmCBWFlags = size >> 31 ? 0x80 : 0x00;
 	msc->CBW.bCBWCBLength = CDB_size;
 	memcpy(msc->CBW.CBWCB, CDB, msc->CBW.bCBWCBLength);
+	lun->dev->transact.data_size = 0;
+	lun->dev->transact.err = VSFERR_NONE;
+	lun->dev->transact.lun = lun;
 	msc->executing = 1;
 	msc->pt.thread = vsfusbh_msc_exe_thread;
 	msc->pt.user_data = lun;

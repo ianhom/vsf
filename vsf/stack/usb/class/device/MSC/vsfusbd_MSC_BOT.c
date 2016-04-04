@@ -112,7 +112,7 @@ static void vsfusbd_MSCBOT_on_data_finish(void *p)
 			transact->zlp =
 				CBW->dCBWDataTransferLength > scsi_transact->data_size;
 		send_remain:
-			transact->stream = scsi_transact->stream;
+			transact->stream = scsi_transact->lun->stream;
 			transact->cb.on_finish = vsfusbd_MSCBOT_to_SendCSW;
 			vsfusbd_ep_send(param->device, transact);
 			return;
@@ -169,7 +169,7 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 		}
 		param->transact_size = transact->data_size = scsi_transact->data_size ?
 				scsi_transact->data_size : CBW->dCBWDataTransferLength;
-		transact->stream = scsi_transact->stream;
+		transact->stream = scsi_transact->lun->stream;
 		transact->cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
 		transact->cb.param = param;
 

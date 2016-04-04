@@ -88,7 +88,6 @@ struct vsfscsi_transact_t
 	uint64_t LBA;
 	uint32_t data_size;
 	vsf_err_t err;
-	struct vsf_stream_t *stream;
 	struct vsfscsi_lun_t *lun;
 };
 

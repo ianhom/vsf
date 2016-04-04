@@ -39,6 +39,7 @@ struct vsfusbh_msc_t
 	uint32_t cur_size;
 	uint32_t all_size;
 	uint8_t *cur_ptr;
+	struct vsfsm_t *inout_notifier;
 	struct USBMSC_CBW_t CBW;
 	struct USBMSC_CSW_t CSW;
 };
