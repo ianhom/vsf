@@ -187,11 +187,14 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	struct vsfscsi_lun_t *lun = (struct vsfscsi_lun_t *)pt->user_data;
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)lun->param;
 	struct vsfusbh_urb_t *urb = msc->urb;
-	bool send = msc->CBW.bmCBWFlags > 0;
+	bool send;
 	uint32_t tmp32, remain;
-	uint16_t epsize = send ? msc->dev->epmaxpacketout[msc->ep_out] :
-								msc->dev->epmaxpacketin[msc->ep_in];
+	uint16_t epsize;
 
+again:
+	send = msc->CBW.bmCBWFlags > 0;
+	epsize = send ? msc->dev->epmaxpacketout[msc->ep_out] :
+						msc->dev->epmaxpacketin[msc->ep_in];
 	vsfsm_pt_begin(pt);
 
 	if (send)
@@ -218,15 +221,16 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	urb->pipe = send ? usb_sndbulkpipe(urb->vsfdev, msc->ep_out) :
 						usb_rcvbulkpipe(urb->vsfdev, msc->ep_in);
-	msc->all_size = 0;
-	while (msc->all_size < msc->CBW.dCBWDataTransferLength)
+	lun->dev->transact.data_size = 0;
+	while (lun->dev->transact.data_size < msc->CBW.dCBWDataTransferLength)
 	{
 		if (send)
 		{
 			while (1)
 			{
 				msc->cur_size = STREAM_GET_RBUF(lun->stream, &msc->cur_ptr);
-				remain = msc->CBW.dCBWDataTransferLength - msc->all_size;
+				remain = msc->CBW.dCBWDataTransferLength -
+								lun->dev->transact.data_size;
 				tmp32 = min(epsize, remain);
 				if (msc->cur_size >= tmp32)
 					break;
@@ -259,7 +263,8 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			while (1)
 			{
 				msc->cur_size = STREAM_GET_WBUF(lun->stream, &msc->cur_ptr);
-				remain = msc->CBW.dCBWDataTransferLength - msc->all_size;
+				remain = msc->CBW.dCBWDataTransferLength -
+								lun->dev->transact.data_size;
 				tmp32 = min(epsize, remain);
 				if (msc->cur_size >= tmp32)
 					break;
@@ -287,10 +292,14 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				STREAM_WRITE(lun->stream, &buffer);
 			}
 		}
-		msc->all_size += msc->cur_size;
+		lun->dev->transact.data_size += msc->cur_size;
 		if (msc->cur_size < epsize)
 			break;
 	}
+	if (send)
+		STREAM_DISCONNECT_RX(lun->stream);
+	else
+		STREAM_DISCONNECT_TX(lun->stream);
 
 	urb->pipe = usb_rcvbulkpipe(urb->vsfdev, msc->ep_out);
 	urb->transfer_buffer = &msc->CSW;
@@ -303,17 +312,18 @@ static vsf_err_t vsfusbh_msc_exe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		(msc->CSW.dCSWTag != msc->CBW.dCBWTag))
 		goto fail;
 
-	lun->dev->transact.data_size = msc->all_size;
-	if (send)
-		STREAM_DISCONNECT_RX(lun->stream);
-	else
-		STREAM_DISCONNECT_TX(lun->stream);
+	msc->executing--;
+	if (msc->executing)
+	{
+		pt->state = 0;
+		lun->dev->transact.data_size = 0;
+		goto again;
+	}
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
 fail:
 	lun->dev->transact.err = VSFERR_FAIL;
-	lun->dev->transact.data_size = msc->all_size;
 	if (send)
 		STREAM_DISCONNECT_RX(lun->stream);
 	else
@@ -328,7 +338,7 @@ static vsf_err_t vsfusbh_msc_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 									uint8_t CDB_size, uint32_t size)
 {
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)lun->param;
-	if (msc->executing)
+	if (msc->executing > 1)
 		return VSFERR_NOT_AVAILABLE;
 
 	msc->CBW.bCBWLUN = lun - msc->scsi_dev.lun;
@@ -340,13 +350,15 @@ static vsf_err_t vsfusbh_msc_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 	msc->CBW.bmCBWFlags = size >> 31 ? 0x80 : 0x00;
 	msc->CBW.bCBWCBLength = CDB_size;
 	memcpy(msc->CBW.CBWCB, CDB, msc->CBW.bCBWCBLength);
-	lun->dev->transact.data_size = 0;
-	lun->dev->transact.err = VSFERR_NONE;
-	lun->dev->transact.lun = lun;
-	msc->executing = 1;
-	msc->pt.thread = vsfusbh_msc_exe_thread;
-	msc->pt.user_data = lun;
-	vsfsm_pt_init(&msc->sm, &msc->pt);
+	if (++msc->executing == 1)
+	{
+		lun->dev->transact.data_size = 0;
+		lun->dev->transact.err = VSFERR_NONE;
+		lun->dev->transact.lun = lun;
+		msc->pt.thread = vsfusbh_msc_exe_thread;
+		msc->pt.user_data = lun;
+		vsfsm_pt_init(&msc->sm, &msc->pt);
+	}
 	return VSFERR_NONE;
 }
 
