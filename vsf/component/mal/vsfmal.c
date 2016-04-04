@@ -273,6 +273,7 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
+	stream_disconnect_tx(stream);
 	if (malstream->cb.on_finish != NULL)
 	{
 		malstream->cb.on_finish(malstream->cb.param);
@@ -349,6 +350,7 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
+	stream_disconnect_rx(stream);
 	if (malstream->cb.on_finish != NULL)
 	{
 		malstream->cb.on_finish(malstream->cb.param);

@@ -52,6 +52,12 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 	return vsfusbd_ep_send(param->device, &param->transact);
 }
 
+static void vsfusbd_MSCBOT_to_SendCSW(void *p)
+{
+	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
+	vsfusbd_MSCBOT_SendCSW(param->device, param);
+}
+
 static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 			struct vsfusbd_MSCBOT_param_t *param,  uint8_t error)
 {
@@ -74,7 +80,7 @@ static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 		param->transact.ep = param->ep_in;
 		param->transact.data_size = 0;
 		param->transact.stream = NULL;
-		param->transact.cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
+		param->transact.cb.on_finish = vsfusbd_MSCBOT_to_SendCSW;
 		param->transact.cb.param = param;
 		return vsfusbd_ep_send(param->device, &param->transact);
 	}
@@ -89,7 +95,37 @@ static vsf_err_t vsfusbd_MSCBOT_ErrHandler(struct vsfusbd_device_t *device,
 static void vsfusbd_MSCBOT_on_data_finish(void *p)
 {
 	struct vsfusbd_MSCBOT_param_t *param = (struct vsfusbd_MSCBOT_param_t *)p;
-	vsfusbd_MSCBOT_SendCSW(param->device, param);
+	struct USBMSC_CBW_t *CBW = &param->CBW;
+	struct vsfscsi_transact_t *scsi_transact = &param->scsi_dev->transact;
+	struct vsfusbd_transact_t *transact = &param->transact;
+	uint32_t remain = stream_get_data_size(transact->stream);
+
+	if (scsi_transact->err)
+	{
+		param->CSW.dCSWStatus = USBMSC_CSW_FAIL;
+	}
+	if ((CBW->bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) == USBMSC_CBWFLAGS_DIR_IN)
+	{
+		if (remain)
+		{
+			transact->data_size = remain;
+			transact->zlp =
+				CBW->dCBWDataTransferLength > scsi_transact->data_size;
+		send_remain:
+			transact->stream = scsi_transact->stream;
+			transact->cb.on_finish = vsfusbd_MSCBOT_to_SendCSW;
+			vsfusbd_ep_send(param->device, transact);
+			return;
+		}
+		else if ((CBW->dCBWDataTransferLength > scsi_transact->data_size) &&
+			!((param->transact_size - transact->data_size) &
+				(param->device->drv->ep.get_IN_epsize(param->ep_in) - 1)))
+		{
+			transact->data_size = 0;
+			goto send_remain;
+		}
+	}
+	vsfusbd_MSCBOT_to_SendCSW(param);
 }
 
 static void vsfusbd_MSCBOT_on_cbw(void *p)
@@ -127,11 +163,12 @@ static void vsfusbd_MSCBOT_on_cbw(void *p)
 	{
 		struct vsfusbd_transact_t *transact = &param->transact;
 
-		if (!scsi_transact->lun || !scsi_transact->data_size)
+		if (!scsi_transact->lun)
 		{
 			goto reply_failure;
 		}
-		transact->data_size = scsi_transact->data_size;
+		param->transact_size = transact->data_size = scsi_transact->data_size ?
+				scsi_transact->data_size : CBW->dCBWDataTransferLength;
 		transact->stream = scsi_transact->stream;
 		transact->cb.on_finish = vsfusbd_MSCBOT_on_data_finish;
 		transact->cb.param = param;

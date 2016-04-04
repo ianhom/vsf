@@ -763,6 +763,8 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 		transact->idle = (data_size < cur_size);
 		if (transact->idle)
 		{
+			if (!transact->stream->tx_ready)
+				goto cancel;
 			return VSFERR_NONE;
 		}
 
@@ -800,6 +802,7 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 	}
 	else
 	{
+cancel:
 		vsfusbd_ep_cancel_send(device, transact);
 	}
 
@@ -813,6 +816,7 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	uint16_t pkg_size, next_pkg_size;
 	uint32_t free_size;
 	uint8_t buff[64];
+	bool last;
 
 #if VSFUSBD_CFG_DBUFFER_EN
 	if (device->drv->ep.is_OUT_dbuffer(ep))
@@ -829,11 +833,9 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	}
 	transact->data_size -= pkg_size;
 
-	if ((pkg_size < ep_size) || !transact->data_size)
-	{
-		transact->idle = true;
-	}
-	else
+	transact->idle = last = (pkg_size < ep_size) || !transact->data_size ||
+					!transact->stream->rx_ready;
+	if (!last)
 	{
 		free_size = stream_get_free_size(transact->stream) - pkg_size;
 		next_pkg_size = min(transact->data_size, ep_size);
@@ -850,7 +852,7 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 		stream_write(transact->stream, &buffer);
 	}
 
-	if ((pkg_size < ep_size) || !transact->data_size)
+	if (last)
 	{
 		vsfusbd_ep_cancel_recv(device, transact);
 	}
@@ -1269,8 +1271,6 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				switch (evt & VSFUSBD_EVT_EVT_MASK)
 				{
 				case VSFUSBD_STREAM_CLOSE_IN:
-					vsfusbd_ep_cancel_send(device, transact);
-					break;
 				case VSFUSBD_STREAM_IN:
 					if (transact->idle)
 					{
@@ -1278,7 +1278,8 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					}
 					break;
 				case VSFUSBD_STREAM_CLOSE_OUT:
-					vsfusbd_ep_cancel_recv(device, transact);
+					if (transact->idle)
+						vsfusbd_ep_cancel_recv(device, transact);
 					break;
 				case VSFUSBD_STREAM_OUT:
 					vsfusbd_transact_out(device, transact);

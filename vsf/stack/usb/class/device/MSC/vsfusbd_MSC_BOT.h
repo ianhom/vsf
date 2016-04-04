@@ -34,6 +34,7 @@ struct vsfusbd_MSCBOT_param_t
 	struct vsfusbd_transact_t transact;
 	struct vsf_bufstream_t bufstream;
 	struct vsfusbd_device_t *device;
+	uint32_t transact_size;
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
