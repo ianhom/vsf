@@ -313,6 +313,8 @@ struct vsf_t
 				uint32_t (*pop)(struct vsf_fifo_t*, uint32_t, uint8_t*);
 				uint32_t (*get_data_length)(struct vsf_fifo_t*);
 				uint32_t (*get_avail_length)(struct vsf_fifo_t*);
+				uint32_t (*get_rbuf)(struct vsf_fifo_t*, uint8_t**);
+				uint32_t (*get_wbuf)(struct vsf_fifo_t*, uint8_t**);
 			} fifo;
 
 			struct
@@ -600,6 +602,8 @@ struct vsf_t
 #define vsf_fifo_pop					vsf.component.buffer.fifo.pop
 #define vsf_fifo_get_data_length		vsf.component.buffer.fifo.get_data_length
 #define vsf_fifo_get_avail_length		vsf.component.buffer.fifo.get_avail_length
+#define vsf_fifo_get_rbuf				vsf.component.buffer.fifo.get_rbuf
+#define vsf_fifo_get_wbuf				vsf.component.buffer.fifo.get_wbuf
 
 #define vsf_multibuf_init				vsf.component.buffer.multibuf.init
 #define vsf_multibuf_get_empty			vsf.component.buffer.multibuf.get_empty

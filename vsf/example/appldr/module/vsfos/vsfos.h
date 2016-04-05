@@ -51,6 +51,7 @@ struct vsfos_modifs_t
 		struct vsfscsi_device_t scsi_dev;
 		struct vsfscsi_lun_t lun[1];
 
+		struct vsf_scsistream_t scsistream;
 		struct vsf_mal2scsi_t mal2scsi;
 		struct vsfmal_t mal;
 		struct fakefat32_param_t fakefat32;

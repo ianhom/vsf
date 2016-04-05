@@ -337,10 +337,10 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->fs.memop.free_vfs = vsfos_vsfile_free_vfs;
 
 	// init mal2scsi
+	ifs->mal.scsistream.mbuf.count = dimof(ifs->mal.buffer);
+	ifs->mal.scsistream.mbuf.size = sizeof(ifs->mal.buffer[0]);
+	ifs->mal.scsistream.mbuf.buffer_list = ifs->mal.pbuffer;
 	ifs->mal.mal2scsi.malstream.mal = &ifs->mal.mal;
-	ifs->mal.mal2scsi.multibuf.count = dimof(ifs->mal.buffer);
-	ifs->mal.mal2scsi.multibuf.size = sizeof(ifs->mal.buffer[0]);
-	ifs->mal.mal2scsi.multibuf.buffer_list = ifs->mal.pbuffer;
 	ifs->mal.mal2scsi.cparam.block_size = 512;
 	ifs->mal.mal2scsi.cparam.removable = false;
 	memcpy(ifs->mal.mal2scsi.cparam.vendor, "Simon   ", 8);
@@ -349,7 +349,8 @@ vsf_err_t vsfos_modinit(struct vsf_module_t *module,
 	ifs->mal.mal2scsi.cparam.type = SCSI_PDT_DIRECT_ACCESS_BLOCK;
 
 	// init scsi device
-	ifs->mal.lun[0].op = (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op;
+	ifs->mal.lun[0].op = &vsf_mal2scsi_op;
+	ifs->mal.lun[0].stream = (struct vsf_stream_t *)&ifs->mal.scsistream;
 	ifs->mal.lun[0].param = &ifs->mal.mal2scsi;
 	ifs->mal.scsi_dev.max_lun = 0;
 	ifs->mal.scsi_dev.lun = ifs->mal.lun;
