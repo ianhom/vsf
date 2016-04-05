@@ -494,14 +494,13 @@ vsf_err_t vsfshell_init(struct vsfshell_t *shell)
 }
 
 void vsfshell_register_handlers(struct vsfshell_t *shell,
-										struct vsfshell_handler_t *handlers)
+								struct vsfshell_handler_t *handlers, int num)
 {
-	while ((handlers != NULL) && (handlers->name != NULL))
+	int i;
+	for (i = 0; i < num; i++)
 	{
 		handlers->next = shell->handlers;
-		shell->handlers = handlers;
-
-		handlers++;
+		shell->handlers = handlers++;
 	}
 }
 

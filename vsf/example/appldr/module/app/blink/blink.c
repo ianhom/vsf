@@ -84,12 +84,12 @@ vsf_err_t app_blink_modinit(struct vsf_module_t *module,
 								struct app_hwcfg_t const *cfg)
 {
 	struct vsfshell_handler_t *handlers;
-	handlers = vsf_bufmgr_malloc(2 * sizeof(struct vsfshell_handler_t));
+	handlers = vsf_bufmgr_malloc(sizeof(struct vsfshell_handler_t));
 	if (!handlers) return VSFERR_FAIL;
 	memset(handlers, 0, sizeof(*handlers));
 
 	handlers[0] = (struct vsfshell_handler_t){"blink", app_blink};
-	vsfshell_register_handlers(&vsfos->shell, handlers);
+	vsfshell_register_handlers(&vsfos->shell, handlers, 1);
 	module->ifs = handlers;
 	return VSFERR_NONE;
 }

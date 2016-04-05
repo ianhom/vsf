@@ -33,7 +33,6 @@ enum vsfshell_EVT_t
 
 #define VSFSHELL_HANDLER(name, thread, context)\
 											{(name), (thread), (context), NULL}
-#define VSFSHELL_HANDLER_NONE				VSFSHELL_HANDLER(NULL, NULL, NULL)
 struct vsfshell_handler_t
 {
 	const char * name;
@@ -125,7 +124,8 @@ typedef vsf_err_t (*vsfshell_printf_thread_t)(struct vsfsm_pt_t *pt,
 struct vsfshell_modifs_t
 {
 	vsf_err_t (*init)(struct vsfshell_t*);
-	void (*register_handlers)(struct vsfshell_t*, struct vsfshell_handler_t*);
+	void (*register_handlers)(struct vsfshell_t*, struct vsfshell_handler_t*,
+								int);
 	void (*free_handler_thread)(struct vsfshell_t*, struct vsfsm_t*);
 };
 
@@ -140,7 +140,8 @@ vsf_err_t vsfshell_modinit(struct vsf_module_t*, struct app_hwcfg_t const*);
 
 #else
 vsf_err_t vsfshell_init(struct vsfshell_t*);
-void vsfshell_register_handlers(struct vsfshell_t*, struct vsfshell_handler_t*);
+void vsfshell_register_handlers(struct vsfshell_t*, struct vsfshell_handler_t*,
+								int);
 void vsfshell_free_handler_thread(struct vsfshell_t*, struct vsfsm_t*);
 #endif
 

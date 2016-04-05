@@ -989,12 +989,11 @@ vsf_err_t vsfos_busybox_init(struct vsfshell_t *shell)
 		handlers[idx++] = (struct vsfshell_handler_t){"lsusb", vsfos_busybox_lsusb, ctx};
 	}
 
-	handlers[idx++] = (struct vsfshell_handler_t)VSFSHELL_HANDLER_NONE;
 	if (idx >= VSFOSCFG_HANDLER_NUM)
 	{
 		// memory destroyed
 		while(1);
 	}
-	vsfshell_register_handlers(shell, handlers);
+	vsfshell_register_handlers(shell, handlers, idx);
 	return VSFERR_NONE;
 }
