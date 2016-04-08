@@ -763,7 +763,9 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 		transact->idle = (data_size < cur_size);
 		if (transact->idle)
 		{
-			if (!transact->stream->tx_ready)
+			// If not enough space in stream and stream_tx disconnected, cancel
+			if (!transact->stream->tx_ready &&
+				(data_size < transact->data_size))
 				goto cancel;
 			return VSFERR_NONE;
 		}
@@ -814,9 +816,9 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	struct vsfusbd_transact_t *transact = device->OUT_transact[ep];
 	uint16_t ep_size = device->drv->ep.get_OUT_epsize(ep);
 	uint16_t pkg_size, next_pkg_size;
-	uint32_t free_size;
+	uint32_t free_size = 0;
 	uint8_t buff[64];
-	bool last;
+	bool last = true;
 
 #if VSFUSBD_CFG_DBUFFER_EN
 	if (device->drv->ep.is_OUT_dbuffer(ep))
@@ -833,11 +835,15 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	}
 	transact->data_size -= pkg_size;
 
-	transact->idle = last = (pkg_size < ep_size) || !transact->data_size ||
-					!transact->stream->rx_ready;
-	if (!last)
+	// If not enough data in buffer, and stream_rx is disconnected, set last
+	if (transact->data_size)
 	{
 		free_size = stream_get_free_size(transact->stream) - pkg_size;
+		transact->idle = last = (pkg_size < ep_size) || !transact->data_size ||
+			(!transact->stream->rx_ready && (free_size < transact->data_size));
+	}
+	if (!last)
+	{
 		next_pkg_size = min(transact->data_size, ep_size);
 		transact->idle = (free_size < next_pkg_size);
 		if (!transact->idle)
