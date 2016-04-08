@@ -4,7 +4,7 @@ If Wscript.Arguments.Count <> 1 Then
 End If
 
 Const ModuleFileName = "modules.bin"
-Const PageSize = 1024
+Const PageSize = 2048
 Const DefaultByte = "FF"
 
 Dim ModuleStream, Stream, FileName, FileSize, Buffer, Str, Fso
@@ -27,8 +27,9 @@ Stream.SaveToFile FileName, 2
 With ModuleStream
 	.Type = 1: .Mode = 3: .Open
 End With
-If Fso.FileExists(ModuleFileName) Then
-	ModuleStream.LoadFromFile ModuleFileName
+FileName = Fso.GetParentFolderName(FileName) + "\" + ModuleFileName
+If Fso.FileExists(FileName) Then
+	ModuleStream.LoadFromFile FileName
 	ModuleStream.Position = ModuleStream.Size
 End If
 
@@ -40,7 +41,7 @@ Buffer = Str2BinArr(DefaultByte)
 While (ModuleStream.Size And (PageSize - 1)) <> 0
 	ModuleStream.Write Buffer
 Wend
-ModuleStream.SaveToFile ModuleFileName, 2
+ModuleStream.SaveToFile FileName, 2
 ModuleStream.Close
 Set ModuleStream = Nothing
 Wscript.Quit
