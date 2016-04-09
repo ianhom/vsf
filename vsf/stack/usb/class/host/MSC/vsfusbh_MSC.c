@@ -26,12 +26,12 @@ struct vsfusbh_msc_global_t vsfusbh_msc;
 static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)pt->user_data;
-	struct vsfscsi_device_t *scsi_dev = &msc->scsi_dev;
+	struct vsfscsi_device_t *scsi_dev;
 	struct vsfusbh_urb_t *urb = msc->urb;
 
 	vsfsm_pt_begin(pt);
 
-	scsi_dev->max_lun = 0;
+	msc->max_lun = 0;
 
 	do
 	{
@@ -40,7 +40,7 @@ static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			vsfsm_pt_wfe(pt, VSFSM_EVT_EP0_CRIT);
 
 		urb->pipe = usb_rcvctrlpipe(urb->vsfdev, 0);
-		urb->transfer_buffer = &scsi_dev->max_lun;
+		urb->transfer_buffer = &msc->max_lun;
 		urb->transfer_length = 1;
 		if (vsfusbh_control_msg(msc->usbh, urb,
 				USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
@@ -52,21 +52,28 @@ static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		vsfsm_crit_leave(&msc->dev->ep0_crit);
 		if (urb->status != URB_OK)
 			return VSFERR_FAIL;
-	} while (!scsi_dev->max_lun);
+	} while (!msc->max_lun);
 
-	scsi_dev->lun = vsf_bufmgr_malloc(scsi_dev->max_lun *
-								sizeof(struct vsfscsi_lun_t));
-	if (!scsi_dev->lun)
+	msc->scsi_dev = (struct vsfscsi_device_t *)vsf_bufmgr_malloc(
+		sizeof(*msc->scsi_dev) + msc->max_lun * sizeof(struct vsfscsi_lun_t));
+	if (!msc->scsi_dev)
 		return VSFERR_FAIL;
+	scsi_dev = msc->scsi_dev;
+	scsi_dev->max_lun = msc->max_lun;
+	scsi_dev->lun = (struct vsfscsi_lun_t *)&scsi_dev[1];
 
 	for (int i = 0; i < scsi_dev->max_lun; i++)
 	{
 		scsi_dev->lun[i].op = (struct vsfscsi_lun_op_t *)&vsfusbh_msc_scsi_op;
 		scsi_dev->lun[i].param = msc;
 	}
-	vsfscsi_init(&msc->scsi_dev);
-	if (vsfusbh_msc.after_new && vsfusbh_msc.after_new(msc))
+	vsfscsi_init(scsi_dev);
+	if (vsfusbh_msc.after_new && vsfusbh_msc.after_new(scsi_dev))
+	{
+		vsf_bufmgr_free(scsi_dev);
+		msc->scsi_dev = NULL;
 		return VSFERR_FAIL;
+	}
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
@@ -146,20 +153,44 @@ static void *vsfusbh_msc_probe(struct vsfusbh_t *usbh,
 	return msc;
 }
 
+static void vsfusbh_msc_on_inout(void *p);
 static void vsfusbh_msc_disconnect(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)priv;
+	struct vsfscsi_lun_t *lun;
+
 	if (msc == NULL)
 		return;
 
-	vsfsm_fini(&msc->sm);
+	if (msc->scsi_dev != NULL)
+	{
+		int i;
+		lun = msc->scsi_dev->lun;
+		for (i = 0; i < msc->scsi_dev->max_lun; i++)
+		{
+			if (lun[i].stream != NULL)
+			{
+				if (lun[i].stream->rx_ready &&
+					(lun[i].stream->callback_rx.on_inout == vsfusbh_msc_on_inout))
+				{
+					STREAM_DISCONNECT_RX(lun->stream);
+				}
+				else if (lun[i].stream->tx_ready &&
+					(lun[i].stream->callback_tx.on_inout == vsfusbh_msc_on_inout))
+				{
+					STREAM_DISCONNECT_TX(lun->stream);
+				}
+			}
+			lun[i].param = NULL;
+		}
+		if (vsfusbh_msc.before_delete)
+			vsfusbh_msc.before_delete(msc->scsi_dev);
+	}
 
 	if (msc->urb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &msc->urb);
-
-	if (msc->scsi_dev.lun != NULL)
-		vsf_bufmgr_free(msc->scsi_dev.lun);
+	vsfsm_fini(&msc->sm);
 	vsf_bufmgr_free(msc);
 }
 
@@ -328,9 +359,6 @@ fail:
 		STREAM_DISCONNECT_RX(lun->stream);
 	else
 		STREAM_DISCONNECT_TX(lun->stream);
-	if (vsfusbh_msc.before_delete)
-		vsfusbh_msc.before_delete(msc);
-	vsfusbh_remove_interface(msc->usbh, msc->dev, msc->interface);
 	return VSFERR_FAIL;
 }
 
@@ -338,11 +366,11 @@ static vsf_err_t vsfusbh_msc_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 									uint8_t CDB_size, uint32_t size)
 {
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)lun->param;
-	if (msc->executing > 1)
+	if (!msc || (msc->executing > 1))
 		return VSFERR_NOT_AVAILABLE;
 
-	msc->CBW.bCBWLUN = lun - msc->scsi_dev.lun;
-	if (msc->CBW.bCBWLUN >= msc->scsi_dev.max_lun)
+	msc->CBW.bCBWLUN = lun - msc->scsi_dev->lun;
+	if (msc->CBW.bCBWLUN >= msc->scsi_dev->max_lun)
 		return VSFERR_NOT_AVAILABLE;
 
 	msc->CBW.dCBWTag++;

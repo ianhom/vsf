@@ -30,7 +30,8 @@ struct vsfusbh_msc_t
 	struct usb_interface_t *interface;
 
 	struct vsfusbh_urb_t *urb;
-	struct vsfscsi_device_t scsi_dev;
+	struct vsfscsi_device_t *scsi_dev;
+	uint8_t max_lun;
 	uint8_t ep_out;
 	uint8_t ep_in;
 	uint8_t iface;
@@ -45,8 +46,8 @@ struct vsfusbh_msc_t
 
 struct vsfusbh_msc_global_t
 {
-	vsf_err_t (*after_new)(struct vsfusbh_msc_t *msc);
-	void (*before_delete)(struct vsfusbh_msc_t *msc);
+	vsf_err_t (*after_new)(struct vsfscsi_device_t *dev);
+	void (*before_delete)(struct vsfscsi_device_t *dev);
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE
