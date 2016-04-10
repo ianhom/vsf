@@ -174,8 +174,9 @@ struct vsfapp_t
 	struct
 	{
 		struct vsfscsi_device_t scsi_dev;
-
 		struct vsfscsi_lun_t lun[1];
+
+		struct vsf_scsistream_t scsistream;
 		struct vsf_mal2scsi_t mal2scsi;
 		struct vsfmal_t mal;
 		struct fakefat32_param_t fakefat32;
@@ -244,11 +245,11 @@ struct vsfapp_t
 	.mal.mal.param							= &app.mal.fakefat32,
 	.mal.pbuffer[0]							= app.mal.buffer[0],
 	.mal.pbuffer[1]							= app.mal.buffer[1],
+	.mal.scsistream.mbuf.count				= dimof(app.mal.buffer),
+	.mal.scsistream.mbuf.size				= sizeof(app.mal.buffer[0]),
+	.mal.scsistream.mbuf.buffer_list		= app.mal.pbuffer,
 
 	.mal.mal2scsi.malstream.mal				= &app.mal.mal,
-	.mal.mal2scsi.multibuf.count			= dimof(app.mal.buffer),
-	.mal.mal2scsi.multibuf.size				= sizeof(app.mal.buffer[0]),
-	.mal.mal2scsi.multibuf.buffer_list		= app.mal.pbuffer,
 	.mal.mal2scsi.cparam.block_size			= 512,
 	.mal.mal2scsi.cparam.removable			= false,
 	.mal.mal2scsi.cparam.vendor				= "Simon   ",
@@ -257,6 +258,8 @@ struct vsfapp_t
 	.mal.mal2scsi.cparam.type				= SCSI_PDT_DIRECT_ACCESS_BLOCK,
 
 	.mal.lun[0].op							= (struct vsfscsi_lun_op_t *)&vsf_mal2scsi_op,
+	// lun->stream MUST be scsistream for mal2scsi
+	.mal.lun[0].stream						= (struct vsf_stream_t *)&app.mal.scsistream,
 	.mal.lun[0].param						= &app.mal.mal2scsi,
 	.mal.scsi_dev.max_lun					= 0,
 	.mal.scsi_dev.lun						= app.mal.lun,
