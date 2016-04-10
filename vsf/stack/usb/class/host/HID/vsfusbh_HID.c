@@ -643,15 +643,13 @@ static void vsfusbh_hid_disconnect(struct vsfusbh_t *usbh,
 	if (hid == NULL)
 		return;
 
-	vsfsm_fini(&hid->sm);
-
 	if (hid->ctrlurb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &hid->ctrlurb);
 	if (hid->inturb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &hid->inturb);
 
 	usbh_hid_free_report(&hid->hid_report);
-
+	vsfsm_fini(&hid->sm);
 	vsf_bufmgr_free(hid);
 }
 
