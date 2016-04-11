@@ -22,6 +22,24 @@
 /**************************************************************************
  * export data
  **************************************************************************/
+
+struct vsfdwcotg_hcd_param_t
+{
+	uint32_t index;
+
+	uint8_t speed;
+	uint8_t dma_en;
+	uint8_t ulpi_en;
+	uint8_t vbus_en;
+	uint8_t hc_amount;
+	uint8_t iso_packet_limit;
+
+	uint16_t fifo_size;
+	uint16_t periodic_out_packet_size_max;
+	uint16_t non_periodic_out_packet_size_max;
+	uint16_t in_packet_size_max;
+};
+
 extern const struct vsfusbh_hcddrv_t vsfdwcotgh_drv;
 
 #endif // __VSFDWCOTG_H___
