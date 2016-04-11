@@ -77,7 +77,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.50.2.10499</state>
+          <state>7.60.1.11206</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -89,7 +89,7 @@
         </option>
         <option>
           <name>OGChipSelectEditMenu</name>
-          <state>STM32F103x8	ST STM32F103x8</state>
+          <state>Default	None</state>
         </option>
         <option>
           <name>GenLowLevelInterface</name>
@@ -127,7 +127,7 @@
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
         <option>
@@ -144,12 +144,12 @@
         </option>
         <option>
           <name>CoreVariant</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
         <option>
           <name>GFPUDeviceSlave</name>
-          <state>STM32F103x8	ST STM32F103x8</state>
+          <state>Default	None</state>
         </option>
         <option>
           <name>FPU2</name>
@@ -167,7 +167,7 @@
         </option>
         <option>
           <name>GFPUCoreSlave2</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
       </data>
@@ -647,14 +647,14 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
+        <postbuild>wscript "$PROJ_DIR$\fixsize.vbs" "$EXE_DIR$\$PROJ_FNAME$.bin"</postbuild>
       </data>
     </settings>
     <settings>
       <name>ILINK</name>
       <archiveVersion>0</archiveVersion>
       <data>
-        <version>16</version>
+        <version>17</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -938,6 +938,10 @@
           <name>IlinkThreadsSlave</name>
           <state>1</state>
         </option>
+        <option>
+          <name>IlinkLogCallGraph</name>
+          <state>0</state>
+        </option>
       </data>
     </settings>
     <settings>
@@ -1042,7 +1046,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.50.2.10499</state>
+          <state>7.60.1.11206</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -1054,7 +1058,7 @@
         </option>
         <option>
           <name>OGChipSelectEditMenu</name>
-          <state>STM32F103xB	ST STM32F103xB</state>
+          <state>Default	None</state>
         </option>
         <option>
           <name>GenLowLevelInterface</name>
@@ -1092,7 +1096,7 @@
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
         <option>
@@ -1109,12 +1113,12 @@
         </option>
         <option>
           <name>CoreVariant</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
         <option>
           <name>GFPUDeviceSlave</name>
-          <state>STM32F103xB	ST STM32F103xB</state>
+          <state>Default	None</state>
         </option>
         <option>
           <name>FPU2</name>
@@ -1132,7 +1136,7 @@
         </option>
         <option>
           <name>GFPUCoreSlave2</name>
-          <version>22</version>
+          <version>24</version>
           <state>34</state>
         </option>
       </data>
@@ -1613,14 +1617,14 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild>wscript $PROJ_DIR$\fixsize.vbs $EXE_DIR$\$PROJ_FNAME$.bin</postbuild>
+        <postbuild>wscript "$PROJ_DIR$\fixsize.vbs" "$EXE_DIR$\$PROJ_FNAME$.bin"</postbuild>
       </data>
     </settings>
     <settings>
       <name>ILINK</name>
       <archiveVersion>0</archiveVersion>
       <data>
-        <version>16</version>
+        <version>17</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -1903,6 +1907,10 @@
         <option>
           <name>IlinkThreadsSlave</name>
           <state>1</state>
+        </option>
+        <option>
+          <name>IlinkLogCallGraph</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
