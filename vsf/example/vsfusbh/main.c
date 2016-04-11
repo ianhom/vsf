@@ -206,6 +206,7 @@ struct vsfapp_t
 		struct vsfusbd_config_t config[1];
 		struct vsfusbd_device_t device;
 	} usbd;
+	struct vsfohci_hcd_param_t ohci_param;
 	struct vsfusbh_t usbh;
 	struct vsfshell_t shell;
 
@@ -251,8 +252,9 @@ struct vsfapp_t
 	.usbd.device.drv						= (struct interface_usbd_t *)&core_interfaces.usbd,
 	.usbd.device.int_priority				= 0,
 
+	.ohci_param.index						= OHCI_PORT_INDEX,
 	.usbh.hcd								= &vsfohci_drv,
-	.usbh.hcd_index							= OHCI_PORT_INDEX,
+	.usbh.hcd_param							= &app.ohci_param,
 
 	//.shell.stream_tx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_tx,
 	//.shell.stream_rx						= (struct vsf_stream_t *)&app.usbd.cdc.stream_rx,
