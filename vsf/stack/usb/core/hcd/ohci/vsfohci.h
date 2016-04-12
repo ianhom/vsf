@@ -19,6 +19,11 @@
 #ifndef __VSFOHCI_H___
 #define __VSFOHCI_H___
 
+struct vsfohci_hcd_param_t
+{
+	uint32_t index;
+};
+
 #ifdef VSFCFG_STANDALONE_MODULE
 #define VSFOHCI_MODNAME						"vsf.stack.usb.host.hcd.ohci"
 

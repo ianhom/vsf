@@ -528,11 +528,10 @@ static void vsfusbh_hub_disconnect(struct vsfusbh_t *usbh,
 {
 	struct vsfusbh_hub_t *hub = priv;
 
-	vsfsm_fini(&hub->sm);
-
 	if (hub->vsfurb != NULL)
 		usbh->hcd->free_urb(usbh->hcd_data, &hub->vsfurb);
 
+	vsfsm_fini(&hub->sm);
 	vsf_bufmgr_free(hub);
 }
 

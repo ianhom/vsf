@@ -782,18 +782,19 @@ static vsf_err_t vsfohci_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsf_err_t err;
 	struct vsfohci_t *vsfohci;
 	struct vsfusbh_t *usbh = (struct vsfusbh_t *)pt->user_data;
+	struct vsfohci_hcd_param_t *hcd_param = usbh->hcd_param;
 	vsfohci = (struct vsfohci_t *)usbh->hcd_data;
 
 	vsfsm_pt_begin(pt);
 
 	usbh->hcd_rh_speed = USB_SPEED_FULL;
 	err = vsfohci_init_get_resource(usbh,
-			(uint32_t)vsfhal_hcd_regbase(usbh->hcd_index));
+			(uint32_t)vsfhal_hcd_regbase(hcd_param->index));
 	if (err)
 		return err;
 	vsfohci = (struct vsfohci_t *)usbh->hcd_data;
 
-	vsfhal_hcd_init(usbh->hcd_index, vsfohci_interrupt, usbh->hcd_data);
+	vsfhal_hcd_init(hcd_param->index, vsfohci_interrupt, usbh->hcd_data);
 
 	vsfohci->ohci->regs->intrdisable = OHCI_INTR_MIE;
 	vsfohci->ohci->regs->control = 0;

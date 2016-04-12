@@ -166,7 +166,7 @@ struct vsfusbh_hcddrv_t
 struct vsfusbh_t
 {
 	const struct vsfusbh_hcddrv_t *hcd;
-	uint32_t hcd_index;
+	void *hcd_param;
 
 	// private
 	uint8_t hcd_rh_speed;
