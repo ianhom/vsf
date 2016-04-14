@@ -466,11 +466,11 @@ vsf_err_t vsfscsi_modinit(struct vsf_module_t *module,
 	ifs->release_transact = vsfscsi_release_transact;
 	ifs->mal2scsi.op.init = vsf_mal2scsi_init;
 	ifs->mal2scsi.op.execute = vsf_mal2scsi_execute;
-	ifs->scsi2mal.op.block_size = vsf_scsi2mal_blocksize,
-	ifs->scsi2mal.op.init = vsf_scsi2mal_init,
-	ifs->scsi2mal.op.fini = vsf_scsi2mal_fini,
-	ifs->scsi2mal.op.read = vsf_scsi2mal_read,
-	ifs->scsi2mal.op.write = vsf_scsi2mal_write,
+	ifs->scsi2mal.op.block_size = vsf_scsi2mal_blocksize;
+	ifs->scsi2mal.op.init = vsf_scsi2mal_init;
+	ifs->scsi2mal.op.fini = vsf_scsi2mal_fini;
+	ifs->scsi2mal.op.read = vsf_scsi2mal_read;
+	ifs->scsi2mal.op.write = vsf_scsi2mal_write;
 	module->ifs = ifs;
 	return VSFERR_NONE;
 }

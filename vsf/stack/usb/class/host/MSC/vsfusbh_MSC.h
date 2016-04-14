@@ -48,8 +48,9 @@ struct vsfusbh_msc_t
 
 struct vsfusbh_msc_global_t
 {
-	vsf_err_t (*after_new)(struct vsfscsi_device_t *dev);
-	void (*before_delete)(struct vsfscsi_device_t *dev);
+	struct vsfscsi_device_t* (*on_new)(uint8_t maxlun,
+				struct vsfscsi_lun_op_t *op, void *param);
+	void (*on_delete)(struct vsfscsi_device_t *dev);
 };
 
 #ifdef VSFCFG_STANDALONE_MODULE

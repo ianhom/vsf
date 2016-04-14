@@ -25,7 +25,6 @@ struct vsfusbh_msc_global_t vsfusbh_msc;
 static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfusbh_msc_t *msc = (struct vsfusbh_msc_t *)pt->user_data;
-	struct vsfscsi_device_t *scsi_dev;
 	struct vsfusbh_urb_t *urb = msc->urb;
 
 	vsfsm_pt_begin(pt);
@@ -52,26 +51,9 @@ static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 			return VSFERR_FAIL;
 	} while (!msc->max_lun);
 
-	msc->scsi_dev = (struct vsfscsi_device_t *)vsf_bufmgr_malloc(
-		sizeof(*msc->scsi_dev) + msc->max_lun * sizeof(struct vsfscsi_lun_t));
-	if (!msc->scsi_dev)
-		return VSFERR_FAIL;
-	scsi_dev = msc->scsi_dev;
-	scsi_dev->max_lun = msc->max_lun;
-	scsi_dev->lun = (struct vsfscsi_lun_t *)&scsi_dev[1];
-
-	for (int i = 0; i < scsi_dev->max_lun; i++)
-	{
-		scsi_dev->lun[i].op = (struct vsfscsi_lun_op_t *)&vsfusbh_msc_scsi_op;
-		scsi_dev->lun[i].param = msc;
-	}
-	vsfscsi_init(scsi_dev);
-	if (vsfusbh_msc.after_new && vsfusbh_msc.after_new(scsi_dev))
-	{
-		vsf_bufmgr_free(scsi_dev);
-		msc->scsi_dev = NULL;
-		return VSFERR_FAIL;
-	}
+	if (vsfusbh_msc.on_new != NULL)
+		msc->scsi_dev = vsfusbh_msc.on_new(msc->max_lun,
+				(struct vsfscsi_lun_op_t *)&vsfusbh_msc_scsi_op, msc);
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
@@ -178,8 +160,8 @@ static void vsfusbh_msc_disconnect(struct vsfusbh_t *usbh,
 			}
 			lun[i].param = NULL;
 		}
-		if (vsfusbh_msc.before_delete)
-			vsfusbh_msc.before_delete(msc->scsi_dev);
+		if (vsfusbh_msc.on_delete)
+			vsfusbh_msc.on_delete(msc->scsi_dev);
 	}
 
 	if (msc->urb != NULL)
