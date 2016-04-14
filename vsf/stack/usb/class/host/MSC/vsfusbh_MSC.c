@@ -17,7 +17,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
-#include "../../common/MSC/vsfusb_MSC.h"
 
 #ifndef VSFCFG_STANDALONE_MODULE
 struct vsfusbh_msc_global_t vsfusbh_msc;
@@ -35,7 +34,6 @@ static vsf_err_t vsfusbh_msc_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	do
 	{
-		vsfsm_pt_delay(pt, 100);
 		if (vsfsm_crit_enter(&msc->dev->ep0_crit, pt->sm))
 			vsfsm_pt_wfe(pt, VSFSM_EVT_EP0_CRIT);
 
@@ -166,21 +164,17 @@ static void vsfusbh_msc_disconnect(struct vsfusbh_t *usbh,
 	if (msc->scsi_dev != NULL)
 	{
 		int i;
+		msc->scsi_dev->transact.err = VSFERR_FAIL;
 		lun = msc->scsi_dev->lun;
 		for (i = 0; i < msc->scsi_dev->max_lun; i++)
 		{
-			if (lun[i].stream != NULL)
+			if ((lun[i].stream != NULL) &&
+				(lun[i].stream->callback_rx.on_inout == vsfusbh_msc_on_inout))
 			{
-				if (lun[i].stream->rx_ready &&
-					(lun[i].stream->callback_rx.on_inout == vsfusbh_msc_on_inout))
-				{
+				if (lun[i].stream->rx_ready)
 					STREAM_DISCONNECT_RX(lun->stream);
-				}
-				else if (lun[i].stream->tx_ready &&
-					(lun[i].stream->callback_tx.on_inout == vsfusbh_msc_on_inout))
-				{
+				else if (lun[i].stream->tx_ready)
 					STREAM_DISCONNECT_TX(lun->stream);
-				}
 			}
 			lun[i].param = NULL;
 		}
@@ -245,10 +239,10 @@ again:
 	urb->transfer_buffer = &msc->CBW;
 	urb->transfer_length = sizeof(msc->CBW);
 	if (vsfusbh_submit_urb(msc->usbh, urb))
-		goto fail;
+		goto fail_disconnect;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (urb->status != URB_OK)
-		goto fail;
+		goto fail_disconnect;
 
 	urb->pipe = send ? usb_sndbulkpipe(urb->vsfdev, msc->ep_out) :
 						usb_rcvbulkpipe(urb->vsfdev, msc->ep_in);
@@ -275,10 +269,10 @@ again:
 			urb->transfer_buffer = msc->cur_ptr;
 			urb->transfer_length = msc->cur_size;
 			if (vsfusbh_submit_urb(msc->usbh, urb))
-				goto fail;
+				goto fail_disconnect;
 			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 			if (urb->status != URB_OK)
-				goto fail;
+				goto fail_disconnect;
 
 			{
 				struct vsf_buffer_t buffer =
@@ -309,10 +303,10 @@ again:
 			urb->transfer_buffer = &msc->cur_ptr;
 			urb->transfer_length = msc->cur_size;
 			if (vsfusbh_submit_urb(msc->usbh, urb))
-				goto fail;
+				goto fail_disconnect;
 			vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 			if (urb->status != URB_OK)
-				goto fail;
+				goto fail_disconnect;
 
 			{
 				struct vsf_buffer_t buffer =
@@ -339,12 +333,12 @@ again:
 		goto fail;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 
-	if ((msc->CSW.dCSWSignature != SYS_TO_LE_U32(USBMSC_CSW_SIGNATURE)) ||
+	if ((urb->status != URB_OK) ||
+		(msc->CSW.dCSWSignature != SYS_TO_LE_U32(USBMSC_CSW_SIGNATURE)) ||
 		(msc->CSW.dCSWTag != msc->CBW.dCBWTag))
 		goto fail;
 
-	msc->executing--;
-	if (msc->executing)
+	if (--msc->executing)
 	{
 		pt->state = 0;
 		lun->dev->transact.data_size = 0;
@@ -353,12 +347,15 @@ again:
 	vsfsm_pt_end(pt);
 
 	return VSFERR_NONE;
-fail:
+fail_disconnect:
 	lun->dev->transact.err = VSFERR_FAIL;
 	if (send)
 		STREAM_DISCONNECT_RX(lun->stream);
 	else
 		STREAM_DISCONNECT_TX(lun->stream);
+	return VSFERR_FAIL;
+fail:
+	lun->dev->transact.err = VSFERR_FAIL;
 	return VSFERR_FAIL;
 }
 

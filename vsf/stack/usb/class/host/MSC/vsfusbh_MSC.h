@@ -20,6 +20,8 @@
 #ifndef __VSFUSBH_MSC_H_INCLUDED__
 #define __VSFUSBH_MSC_H_INCLUDED__
 
+#include "../../common/MSC/vsfusb_MSC.h"
+
 struct vsfusbh_msc_t
 {
 	struct vsfsm_t sm;
