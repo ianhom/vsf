@@ -125,7 +125,7 @@ vsf_err_t stm32_gpio_config(uint8_t index, uint32_t pin_mask, uint32_t io,
 			{
 				if (pull_en_mask & mask)
 				{
-					tmpregl |= 0x10 << (4 * i + 2);
+					tmpregl |= 0x02 << (4 * i + 2);
 				}
 				else
 				{
