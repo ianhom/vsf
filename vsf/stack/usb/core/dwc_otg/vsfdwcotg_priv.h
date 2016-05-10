@@ -125,18 +125,17 @@ enum dwcotg_state_t
 struct dwcotg_t
 {
 	// common config
-	uint8_t dwcotg_state : 3;
-	uint8_t speed : 2;	// USB_SPEED_LOW / USB_SPEED_FULL / USB_SPEED_HIGH
-	uint8_t dma_en : 1;
-	uint8_t ulpi_en : 1;
-	uint8_t external_vbus_en : 1;
+	uint8_t dwcotg_state;
+	uint8_t speed;	// USB_SPEED_LOW / USB_SPEED_FULL / USB_SPEED_HIGH
+	uint8_t dma_en;
+	uint8_t ulpi_en;
+	uint8_t external_vbus_en;
 
 	uint8_t ep_in_amount;
 	uint8_t ep_out_amount;
 	uint8_t hc_amount;
 	
 	uint16_t retry;
-	uint8_t dummy[3];
 	
 	struct hc_t *hc_pool;
 
@@ -156,4 +155,6 @@ struct dwcotg_t
 	struct dwcotg_dev_in_ep_regs_t *in_ep_regs;
 	// Device Logical OUT Endpoint-Specific Registers B00h-CFCh
 	struct dwcotg_dev_out_ep_regs_t *out_ep_regs;
+	
+	uint32_t *dfifo;
 };

@@ -71,7 +71,7 @@ struct dwcotg_core_global_regs_t {
 	/**PHY Vendor Control Register.	 <i>Offset: 034h</i> */
 	volatile uint32_t gpvndctl;
 	/**General Purpose Input/Output Register.  <i>Offset: 038h</i> */
-	volatile uint32_t ggpio;
+	volatile uint32_t gccfg;
 	/**User ID Register.  <i>Offset: 03Ch</i> */
 	volatile uint32_t guid;
 	/**Synopsys ID Register (Read Only).  <i>Offset: 040h</i> */
@@ -298,11 +298,9 @@ struct dwcotg_core_global_regs_t {
 /********************  Bit definition for USB_OTG_GPVNDCTL register  ****************/
 // TODO
 
-#if (__TARGET_CHIP__ == STM32F7)
 /********************  Bit definition for USB_OTG_GCCFG register  ********************/
 #define USB_OTG_GCCFG_PWRDWN                 ((uint32_t)0x00010000)              /*!< Power down */
 #define USB_OTG_GCCFG_VBDEN                  ((uint32_t)0x00200000)              /*!< USB VBUS Detection Enable */
-#endif
 
 /********************  Bit definition for USB_OTG_GLPMCFG register  ********************/
 #define  USB_OTG_GLPMCFG_LPMEN               ((uint32_t)0x00000001)            /*!< LPM support enable                                     */
@@ -899,12 +897,10 @@ struct dwcotg_dev_out_ep_regs_t {
 #define USB_OTG_DOEPTSIZ_STUPCNT_0               ((uint32_t)0x20000000)            /*!<Bit 0 */
 #define USB_OTG_DOEPTSIZ_STUPCNT_1               ((uint32_t)0x40000000)            /*!<Bit 1 */
 
-#if (__TARGET_CHIP__ == STM32F7)
 /** OTG Power and Clock Gating Control Register */
 /********************  Bit definition for PCGCCTL register  ********************/
 #define USB_OTG_PCGCCTL_STOPCLK                 ((uint32_t)0x00000001)            /*!< SETUP packet count */
 #define USB_OTG_PCGCCTL_GATECLK                 ((uint32_t)0x00000002)            /*!<Bit 0 */
 #define USB_OTG_PCGCCTL_PHYSUSP                 ((uint32_t)0x00000010)            /*!<Bit 1 */
-#endif
 
 #endif // __DWCOTG_REGS_H__

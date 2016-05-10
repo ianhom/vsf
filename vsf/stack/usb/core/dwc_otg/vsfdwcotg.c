@@ -124,7 +124,7 @@ static void hc_halt(struct dwcotg_t *dwcotg, uint8_t hc_num)
 
 const uint8_t pipetype_to_dwctype[4] = {1, 3, 0, 2};
 static vsf_err_t submit_hc(struct dwcotg_t *dwcotg, struct hc_t *hc,
-		uint8_t *buf, uint16_t size)
+		uint32_t *buf, uint16_t size)
 {
 	uint32_t pkt_num, tmp;
 	struct urb_priv_t *urb_priv = hc->owner_priv;
@@ -190,7 +190,8 @@ static vsf_err_t submit_hc(struct dwcotg_t *dwcotg, struct hc_t *hc,
 	reg->hctsiz = ((pkt_num << 19) & USB_OTG_HCTSIZ_PKTCNT) |
 			((uint32_t)hc->dpid << 29) | size;
 
-	reg->hcdma = (uint32_t)buf;
+	if (dwcotg->dma_en)
+		reg->hcdma = (uint32_t)buf;
 
 	tmp = dwcotg->host_global_regs->hfnum & 0x1 ? 0x0ul : 0x1ul;
 	reg->hcchar |= tmp << 29;
@@ -198,6 +199,27 @@ static vsf_err_t submit_hc(struct dwcotg_t *dwcotg, struct hc_t *hc,
 	// enable hc, TODO merge up code
 	tmp = (reg->hcchar & (~USB_OTG_HCCHAR_CHDIS)) | USB_OTG_HCCHAR_CHENA;
 	reg->hcchar = tmp;
+	
+	if ((dwcotg->dma_en == 0) && (hc->dir_o0_i1 == 0) && (hc->transfer_size))
+	{
+		// TODO: check if there is enough space in FIFO space
+		switch (urb_priv->type)
+		{
+		case URB_PRIV_TYPE_CTRL:
+		case URB_PRIV_TYPE_BULK:
+			break;
+		case URB_PRIV_TYPE_ISO:
+		case URB_PRIV_TYPE_INT:
+			break;
+		}
+		//size = (size + 3) >> 2;
+		tmp = 0;
+		while (tmp < size)
+		{
+			dwcotg->dfifo[hc->hc_num] = buf[tmp >> 2];
+			tmp += 4;
+		}
+	}
 
 	return VSFERR_NONE;
 }
@@ -232,7 +254,7 @@ static vsf_err_t submit_priv_urb(struct dwcotg_t *dwcotg,
 		hc->dir_o0_i1 = 0;
 		hc->dpid = HC_DPID_SETUP;
 
-		return submit_hc(dwcotg, hc, (uint8_t *)(&vsfurb->setup_packet),
+		return submit_hc(dwcotg, hc, (uint32_t *)(&vsfurb->setup_packet),
 				sizeof(struct usb_ctrlrequest_t));
 	case URB_PRIV_PHASE_DATA_WAIT:
 		hc->dir_o0_i1 = urb_priv->dir_o0_i1;
@@ -249,7 +271,7 @@ static vsf_err_t submit_priv_urb(struct dwcotg_t *dwcotg,
 			hc->dpid = HC_DPID_DATA1;
 			break;
 		}
-		return submit_hc(dwcotg, hc, (uint8_t *)urb_priv->transfer_buffer,
+		return submit_hc(dwcotg, hc, (uint32_t *)urb_priv->transfer_buffer,
 				urb_priv->transfer_length);
 	case URB_PRIV_PHASE_STATE_WAIT:
 		hc->dir_o0_i1 = !urb_priv->dir_o0_i1;
@@ -734,6 +756,7 @@ static vsf_err_t dwcotg_init_get_resource(struct vsfusbh_t *usbh,
 			(struct dwcotg_dev_in_ep_regs_t *)(reg_base + 0x900);
 	dwcotg->out_ep_regs =
 			(struct dwcotg_dev_out_ep_regs_t *)(reg_base + 0xb00);
+	dwcotg->dfifo = (uint32_t *)(reg_base + 0x1000);
 
 	dwcotg->hc_pool = vsf_bufmgr_malloc(sizeof(struct hc_t) *
 			dwcotg->hc_amount);
@@ -772,10 +795,9 @@ static vsf_err_t dwcotgh_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	if (dwcotg->ulpi_en)
 	{
-#if (__TARGET_CHIP__ == stm32f7)
 		// GCCFG &= ~(USB_OTG_GCCFG_PWRDWN)
-		dwcotg->global_reg->ggpio &= ~USB_OTG_GCCFG_PWRDWN;
-#endif
+		dwcotg->global_reg->gccfg &= ~USB_OTG_GCCFG_PWRDWN;
+		
 		// Init The ULPI Interface
 		dwcotg->global_reg->gusbcfg &= ~(USB_OTG_GUSBCFG_TSDPS |
 				USB_OTG_GUSBCFG_ULPIFSLS | USB_OTG_GUSBCFG_PHYSEL);
@@ -815,12 +837,10 @@ static vsf_err_t dwcotgh_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		dwcotg->retry++;
 	}
 
-#if (__TARGET_CHIP__ == STM32F7)
 	if (dwcotg->ulpi_en == 0)
 	{
-		dwcotg->global_reg->ggpio = USB_OTG_GCCFG_PWRDWN;
+		dwcotg->global_reg->gccfg = USB_OTG_GCCFG_PWRDWN;
 	}
-#endif
 
 	if (dwcotg->dma_en)
 	{
@@ -835,10 +855,9 @@ static vsf_err_t dwcotgh_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_delay(pt, 50);
 
 	// Enable Core
-#if (__TARGET_CHIP__ == STM32F7)
 	// USBx->GCCFG |= USB_OTG_GCCFG_VBDEN;
-	dwcotg->global_reg->ggpio |= USB_OTG_GCCFG_VBDEN;
-#endif
+	dwcotg->global_reg->gccfg |= USB_OTG_GCCFG_VBDEN;
+
 	if (dwcotg->speed == USB_SPEED_HIGH)
 	{
 		dwcotg->host_global_regs->hcfg &= ~USB_OTG_HCFG_FSLSS;
