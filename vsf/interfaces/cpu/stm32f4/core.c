@@ -1,23 +1,133 @@
-#include "vsf_err.h"
-
-#include "app_cfg.h"
 #include "app_type.h"
-
-#include "interfaces_cfg.h"
-#include "interfaces_const.h"
+#include "compiler.h"
 #include "interfaces.h"
+
+#include "stm32f4xx.h"
 #include "core.h"
 
-static struct stm32f4_info_t stm32f4_info = 
+static struct stm32f4_info_t stm32f4_info =
 {
-	0, CORE_VECTOR_TABLE, CORE_CLKSRC, CORE_PLLSRC, CORE_RTCSRC, CORE_HSE_TYPE,
-	OSC0_FREQ_HZ, CORE_PLL_FREQ_HZ, CORE_AHB_FREQ_HZ, CORE_APB1_FREQ_HZ,
-	CORE_APB2_FREQ_HZ, CORE_FLASH_LATENCY, CORE_DEBUG
+	0, CORE_VECTOR_TABLE,
+	CORE_CLKEN,
+	CORE_HCLKSRC, CORE_PLLSRC,
+	HSI_FREQ_HZ, HSE_FREQ_HZ,
+	CORE_PLL_FREQ_HZ, CORE_HCLK_FREQ_HZ, CORE_PCLK1_FREQ_HZ, CORE_PCLK2_FREQ_HZ,
 };
 
-vsf_err_t stm32f4_interface_get_info(struct stm32f4_info_t **info)
+vsf_err_t stm32f4_interface_init(void *p)
 {
-	*info = &stm32f4_info;
+	if (p != NULL)
+	{
+		stm32f4_info = *(struct stm32f4_info_t *)p;
+	}
+	
+	FLASH->ACR |= FLASH_ACR_ICEN;
+	FLASH->ACR |= FLASH_ACR_DCEN;
+	FLASH->ACR |= FLASH_ACR_PRFTEN;
+	
+	// enable hsi and select hclksrc to hsi
+	RCC->CR |= RCC_CR_HSION;
+	while (!(RCC->CR & RCC_CR_HSIRDY));
+	RCC->CFGR &= ~RCC_CFGR_SW;
+	while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI);
+
+    // enable clk
+    if (stm32f4_info.clk_enable & STM32F4_CLK_HSE)
+    {
+		RCC->CR |= RCC_CR_HSEON;
+		while (!(RCC->CR & RCC_CR_HSERDY));
+    }
+    else
+	{
+		RCC->CR &= ~RCC_CR_HSEON;
+	}
+
+	RCC->CR &= ~RCC_CR_PLLON;
+    if (stm32f4_info.clk_enable & STM32F4_HCLKSRC_PLL)
+	{
+		uint32_t n, m, p, input, output, pllcfgr;
+		pllcfgr = RCC->PLLCFGR & 0xf0000000;
+
+		pllcfgr |= stm32f4_info.pllsrc == STM32F4_PLLSRC_HSI ? 0 :
+				RCC_PLLCFGR_PLLSRC_HSE;
+		input = stm32f4_info.pllsrc == STM32F4_PLLSRC_HSI ?
+				stm32f4_info.hsi_freq_hz : stm32f4_info.hse_freq_hz;
+
+		if (input % 2000000)
+		{
+			m = input / 1000000;
+			input = 1000000;
+		}
+		else
+		{
+			m = input / 2000000;
+			input = 2000000;
+		}
+		pllcfgr |= m;
+
+		for (p = 2; p <= 8; p += 2)
+		{
+			if ((stm32f4_info.pll_freq_hz * p >= 192000000) &&
+				(stm32f4_info.pll_freq_hz * p <= 432000000))
+			{
+				break;
+			}
+		}
+		if (p > 8)
+			return  VSFERR_FAIL;
+		pllcfgr |= (p / 2 - 1) << 16;
+
+		output = stm32f4_info.pll_freq_hz * p;
+		n = output / input;
+		pllcfgr |= n << 6;
+
+		pllcfgr |= (output / 48000000) << 24;
+		
+		RCC->PLLCFGR = pllcfgr;
+		RCC->CR |= RCC_CR_PLLON;
+		while (!(RCC->CR & RCC_CR_PLLRDY));
+	} 
+
+	// set pclk and hclk
+	RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+	
+	if (stm32f4_info.pll_freq_hz > stm32f4_info.hclk_freq_hz * 4)
+		RCC->CFGR |= 0x8 << 4 | 0x2 << 4;
+	else if (stm32f4_info.pll_freq_hz > stm32f4_info.hclk_freq_hz * 2)
+		RCC->CFGR |= 0x8 << 4 | 0x1 << 4;
+	else if (stm32f4_info.pll_freq_hz > stm32f4_info.hclk_freq_hz * 1)
+		RCC->CFGR |= 0x8 << 4 | 0x0 << 4;
+	else
+		RCC->CFGR |= 0;
+	
+	if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk1_freq_hz * 8)
+		RCC->CFGR |= 0x4 << 10 | 0x3 << 10;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk1_freq_hz * 4)
+		RCC->CFGR |= 0x4 << 10 | 0x2 << 10;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk1_freq_hz * 2)
+		RCC->CFGR |= 0x4 << 10 | 0x1 << 10;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk1_freq_hz * 1)
+		RCC->CFGR |= 0x4 << 10 | 0x0 << 10;
+	else
+		RCC->CFGR |= 0;
+	
+	if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk2_freq_hz * 8)
+		RCC->CFGR |= 0x4 << 13 | 0x3 << 13;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk2_freq_hz * 4)
+		RCC->CFGR |= 0x4 << 13 | 0x2 << 13;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk2_freq_hz * 2)
+		RCC->CFGR |= 0x4 << 13 | 0x1 << 13;
+	else if (stm32f4_info.hclk_freq_hz > stm32f4_info.pclk2_freq_hz * 1)
+		RCC->CFGR |= 0x4 << 13 | 0x0 << 13;
+	else
+		RCC->CFGR |= 0;
+
+	// select
+	RCC->CFGR |= stm32f4_info.hclksrc;
+	while (((RCC->CFGR & RCC_CFGR_SWS) >> 2) != stm32f4_info.hclksrc);
+
+	SCB->VTOR = stm32f4_info.vector_table;
+	SCB->AIRCR = 0x05FA0000 | stm32f4_info.priority_group;
 	return VSFERR_NONE;
 }
 
@@ -25,101 +135,88 @@ vsf_err_t stm32f4_interface_fini(void *p)
 {
 	return VSFERR_NONE;
 }
-
 vsf_err_t stm32f4_interface_reset(void *p)
 {
-	NVIC_SystemReset();
 	return VSFERR_NONE;
 }
-
 uint32_t stm32f4_interface_get_stack(void)
 {
-	return __get_MSP(sp);
+	return __get_MSP();
 }
-
 vsf_err_t stm32f4_interface_set_stack(uint32_t sp)
 {
 	__set_MSP(sp);
 	return VSFERR_NONE;
 }
-
-// sleep will enable interrupt
-// for cortex processor, if an interrupt occur between enable the interrupt
-// 		and __WFI, wfi will not make the core sleep
 void stm32f4_interface_sleep(uint32_t mode)
 {
-	vsf_leave_critical();
-	__WFI();
+	// TODO
+	return;
 }
 
-vsf_err_t stm32f4_interface_init(void *p)
+// Pendsv
+struct stm32f4_pendsv_t
 {
-	SCB->VTOR = stm32f4_info.vector_table;
-	SCB->AIRCR = 0x05FA0000 | stm32f4_info.priority_group;
-	return VSFERR_NONE;
-}
+	void (*on_pendsv)(void *);
+	void *param;
+} static stm32f4_pendsv;
 
-uint32_t stm32f4_uid_get(uint8_t *buffer, uint32_t size)
+ROOTFUNC void PendSV_Handler(void)
 {
-	return 0;
-}
-
-#define CM3_SYSTICK_ENABLE				(1 << 0)
-#define CM3_SYSTICK_CLKSOURCE			(1 << 2)
-#define CM3_SYSTICK_COUNTFLAG			(1 << 16)
-
-vsf_err_t stm32f4_delay_init(void)
-{
-	SysTick->CTRL = CM3_SYSTICK_CLKSOURCE;
-	SysTick->VAL = 0;
-	return VSFERR_NONE;
-}
-
-static vsf_err_t stm32f4_delay_delayus_do(uint32_t tick)
-{
-	uint32_t dly_tmp;
-	
-	stm32f4_delay_init();
-	while (tick)
+	if (stm32f4_pendsv.on_pendsv != NULL)
 	{
-		dly_tmp = (tick > ((1 << 24) - 1)) ? ((1 << 24) - 1) : tick;
-		SysTick->LOAD = dly_tmp;
-		SysTick->CTRL |= CM3_SYSTICK_ENABLE;
-		while (!(SysTick->CTRL & CM3_SYSTICK_COUNTFLAG));
-		stm32f4_delay_init();
-		tick -= dly_tmp;
+		stm32f4_pendsv.on_pendsv(stm32f4_pendsv.param);
+	}
+}
+
+vsf_err_t stm32f4_interface_pendsv_config(void (*on_pendsv)(void *),
+		void *param)
+{
+	stm32f4_pendsv.on_pendsv = on_pendsv;
+	stm32f4_pendsv.param = param;
+
+	if (stm32f4_pendsv.on_pendsv != NULL)
+	{
+		SCB->SHP[10] = 0xFF;
 	}
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32f4_delay_delayus(uint16_t us)
+vsf_err_t stm32f4_interface_pendsv_trigger(void)
 {
-	stm32f4_delay_delayus_do(us * (stm32f4_info.sys_freq_hz / (1000 * 1000)));
+	SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 	return VSFERR_NONE;
 }
-
-vsf_err_t stm32f4_delay_delayms(uint16_t ms)
-{
-	stm32f4_delay_delayus_do(ms * (stm32f4_info.sys_freq_hz / 1000));
-	return VSFERR_NONE;
-}
-
-// tickclk
-#define TICKCLK_TIM							TIM5
 
 static void (*stm32f4_tickclk_callback)(void *param) = NULL;
 static void *stm32f4_tickclk_param = NULL;
-static uint32_t stm32f4_tickcnt = 0;
+static volatile uint32_t stm32f4_tickcnt = 0;
+
 vsf_err_t stm32f4_tickclk_start(void)
 {
-	TICKCLK_TIM->CR1 |= TIM_CR1_CEN;
+	SysTick->VAL = 0;
+	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	return VSFERR_NONE;
 }
 
 vsf_err_t stm32f4_tickclk_stop(void)
 {
-	TICKCLK_TIM->CR1 &= ~TIM_CR1_CEN;
+	SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 	return VSFERR_NONE;
+}
+
+vsf_err_t stm32f4_tickclk_init(void)
+{
+	stm32f4_tickcnt = 0;
+	SysTick->LOAD = stm32f4_info.hclk_freq_hz / 1000;
+	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk;
+	NVIC_SetPriority(SysTick_IRQn, (1UL << __NVIC_PRIO_BITS) - 1UL);
+	return VSFERR_NONE;
+}
+
+vsf_err_t stm32f4_tickclk_fini(void)
+{
+	return stm32f4_tickclk_stop();
 }
 
 static uint32_t stm32f4_tickclk_get_count_local(void)
@@ -130,7 +227,7 @@ static uint32_t stm32f4_tickclk_get_count_local(void)
 uint32_t stm32f4_tickclk_get_count(void)
 {
 	uint32_t count1, count2;
-	
+
 	do {
 		count1 = stm32f4_tickclk_get_count_local();
 		count2 = stm32f4_tickclk_get_count_local();
@@ -138,47 +235,23 @@ uint32_t stm32f4_tickclk_get_count(void)
 	return count1;
 }
 
-ROOTFUNC void TIM5_IRQHandler(void)
+ROOTFUNC void SysTick_Handler(void)
 {
 	stm32f4_tickcnt++;
 	if (stm32f4_tickclk_callback != NULL)
 	{
 		stm32f4_tickclk_callback(stm32f4_tickclk_param);
 	}
-	TICKCLK_TIM->SR = ~TIM_SR_UIF;
 }
 
-vsf_err_t stm32f4_tickclk_set_callback(void (*callback)(void*), void *param)
+vsf_err_t stm32f4_tickclk_config_cb(void (*callback)(void *), void *param)
 {
-	TICKCLK_TIM->DIER &= ~TIM_DIER_UIE;
+	uint32_t tmp = SysTick->CTRL;
+
+	SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
 	stm32f4_tickclk_callback = callback;
 	stm32f4_tickclk_param = param;
-	TICKCLK_TIM->DIER |= TIM_DIER_UIE;
+	SysTick->CTRL = tmp;
 	return VSFERR_NONE;
 }
 
-vsf_err_t stm32f4_tickclk_init(void)
-{
-	stm32f4_tickcnt = 0;
-	RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;
-	RCC->APB1RSTR |= RCC_APB1RSTR_TIM5RST;
-	RCC->APB1RSTR &= ~RCC_APB1RSTR_TIM5RST;
-	
-	// TIM5 generate 1ms event
-	TICKCLK_TIM->CR1 &= 0x03FF;
-	TICKCLK_TIM->ARR = stm32f4_info.apb1_freq_hz / 2 / 1000;
-	TICKCLK_TIM->PSC = 1;
-	TICKCLK_TIM->RCR = 0;
-	TICKCLK_TIM->EGR |= TIM_EGR_UG;
-	TICKCLK_TIM->DIER |= TIM_DIER_UIE;
-	NVIC->IP[TIM5_IRQn] = 0xFF;
-	NVIC->ISER[TIM5_IRQn >> 0x05] = 1UL << (TIM5_IRQn & 0x1F);
-	
-	return VSFERR_NONE;
-}
-
-vsf_err_t stm32f4_tickclk_fini(void)
-{
-	RCC->APB1ENR &= ~RCC_APB1ENR_TIM5EN;
-	return VSFERR_NONE;
-}
