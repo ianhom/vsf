@@ -567,6 +567,7 @@ static struct vsfsm_state_t *vsfusbh_hid_evt_handler_init(struct vsfsm_t *sm,
 		hid->pt.sm = sm;
 		hid->pt.state = 0;
 	case VSFSM_EVT_URB_COMPLETE:
+	case VSFSM_EVT_EP0_CRIT:
 	case VSFSM_EVT_DELAY_DONE:
 		err = hid->pt.thread(&hid->pt, evt);
 		if (err < 0)
