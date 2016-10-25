@@ -28,7 +28,18 @@ struct vsftimer_t
 	// inherent from vsfq_node_t
 	struct vsfq_node_t node;
 	
-	struct vsfsm_t *sm;
+	union
+	{
+		struct
+		{
+			struct vsfsm_t *sm;
+		};
+		struct
+		{
+			void (*cb)(void *param);
+			void *param;
+		};
+	};
 	vsfsm_evt_t evt;
 	uint32_t interval;
 	int trigger_cnt;
@@ -48,6 +59,8 @@ void vsftimer_callback_int(void);
 
 struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 							int16_t trigger_cnt, vsfsm_evt_t evt);
+struct vsftimer_t *vsftimer_create_cb(uint32_t interval, int16_t trigger_cnt,
+									void (*cb)(void *), void *param);
 void vsftimer_free(struct vsftimer_t *timer);
 
 void vsftimer_enqueue(struct vsftimer_t *timer);

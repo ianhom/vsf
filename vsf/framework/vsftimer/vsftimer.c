@@ -34,11 +34,7 @@ struct vsftimer_info_t
 	struct vsftimer_mem_op_t *mem_op;
 } static vsftimer =
 {
-	{
-		{
-			vsftimer_init_handler,
-		},								// struct vsfsm_state_t init_state;
-	},
+	.sm.init_state.evt_handler = vsftimer_init_handler,
 };
 
 // vsftimer_callback_int is called in interrupt,
@@ -100,9 +96,19 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					vsftimer_free(timer);
 				}
 
-				if ((timer->sm != NULL) && (timer->evt != VSFSM_EVT_INVALID))
+				if (timer->evt != VSFSM_EVT_INVALID)
 				{
-					vsfsm_post_evt(timer->sm, timer->evt);
+					if (timer->sm != NULL)
+					{
+						vsfsm_post_evt(timer->sm, timer->evt);
+					}
+				}
+				else
+				{
+					if (timer->cb != NULL)
+					{
+						timer->cb(timer->param);
+					}
 				}
 				timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 			}
@@ -114,6 +120,24 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		break;
 	}
 	return NULL;
+}
+
+struct vsftimer_t *vsftimer_create_cb(uint32_t interval, int16_t trigger_cnt,
+									void (*cb)(void *), void *param)
+{
+	struct vsftimer_t *timer = vsftimer_allocate();
+	if (NULL == timer)
+	{
+		return NULL;
+	}
+
+	timer->evt = VSFSM_EVT_INVALID;
+	timer->cb = cb;
+	timer->param = param;
+	timer->interval = interval;
+	timer->trigger_cnt = trigger_cnt;
+	vsftimer_enqueue(timer);
+	return timer;
 }
 
 struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
