@@ -124,6 +124,12 @@ struct vsf_module_t
 #endif
 #endif
 
+#ifdef VSFCFG_FUNC_MFI
+#include "stack/mfi/vsfmfi.h"
+#include "stack/mfi/func/HID/vsfmfi_HID.h"
+#include "stack/mfi/func/EAP/vsfmfi_EAP.h"
+#endif
+
 #ifdef VSFCFG_FUNC_BCMWIFI
 #include "stack/tcpip/netif/eth/broadcom/bcm_wifi.h"
 #include "stack/tcpip/netif/eth/broadcom/bus/bcm_bus.h"
