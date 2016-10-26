@@ -474,16 +474,41 @@ vsf_err_t CORE_TICKCLK_CONFIG_CB(__TARGET_CHIP__)(void (*)(void*), void*);
 #define vsfhal_tickclk_config_cb		CORE_TICKCLK_CONFIG_CB(__TARGET_CHIP__)
 #endif
 
-#if IFS_IIC_EN
+#if IFS_I2C_EN
+
+#define I2C_READ						(1 << 0)
+#define I2C_WRITE						(0 << 0)
+#define I2C_NOSTART						(1 << 4)
+
+struct interface_i2c_msg_t
+{
+	uint16_t flag;
+	uint16_t len;
+	uint8_t *buf;
+};
 
 struct interface_i2c_t
 {
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
-	vsf_err_t (*config)(uint8_t index, uint16_t kHz, uint16_t byte_interval, uint16_t max_dly);
-	vsf_err_t (*read)(uint8_t index, uint16_t chip_addr, uint8_t *data, uint16_t data_len, uint8_t stop, bool nacklast);
-	vsf_err_t (*write)(uint8_t index, uint16_t chip_addr, uint8_t *data, uint16_t data_len, uint8_t stop);
+	vsf_err_t (*config)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
+	vsf_err_t (*xfer)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
 };
+
+#define CORE_I2C_INIT(m)				__CONNECT(m, _i2c_init)
+#define CORE_I2C_FINI(m)				__CONNECT(m, _i2c_fini)
+#define CORE_I2C_CONFIG(m)				__CONNECT(m, _i2c_config)
+#define CORE_I2C_XFER(m)				__CONNECT(m, _i2c_xfer)
+
+vsf_err_t CORE_I2C_INIT(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_I2C_FINI(__TARGET_CHIP__)(uint8_t index);
+vsf_err_t CORE_I2C_CONFIG(__TARGET_CHIP__)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
+vsf_err_t CORE_I2C_XFER(__TARGET_CHIP__)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
+
+#define vsfhal_i2c_init					CORE_I2C_INIT(__TARGET_CHIP__)
+#define vsfhal_i2c_fini					CORE_I2C_FINI(__TARGET_CHIP__)
+#define vsfhal_i2c_config				CORE_I2C_CONFIG(__TARGET_CHIP__)
+#define vsfhal_i2c_xfer					CORE_I2C_XFER(__TARGET_CHIP__)
 
 #endif
 
@@ -1171,7 +1196,7 @@ struct interfaces_info_t
 #if IFS_ADC_EN
 	struct interface_adc_t adc;
 #endif
-#if IFS_IIC_EN
+#if IFS_I2C_EN
 	struct interface_i2c_t i2c;
 #endif
 #if IFS_USBD_EN

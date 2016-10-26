@@ -149,8 +149,10 @@ const struct interfaces_info_t core_interfaces =
 	.adc.start = CORE_ADC_START(__TARGET_CHIP__),
 #endif
 #if IFS_IIC_EN
-	.i2c.init = NULL,
-	.i2c.fini = NULL,
+	.i2c.init = CORE_I2C_INIT(__TARGET_CHIP__),
+	.i2c.fini = CORE_I2C_FINI(__TARGET_CHIP__),
+	.i2c.config = CORE_I2C_CONFIG(__TARGET_CHIP__),
+	.i2c.xfer = CORE_I2C_XFER(__TARGET_CHIP__),
 #endif
 #if IFS_USBD_EN
 	.usbd.init = CORE_USBD_INIT(__TARGET_CHIP__),
