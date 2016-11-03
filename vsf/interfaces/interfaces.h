@@ -492,7 +492,7 @@ struct interface_i2c_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
-	vsf_err_t (*xfer)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
+	vsf_err_t (*xfer)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint8_t msglen);
 };
 
 #define CORE_I2C_INIT(m)				__CONNECT(m, _i2c_init)
@@ -503,7 +503,7 @@ struct interface_i2c_t
 vsf_err_t CORE_I2C_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_I2C_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_I2C_CONFIG(__TARGET_CHIP__)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
-vsf_err_t CORE_I2C_XFER(__TARGET_CHIP__)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
+vsf_err_t CORE_I2C_XFER(__TARGET_CHIP__)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint8_t msglen);
 
 #define vsfhal_i2c_init					CORE_I2C_INIT(__TARGET_CHIP__)
 #define vsfhal_i2c_fini					CORE_I2C_FINI(__TARGET_CHIP__)
