@@ -526,6 +526,7 @@ vsf_err_t nuc505_usbd_ep_write_IN_buffer(uint8_t idx, uint8_t *buffer,
 
 	if (0 == idx)
 	{
+		USBD->CEPCTL = USB_CEPCTL_FLUSH;
 		for (i = 0; i < size; i++)
 		{
 			USBD->CEPDAT_BYTE = buffer[i];
@@ -814,6 +815,7 @@ vsf_err_t nuc505_usbd_ep_enable_OUT(uint8_t idx)
 		{
 			nuc505_outen |= 1 << idx;
 			USBD->CEPINTEN |= USBD_CEPINTEN_RXPKIEN_Msk;
+			USBD->CEPCTL = USB_CEPCTL_NAKCLR | USB_CEPCTL_FLUSH;
 		}
 		return VSFERR_NONE;
 	}
