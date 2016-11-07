@@ -141,8 +141,7 @@ struct vsfsm_evtq_t
 	volatile uint32_t evt_count;
 };
 void vsfsm_evtq_init(struct vsfsm_evtq_t *queue);
-void vsfsm_evtq_set(struct vsfsm_evtq_t *queue);
-struct vsfsm_evtq_t* vsfsm_evtq_get(void);
+struct vsfsm_evtq_t* vsfsm_evtq_set(struct vsfsm_evtq_t *queue);
 
 #if VSFSM_CFG_LJMP_EN
 #include <setjmp.h>

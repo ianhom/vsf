@@ -105,9 +105,8 @@ static void vsfapp_init(struct vsfapp_t *app)
 #if defined(APPCFG_VSFSM_PENDSVQ_LEN) && (APPCFG_VSFSM_PENDSVQ_LEN > 0)
 static void app_on_pendsv(void *param)
 {
-	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
+	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_set(evtq_cur);
 
-	vsfsm_evtq_set(evtq_cur);
 	while (vsfsm_get_event_pending())
 		vsfsm_poll();
 	vsfsm_evtq_set(evtq_old);
