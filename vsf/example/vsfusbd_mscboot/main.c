@@ -425,9 +425,8 @@ app_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 static void app_on_pendsv(void *param)
 {
-	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
+	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_set(evtq_cur);
 
-	vsfsm_evtq_set(evtq_cur);
 	while (vsfsm_get_event_pending())
 	{
 		vsfsm_poll();

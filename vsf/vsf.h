@@ -250,8 +250,7 @@ struct vsf_t
 	struct vsf_framework_t
 	{
 		void (*evtq_init)(struct vsfsm_evtq_t*);
-		void (*evtq_set)(struct vsfsm_evtq_t*);
-		struct vsfsm_evtq_t* (*evtq_get)(void);
+		struct vsfsm_evtq_t* (*evtq_set)(struct vsfsm_evtq_t*);
 		vsf_err_t (*poll)(void);
 		uint32_t (*get_event_pending)(void);
 		vsf_err_t (*sm_init)(struct vsfsm_t*);
@@ -559,7 +558,6 @@ struct vsf_t
 
 #define vsfsm_evtq_init					vsf.framework.evtq_init
 #define vsfsm_evtq_set					vsf.framework.evtq_set
-#define vsfsm_evtq_get					vsf.framework.evtq_get
 #define vsfsm_poll						vsf.framework.poll
 #define vsfsm_get_event_pending			vsf.framework.get_event_pending
 #define vsfsm_init						vsf.framework.sm_init

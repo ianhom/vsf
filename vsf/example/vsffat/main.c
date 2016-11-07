@@ -434,9 +434,8 @@ static vsf_err_t app_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 #if defined(APPCFG_VSFSM_PENDSVQ_LEN) && (APPCFG_VSFSM_PENDSVQ_LEN > 0)
 static void app_on_pendsv(void *param)
 {
-	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_get();
+	struct vsfsm_evtq_t *evtq_cur = param, *evtq_old = vsfsm_evtq_set(evtq_cur);
 
-	vsfsm_evtq_set(evtq_cur);
 	while (vsfsm_get_event_pending())
 	{
 		vsfsm_poll();

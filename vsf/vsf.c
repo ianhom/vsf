@@ -260,7 +260,6 @@ ROOTFUNC const struct vsf_t vsf @ VSFCFG_API_ADDR =
 
 	.framework.evtq_init = vsfsm_evtq_init,
 	.framework.evtq_set = vsfsm_evtq_set,
-	.framework.evtq_get = vsfsm_evtq_get,
 	.framework.poll = vsfsm_poll,
 	.framework.get_event_pending = vsfsm_get_event_pending,
 	.framework.sm_init = vsfsm_init,
