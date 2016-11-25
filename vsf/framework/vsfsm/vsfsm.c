@@ -21,13 +21,11 @@
 #include "vsfsm.h"
 
 static struct vsfsm_evtq_t *vsfsm_cur_evtq = NULL;
-void vsfsm_evtq_set(struct vsfsm_evtq_t *queue)
+struct vsfsm_evtq_t* vsfsm_evtq_set(struct vsfsm_evtq_t *queue)
 {
+	struct vsfsm_evtq_t *ret = vsfsm_cur_evtq;
 	vsfsm_cur_evtq = queue;
-}
-struct vsfsm_evtq_t* vsfsm_evtq_get(void)
-{
-	return vsfsm_cur_evtq;
+	return ret;
 }
 
 void vsfsm_evtq_init(struct vsfsm_evtq_t *queue)

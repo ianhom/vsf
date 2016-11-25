@@ -363,6 +363,14 @@ uint32_t CORE_ADC_GET_MAX_VALUE(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_ADC_START(__TARGET_CHIP__)(uint8_t index, uint8_t channel,
 							void (callback)(void *, uint16_t), void *param);
 
+#define vsfhal_adc_init					CORE_ADC_INIT(__TARGET_CHIP__)
+#define vsfhal_adc_fini					CORE_ADC_FINI(__TARGET_CHIP__)
+#define vsfhal_adc_config				CORE_ADC_CONFIG(__TARGET_CHIP__)
+#define vsfhal_adc_config_channel		CORE_ADC_CONFIG_CHANNEL(__TARGET_CHIP__)
+#define vsfhal_adc_calibrate			CORE_ADC_CALIBRATE(__TARGET_CHIP__)
+#define vsfhal_adc_get_max_value		CORE_ADC_GET_MAX_VALUE(__TARGET_CHIP__)
+#define vsfhal_adc_start				CORE_ADC_START(__TARGET_CHIP__)
+
 #endif
 
 #if IFS_GPIO_EN
@@ -492,7 +500,7 @@ struct interface_i2c_t
 	vsf_err_t (*init)(uint8_t index);
 	vsf_err_t (*fini)(uint8_t index);
 	vsf_err_t (*config)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
-	vsf_err_t (*xfer)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
+	vsf_err_t (*xfer)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint8_t msglen);
 };
 
 #define CORE_I2C_INIT(m)				__CONNECT(m, _i2c_init)
@@ -503,7 +511,7 @@ struct interface_i2c_t
 vsf_err_t CORE_I2C_INIT(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_I2C_FINI(__TARGET_CHIP__)(uint8_t index);
 vsf_err_t CORE_I2C_CONFIG(__TARGET_CHIP__)(uint8_t index, uint16_t kHz, void *param, void (*cb)(void*, vsf_err_t));
-vsf_err_t CORE_I2C_XFER(__TARGET_CHIP__)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint16_t msglen);
+vsf_err_t CORE_I2C_XFER(__TARGET_CHIP__)(uint8_t index, uint16_t addr, struct interface_i2c_msg_t *msg, uint8_t msglen);
 
 #define vsfhal_i2c_init					CORE_I2C_INIT(__TARGET_CHIP__)
 #define vsfhal_i2c_fini					CORE_I2C_FINI(__TARGET_CHIP__)
@@ -540,6 +548,13 @@ vsf_err_t CORE_PWM_CONFIG_MODE(__TARGET_CHIP__)(uint8_t index, uint8_t mode);
 vsf_err_t CORE_PWM_CONFIG_FREQ(__TARGET_CHIP__)(uint8_t index, uint16_t kHz);
 vsf_err_t CORE_PWM_OUT(__TARGET_CHIP__)(uint8_t index, uint16_t count, uint16_t *rate);
 vsf_err_t CORE_PWM_IN(__TARGET_CHIP__)(uint8_t index, uint16_t count, uint16_t *rate);
+
+#define vsfhal_pwm_init					CORE_PWM_INIT(__TARGET_CHIP__)
+#define vsfhal_pwm_fini					CORE_PWM_FINI(__TARGET_CHIP__)
+#define vsfhal_pwm_config_mode			CORE_PWM_CONFIG_MODE(__TARGET_CHIP__)
+#define vsfhal_pwm_config_freq			CORE_PWM_CONFIG_FREQ(__TARGET_CHIP__)
+#define vsfhal_pwm_out					CORE_PWM_OUT(__TARGET_CHIP__)
+#define vsfhal_pwm_in					CORE_PWM_IN(__TARGET_CHIP__)
 
 #endif
 
