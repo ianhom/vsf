@@ -606,6 +606,7 @@ void vsf_bufmgr_init(uint8_t *buf, uint32_t size)
 
 	mcb->buffer.buffer = (void *)(((uint32_t)buf + MCB_SIZE + 3) & 0xfffffffc);
 	mcb->buffer.size = (uint32_t)buf + size - (uint32_t)mcb->buffer.buffer;
+	sllist_init_node(mcb->list);
 	sllist_insert(bufmgr.freed_list.list, mcb->list);
 
 #if VSF_BUFMGR_BUF_CHECK_EN

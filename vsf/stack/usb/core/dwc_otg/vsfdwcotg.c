@@ -58,10 +58,10 @@ static void hc_fini(struct hc_t **hcp)
 	uint8_t i;
 	struct hc_t *hc;
 	struct dwcotg_device_t *dev_priv;
-	
+
 	if (*hcp == NULL)
 		return;
-	
+
 	hc = *hcp;
 	hcp = NULL;
 	dev_priv = hc->owner_dev;
@@ -199,7 +199,7 @@ static vsf_err_t submit_hc(struct dwcotg_t *dwcotg, struct hc_t *hc,
 	// enable hc, TODO merge up code
 	tmp = (reg->hcchar & (~USB_OTG_HCCHAR_CHDIS)) | USB_OTG_HCCHAR_CHENA;
 	reg->hcchar = tmp;
-	
+
 	if ((dwcotg->dma_en == 0) && (hc->dir_o0_i1 == 0) && (hc->transfer_size))
 	{
 		// TODO: check if there is enough space in FIFO space
@@ -662,10 +662,10 @@ static vsf_err_t vsfdwcotg_interrupt(void *param)
 		{
 			uint8_t i;
 			struct hc_t *hc = dwcotg->hc_pool;
-				
+
 			dwcotg->softick++;
 			dwcotg->global_reg->gintsts = USB_OTG_GINTSTS_SOF;
-			
+
 			for (i = 0; i < dwcotg->hc_amount; i++)
 			{
 				if ((hc[i].alloced) && (hc[i].hc_state == HC_WAIT))
@@ -797,7 +797,7 @@ static vsf_err_t dwcotgh_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	{
 		// GCCFG &= ~(USB_OTG_GCCFG_PWRDWN)
 		dwcotg->global_reg->gccfg &= ~USB_OTG_GCCFG_PWRDWN;
-		
+
 		// Init The ULPI Interface
 		dwcotg->global_reg->gusbcfg &= ~(USB_OTG_GUSBCFG_TSDPS |
 				USB_OTG_GUSBCFG_ULPIFSLS | USB_OTG_GUSBCFG_PHYSEL);
@@ -987,7 +987,7 @@ static vsf_err_t dwcotgh_free_urb(void *param, struct vsfusbh_urb_t **vsfurbp)
 	if (vsfurb == NULL)
 		return VSFERR_FAIL;
 	*vsfurbp = NULL;
-	
+
 	if (urb_priv->hc)
 	{
 		urb_priv->discarded = 1;
@@ -1021,7 +1021,7 @@ static vsf_err_t dwcotgh_submit_urb(void *param, struct vsfusbh_urb_t *vsfurb)
 	urb_priv->type = usb_pipetype(pipe);
 	if (urb_priv->type == URB_PRIV_TYPE_CTRL)
 		urb_priv->phase = URB_PRIV_PHASE_SETUP_WAIT;
-	else if (urb_priv->type == URB_PRIV_TYPE_CTRL)
+	else if (urb_priv->type == URB_PRIV_TYPE_BULK)
 		urb_priv->phase = URB_PRIV_PHASE_DATA_WAIT;
 	else
 		urb_priv->phase = URB_PRIV_PHASE_PERIOD_WAIT;
