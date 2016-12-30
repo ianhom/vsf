@@ -33,7 +33,7 @@ struct vsfusbh_hub_t
 	struct vsfusbh_urb_t *vsfurb;
 
 	struct usb_hub_descriptor_t hub_desc;
-	struct usb_hub_status_t hub_status;
+	//struct usb_hub_status_t hub_status;
 	struct usb_port_status_t hub_portsts;
 
 	int16_t counter;
@@ -62,6 +62,7 @@ static vsf_err_t hub_clear_port_feature(struct vsfusbh_t *usbh,
 	return vsfusbh_control_msg(usbh, vsfurb, USB_RT_PORT, USB_REQ_CLEAR_FEATURE,
 			feature, port);
 }
+#if 0
 static vsf_err_t hub_get_status(struct vsfusbh_t *usbh,
 		struct vsfusbh_urb_t *vsfurb)
 {
@@ -69,7 +70,7 @@ static vsf_err_t hub_get_status(struct vsfusbh_t *usbh,
 	return vsfusbh_control_msg(usbh, vsfurb, USB_DIR_IN | USB_RT_HUB,
 			USB_REQ_GET_STATUS, 0, 0);
 }
-
+#endif
 
 static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
@@ -81,6 +82,8 @@ static vsf_err_t hub_reset_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	hub->retry = 0;
 
+	vsfsm_pt_delay(pt, 50);
+	
 	do
 	{
 		/* send command to reset port */
@@ -313,7 +316,7 @@ static vsf_err_t hub_scan_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 		// TODO : poll hub status
 
-		vsfsm_pt_delay(pt, 500);
+		vsfsm_pt_delay(pt, 200);
 	} while (1);
 	vsfsm_pt_end(pt);
 
@@ -388,7 +391,7 @@ static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		return VSFERR_FAIL;
 
 	hub->dev->maxchild = min(hub->hub_desc.bNbrPorts, USB_MAXCHILDREN);
-
+#if 0
 	vsfurb->transfer_buffer = &hub->hub_status;
 	vsfurb->transfer_length = sizeof(hub->hub_status);
 	err = hub_get_status(hub->usbh, vsfurb);
@@ -397,7 +400,7 @@ static vsf_err_t hub_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if (vsfurb->status != URB_OK)
 		return VSFERR_FAIL;
-
+#endif
 	hub->counter = 0;
 
 	do

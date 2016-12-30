@@ -55,9 +55,9 @@ struct hc_t
 	uint8_t hc_state : 4;
 	uint8_t dpid : 2;
 	uint8_t : 1;
-	
+
 	uint32_t transfer_size;
-	
+
 	struct dwcotg_device_t *owner_dev;
 	struct urb_priv_t *owner_priv;
 };
@@ -134,9 +134,9 @@ struct dwcotg_t
 	uint8_t ep_in_amount;
 	uint8_t ep_out_amount;
 	uint8_t hc_amount;
-	
+
 	uint16_t retry;
-	
+
 	struct hc_t *hc_pool;
 
 	volatile uint32_t softick;
@@ -155,6 +155,6 @@ struct dwcotg_t
 	struct dwcotg_dev_in_ep_regs_t *in_ep_regs;
 	// Device Logical OUT Endpoint-Specific Registers B00h-CFCh
 	struct dwcotg_dev_out_ep_regs_t *out_ep_regs;
-	
+
 	uint32_t *dfifo;
 };

@@ -11,6 +11,8 @@
 #define USB_ALTSETTINGALLOC				4
 #endif
 
+#define USBH_INTERFACE_RAM_OPTIMIZE		1
+
 #include "stack/usb/common/usb_common.h"
 #include "stack/usb/common/usb_ch11.h"
 #include "hcd/hcd.h"

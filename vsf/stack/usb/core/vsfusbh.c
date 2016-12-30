@@ -163,6 +163,44 @@ static const struct vsfusbh_device_id_t *vsfusbh_match_id(
 	return NULL;
 }
 
+static vsf_err_t vsfusbh_match_intrface_driver(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_interface_t *interface)
+{
+	uint8_t i;
+	vsf_err_t err = VSFERR_FAIL;
+	struct sllist *list = &usbh->drv_list;
+	struct vsfusbh_class_drv_list *drv_list;
+	const struct vsfusbh_class_drv_t *drv;
+	const struct vsfusbh_device_id_t *id;
+
+	while (list->next)
+	{
+		list = list->next;
+		drv_list = sllist_get_container(list, struct vsfusbh_class_drv_list, list);
+		drv = drv_list->drv;
+
+		id = drv->id_table;
+
+		if (id)
+		{
+			for (i = 0; i < interface->num_altsetting; i++)
+			{
+				interface->act_altsetting = i;
+				id = vsfusbh_match_id(dev, interface, id);
+				if (id)
+				{
+					err = VSFERR_NONE;
+					goto end;
+				}
+			}
+		}
+	}
+	
+end:
+	interface->act_altsetting = 0;
+	return err;
+}
+
 static vsf_err_t vsfusbh_find_intrface_driver(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, uint8_t ifnum)
 {
@@ -172,7 +210,7 @@ static vsf_err_t vsfusbh_find_intrface_driver(struct vsfusbh_t *usbh,
 	struct vsfusbh_class_drv_list *drv_list;
 	const struct vsfusbh_class_drv_t *drv;
 	const struct vsfusbh_device_id_t *id;
-	void *priv;
+	void *priv = NULL;
 
 	while (list->next)
 	{
@@ -238,7 +276,8 @@ vsf_err_t vsfusbh_add_device(struct vsfusbh_t *usbh,
 
 	for (i = 0; i < dev->actconfig->bNumInterfaces; i++)
 	{
-		if (dev->actconfig->interface[i].driver == NULL)
+		if ((dev->actconfig->interface[i].altsetting != NULL) &&
+				(dev->actconfig->interface[i].driver == NULL))
 		{
 			if (vsfusbh_find_intrface_driver(usbh, dev, i) == VSFERR_NONE)
 				claimed++;
@@ -639,8 +678,13 @@ static void vsfusbh_set_maxpacket_ep(struct vsfusbh_device_t *dev)
 		struct usb_interface_t *intf = dev->actconfig->interface + i;
 		struct usb_interface_desc_t *intf_desc = intf->altsetting +
 					intf->act_altsetting;
-		struct usb_endpoint_desc_t *ep_desc = intf_desc->ep_desc;
+		struct usb_endpoint_desc_t *ep_desc;
 		int e;
+		
+		if (intf_desc == NULL)
+			continue;
+		
+		ep_desc = intf_desc->ep_desc;
 
 		for (e = 0; e < intf_desc->bNumEndpoints; e++)
 		{
@@ -775,7 +819,8 @@ static int parse_endpoint(struct usb_endpoint_desc_t *endpoint,
 	return parsed;
 }
 
-static int parse_interface(struct usb_interface_t *interface, unsigned char *buffer, int size)
+static int parse_interface(struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
+		struct usb_interface_t *interface, unsigned char *buffer, int size)
 {
 	int i, len, numskipped, retval, parsed = 0;
 	struct usb_descriptor_header_t *header;
@@ -877,7 +922,7 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 		if ((size >= sizeof(struct usb_descriptor_header_t)) &&
 				((header->bDescriptorType == USB_DT_CONFIG) ||
 						(header->bDescriptorType == USB_DT_DEVICE)))
-			return parsed;
+			goto end;
 
 		if (ifp->bNumEndpoints > USB_MAXENDPOINTS)
 		{
@@ -907,7 +952,7 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 
 				retval = parse_endpoint(ifp->ep_desc + i, buffer, size);
 				if (retval < 0)
-					return retval;
+					goto end;
 
 				buffer += retval;
 				parsed += retval;
@@ -920,13 +965,32 @@ static int parse_interface(struct usb_interface_t *interface, unsigned char *buf
 		if (size < USB_DT_INTERFACE_SIZE ||
 				ifp->bDescriptorType != USB_DT_INTERFACE ||
 				!ifp->bAlternateSetting)
-			return parsed;
+			goto end;
 	}
 
+end:
+#if USBH_INTERFACE_RAM_OPTIMIZE
+	if (vsfusbh_match_intrface_driver(usbh, dev, interface) != VSFERR_NONE)
+	{
+		uint32_t k;		
+		ifp = interface->altsetting;		
+		for (k = 0; k < interface->num_altsetting; k++)
+		{
+			if (ifp[k].ep_desc != NULL)
+				vsf_bufmgr_free(ifp[k].ep_desc);
+		}
+		
+		vsf_bufmgr_free(interface->altsetting);
+		interface->altsetting = NULL;
+		interface->act_altsetting = 0;
+		interface->num_altsetting = 0;
+	}
+#endif
 	return parsed;
 }
 
-static vsf_err_t parse_configuration(struct usb_config_t *config,
+static vsf_err_t parse_configuration(struct vsfusbh_t *usbh,
+		struct vsfusbh_device_t *dev, struct usb_config_t *config,
 		uint8_t *buffer)
 {
 	int i, retval, size;
@@ -1001,7 +1065,7 @@ static vsf_err_t parse_configuration(struct usb_config_t *config,
 				}
 		*/
 
-		retval = parse_interface(config->interface + i, buffer, size);
+		retval = parse_interface(usbh, dev, config->interface + i, buffer, size);
 		if (retval < 0)
 			return VSFERR_FAIL;
 
@@ -1114,7 +1178,7 @@ vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		if (probe_urb->actual_length != len)
 			goto get_config_fail;
 
-		err = parse_configuration(dev->config + dev->temp_u8,
+		err = parse_configuration(usbh, dev, dev->config + dev->temp_u8,
 				probe_urb->transfer_buffer);
 		if (err != VSFERR_NONE)
 			goto get_config_fail;
@@ -1335,3 +1399,4 @@ vsf_err_t vsfusbh_modinit(struct vsf_module_t *module,
 	return VSFERR_NONE;
 }
 #endif
+
